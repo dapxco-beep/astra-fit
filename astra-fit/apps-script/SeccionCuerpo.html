@@ -629,28 +629,38 @@
     $('cuerpo-carga').hidden = false;
     $('cuerpo-carga-texto').textContent = texto;
   }
+  /* Los modelos 3D pesan varios MB: se bajan solo cuando la sección está cerca de la pantalla (600 px).
+     Mientras tanto se muestra la imagen de anatomía, que pesa unos 300 KB. */
+  let cerca = false;
+  const mostrarPoster = () => {
+    const poster = $('cuerpo-poster'), sx = Sesion.astronauta && String(Sesion.astronauta.sexo).toUpperCase() === 'F' ? 'f' : 'm';
+    poster.src = BASE_MODELOS + 'anatomia2d/' + sx + '-front-base.png'; poster.hidden = false;
+    $('cuerpo-carga').hidden = false;
+  };
+  async function arrancar() {
+    if (motor || !cerca || !Sesion.astronauta) return;
+    mostrarPoster();
+    $('cuerpo-carga-texto').textContent = 'Cargando modelos 3D…';
+    iniciando = iniciando || crearMotor(Sesion.astronauta && Sesion.astronauta.sexo);
+    try { motor = await iniciando; }
+    catch (err) {
+      console.error(err);
+      iniciando = null;
+      return mostrarError(location.protocol === 'file:'
+        ? 'El navegador no deja cargar los modelos con doble clic. Abre INICIAR-WINDOWS.bat.'
+        : 'No se pudieron cargar los modelos 3D. Recarga la página.');
+    }
+    $('cuerpo-carga').hidden = true;
+    if (Sesion.astronauta) await motor.ponerAstronauta(Sesion.astronauta);
+  }
   document.addEventListener('astronauta-elegido', async () => {
     grupoActivo = null;
     dibujarPanel();
-    if (!motor) {
-      // Imagen de anatomía al instante (pesa unos 300 KB) mientras llegan los modelos 3D
-      const poster = $('cuerpo-poster'), sx = Sesion.astronauta && String(Sesion.astronauta.sexo).toUpperCase() === 'F' ? 'f' : 'm';
-      poster.src = BASE_MODELOS + 'anatomia2d/' + sx + '-front-base.png'; poster.hidden = false;
-      $('cuerpo-carga').hidden = false;
-      $('cuerpo-carga-texto').textContent = 'Cargando modelos 3D…';
-      iniciando = iniciando || crearMotor(Sesion.astronauta && Sesion.astronauta.sexo);
-      try { motor = await iniciando; }
-      catch (err) {
-        console.error(err);
-        iniciando = null;
-        return mostrarError(location.protocol === 'file:'
-          ? 'El navegador no deja cargar los modelos con doble clic. Abre INICIAR-WINDOWS.bat.'
-          : 'No se pudieron cargar los modelos 3D. Recarga la página.');
-      }
-      $('cuerpo-carga').hidden = true;
-    }
-    if (Sesion.astronauta) await motor.ponerAstronauta(Sesion.astronauta);
+    if (motor) { if (Sesion.astronauta) await motor.ponerAstronauta(Sesion.astronauta); return; }
+    if (!cerca) { mostrarPoster(); $('cuerpo-carga-texto').textContent = 'El visor 3D se carga al llegar a esta sección.'; }
+    arrancar();
   });
+  new IntersectionObserver((en) => { if (en[0].isIntersecting) { cerca = true; arrancar(); } }, { rootMargin: '600px 0px' }).observe($('visor-cuerpo'));
   /* Cuando Registro o Alertas guardan algo, cambian los estados: se redibuja el panel y los colores del cuerpo */
   document.addEventListener('datos-actualizados', () => {
     dibujarPanel();

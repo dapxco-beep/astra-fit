@@ -29,7 +29,10 @@
         <h3 class="titulo-tarjeta">Plan de intervención y fortalecimiento</h3>
         <p class="pequeno texto-2">Resistencia progresiva adaptada a microgravedad, con los equipos de la misión (resistencia mecánica y bandas elásticas). Cada músculo sigue el plan de su nivel de riesgo actual.</p>
       </div>
-      <div class="alr-planes" id="alr-planes"></div>
+      <details class="alr-colapso" id="alr-plan-det" open>
+        <summary class="pequeno">Ver el plan de cada músculo</summary>
+        <div class="alr-planes" id="alr-planes"></div>
+      </details>
     </div>
 
     <div class="alr-pie">
@@ -116,6 +119,21 @@
       </article>`;
     }).join('') || '<p class="alr-vacio texto-2">Todo en orden. Las alertas aparecen cuando un músculo sube de nivel de riesgo o cumple la regla de evaluación prioritaria.</p>';
   }
+  /* En móvil se ven 3 alertas y un botón para el resto; el plan por músculo empieza cerrado */
+  const movil = () => matchMedia('(max-width: 640px)').matches;
+  if (movil()) $('alr-plan-det').open = false;
+  function plegarAlertas() {
+    const lista = $('alr-lista'), items = [...lista.querySelectorAll(':scope > article')], previo = $('alr-mas');
+    if (previo) previo.remove();
+    if (!movil() || items.length <= 3) return;
+    items.slice(3).forEach((a) => { a.hidden = true; });
+    const b = document.createElement('button');
+    b.type = 'button'; b.id = 'alr-mas'; b.className = 'boton boton--secundario';
+    b.textContent = `Ver las ${items.length - 3} alertas restantes`;
+    b.addEventListener('click', () => { items.forEach((a) => { a.hidden = false; }); b.remove(); });
+    lista.after(b);
+  }
+  new MutationObserver(plegarAlertas).observe($('alr-lista'), { childList: true });
   $('alr-lista').addEventListener('click', async (e) => {
     const b = e.target.closest('[data-estado]'); if (!b) return;
     const id = b.closest('[data-id]').dataset.id, estado = b.dataset.estado;
