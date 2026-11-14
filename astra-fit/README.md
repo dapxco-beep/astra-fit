@@ -36,7 +36,6 @@ Todo lo que se sube a Apps Script está en `apps-script/`, con los mismos nombre
 | `JsAvatares.html` | Avatares de astronauta con casco (en lugar de emojis) | Dashboard |
 | `JsErdm.html` | Escala ERDM-A: compara cada músculo con su basal, da de 0 a 10 puntos, nivel de riesgo, alertas y plan sugerido. Lee los cortes de la pestaña `EscalaERDM` | Dashboard |
 | `SeccionMonitoreo.html` | Monitoreo neuromuscular: figura de frente y espalda con la banda de cada músculo, una gráfica pequeña por músculo (puntaje ERDM-A por semana) y, al tocar uno, señales EMG e IMU en vivo, medición de 10 s (EMG, IMU y dinamómetro) y tarjeta de la ERDM-A | Dashboard |
-| `SeccionBienestar.html` | ¿Cómo estás hoy?: sueño, ánimo, temperatura y glucosa, con semáforo y recomendación | Dashboard |
 | `SeccionSensores.html` | Seis bandas: estado de cada sensor, cómo se calculan los indicadores y especificaciones | Dashboard |
 | `SeccionCuerpo.html` | Visor del cuerpo 3D, dentro de `#visor-cuerpo` (colorea cuádriceps y pantorrilla con su riesgo ERDM-A) | **Equipo del cuerpo** |
 | `SeccionMision.html` | Destinos: el astronauta animado en la Estación, Gateway, tránsito, Luna y Marte | **Equipo 3D** |
@@ -60,7 +59,7 @@ Todo lo que se sube a Apps Script está en `apps-script/`, con los mismos nombre
 | `Monitoreo` | medición de 10 s con el sensor | Sección Monitoreo |
 | `EscalaERDM` | dimensión de la escala, con sus cortes de moderado y alto | El equipo (documento ASTRA-FIT) |
 | `PlanFortalecimiento` | músculo × nivel de riesgo | El equipo (documento ASTRA-FIT) |
-| `Seguimiento` | día (agarre, circunferencias, masa, dolor, sueño, ánimo, temperatura, glucosa) | Sección Bienestar |
+| `Seguimiento` | día (agarre, circunferencias, masa, dolor) | El equipo |
 | `Umbrales` | indicador del seguimiento diario | El equipo |
 | `Alertas` | alerta generada | La página, al guardar |
 | `Intervenciones` | intervención aplicada | El equipo |
