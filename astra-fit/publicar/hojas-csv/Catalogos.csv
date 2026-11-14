@@ -4,14 +4,22 @@ grupo_muscular,gluteo_mayor,Glúteo mayor,
 grupo_muscular,gastrocnemio_soleo,Gastrocnemio y sóleo,
 grupo_muscular,erectores_espinales,Erectores espinales,
 grupo_muscular,dorsal_ancho,Dorsal ancho,
+grupo_muscular,pectoral_mayor,Pectoral mayor,
+grupo_muscular,triceps_braquial,Tríceps braquial,
+grupo_muscular,deltoides,Deltoides,
 ejercicio,sentadilla,Sentadilla,"cuadriceps,gluteo_mayor"
 ejercicio,peso_muerto,Peso muerto,erectores_espinales
 ejercicio,elevacion_talones,Elevación de talones,gastrocnemio_soleo
 ejercicio,remo_sentado,Remo sentado,dorsal_ancho
+ejercicio,press_pecho,Press de pecho,"pectoral_mayor,triceps_braquial,deltoides"
+ejercicio,carrera_cinta,Carrera en cinta con arnés,"cuadriceps,gastrocnemio_soleo,gluteo_mayor"
 fase,basal,Basal,
 fase,mision,Misión,
 fase,post_entrenamiento,Post-entrenamiento,
 fase,post_vuelo,Post-vuelo,
+entorno,orbita,Estación en órbita baja,
+entorno,luna,Base lunar,
+entorno,marte,Base en Marte,
 lado,izquierdo,Izquierdo,
 lado,derecho,Derecho,
 tipo_intervencion,ajuste_carga,Ajuste de carga,

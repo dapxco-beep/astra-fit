@@ -44,6 +44,8 @@ EJERCICIOS = {  # valor: (etiqueta, músculos, código corto, carga base kg, fue
     "peso_muerto":       ("Peso muerto",           ["erectores_espinales"],        "PMUE", 90, 1700),
     "elevacion_talones": ("Elevación de talones",  ["gastrocnemio_soleo"],         "TALO", 60, 1100),
     "remo_sentado":      ("Remo sentado",          ["dorsal_ancho"],               "REMO", 45, 700),
+    # Press de pecho y carrera en cinta con arnés (documento ASTRA-FIT): los datos de ejemplo los agrega local/agregar-ejercicios.js,
+    # que corre después de este script. No los pongas aquí o se duplicarían.
 }
 catalogos = []
 for v, e in GRUPOS.items():

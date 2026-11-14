@@ -24,11 +24,17 @@ async function leerBD(env) {
   const guardado = await env.ASTRA_FIT.get(CLAVE);
   if (guardado) {
     const bd = JSON.parse(guardado);
-    // Los umbrales son configuración, no datos de la gente: si cambian en la semilla, se actualizan sin tocar lo demás
-    if (JSON.stringify(bd.Umbrales) !== JSON.stringify(SEMILLA.Umbrales)) {
-      bd.Umbrales = structuredClone(SEMILLA.Umbrales);
-      await env.ASTRA_FIT.put(CLAVE, JSON.stringify(bd));
+    // Los umbrales son configuración, no datos de la gente: si cambian en la semilla, se actualizan sin tocar lo demás.
+    // Lo que la semilla trae de nuevo (catálogos, sesiones, EMG, alertas) se agrega solo si falta, sin pisar nada de lo guardado.
+    let cambio = false;
+    if (JSON.stringify(bd.Umbrales) !== JSON.stringify(SEMILLA.Umbrales)) { bd.Umbrales = structuredClone(SEMILLA.Umbrales); cambio = true; }
+    const CLAVES = { Catalogos: (f) => f.lista + '|' + f.valor, Sesiones: (f) => f.id_sesion, EMG: (f) => [f.id_sesion, f.grupo_muscular, f.lado].join('|'), Alertas: (f) => f.id_alerta };
+    for (const [hoja, clave] of Object.entries(CLAVES)) {
+      const existentes = new Set((bd[hoja] || []).map(clave));
+      const faltan = (SEMILLA[hoja] || []).filter((f) => !existentes.has(clave(f)));
+      if (faltan.length) { bd[hoja] = [...(bd[hoja] || []), ...structuredClone(faltan)]; cambio = true; }
     }
+    if (cambio) await env.ASTRA_FIT.put(CLAVE, JSON.stringify(bd));
     return bd;
   }
   const bd = structuredClone(SEMILLA);

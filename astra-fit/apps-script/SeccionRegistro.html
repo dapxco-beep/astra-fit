@@ -61,8 +61,9 @@
   const formSesion = $('form-sesion'), formSeg = $('form-seguimiento');
 
   // Qué grupos musculares se miden con cada ejercicio, y el código corto que lleva el id de la sesión
-  const GRUPOS_EJERCICIO = { sentadilla: ['cuadriceps', 'gluteo_mayor'], peso_muerto: ['erectores_espinales'], elevacion_talones: ['gastrocnemio_soleo'], remo_sentado: ['dorsal_ancho'] };
-  const CODIGO = { sentadilla: 'SENT', peso_muerto: 'PMUE', elevacion_talones: 'TALO', remo_sentado: 'REMO' };
+  const GRUPOS_EJERCICIO = { sentadilla: ['cuadriceps', 'gluteo_mayor'], peso_muerto: ['erectores_espinales'], elevacion_talones: ['gastrocnemio_soleo'], remo_sentado: ['dorsal_ancho'],
+    press_pecho: ['pectoral_mayor', 'triceps_braquial', 'deltoides'], carrera_cinta: ['cuadriceps', 'gastrocnemio_soleo', 'gluteo_mayor'] };
+  const CODIGO = { sentadilla: 'SENT', peso_muerto: 'PMUE', elevacion_talones: 'TALO', remo_sentado: 'REMO', press_pecho: 'PECH', carrera_cinta: 'CARR' };
   const LADOS = [['izquierdo', 'izquierdo'], ['derecho', 'derecho']];
 
   const pad = (n) => String(n).padStart(2, '0');

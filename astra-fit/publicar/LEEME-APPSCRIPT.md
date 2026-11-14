@@ -60,3 +60,10 @@ Los pasos de abajo son los originales, por si hay que repetirlos.
 - Fuente de cada umbral (hoy todos dicen "Por validar").
 - Formulario para registrar intervenciones (la pestaña existe, la pantalla no).
 - Sección Evolución (gráfica semana a semana) y resumen de Inicio.
+
+## Ejercicios del documento (actualización)
+
+Se añadieron **Press de pecho** y **Carrera en cinta con arnés** (ya estaban sentadilla, peso muerto, elevación de talones y remo sentado),
+con los grupos Pectoral mayor, Tríceps braquial y Deltoides. Si el Sheet ya existe, hay que volver a importar de `publicar/hojas-csv/`:
+**Catalogos, Sesiones, EMG y Alertas** (Insertar hojas nuevas y borrar las viejas). Para regenerar los datos de ejemplo:
+`python3 astra-fit/local/generar_datos.py` y después `node astra-fit/local/agregar-ejercicios.js`.
