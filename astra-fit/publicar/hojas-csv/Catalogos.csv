@@ -1,0 +1,21 @@
+﻿lista,valor,etiqueta,musculos
+grupo_muscular,cuadriceps,Cuádriceps,
+grupo_muscular,gluteo_mayor,Glúteo mayor,
+grupo_muscular,gastrocnemio_soleo,Gastrocnemio y sóleo,
+grupo_muscular,erectores_espinales,Erectores espinales,
+grupo_muscular,dorsal_ancho,Dorsal ancho,
+ejercicio,sentadilla,Sentadilla,"cuadriceps,gluteo_mayor"
+ejercicio,peso_muerto,Peso muerto,erectores_espinales
+ejercicio,elevacion_talones,Elevación de talones,gastrocnemio_soleo
+ejercicio,remo_sentado,Remo sentado,dorsal_ancho
+fase,basal,Basal,
+fase,mision,Misión,
+fase,post_entrenamiento,Post-entrenamiento,
+fase,post_vuelo,Post-vuelo,
+lado,izquierdo,Izquierdo,
+lado,derecho,Derecho,
+tipo_intervencion,ajuste_carga,Ajuste de carga,
+tipo_intervencion,recuperacion,Recuperación,
+tipo_intervencion,nutricion,Nutrición,
+tipo_intervencion,reevaluacion,Reevaluación,
+tipo_intervencion,valoracion_medica,Valoración médica,

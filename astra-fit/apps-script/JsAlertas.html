@@ -1,0 +1,115 @@
+<!--
+  JsAlertas.html — Motor de alertas. Sin pantalla, sin llamadas al servidor.
+
+  Convierte una sesión o un seguimiento nuevo en alertas, comparando con la basal del mismo astronauta y
+  con las reglas de la pestaña Umbrales (modo, malo_si, amarillo, rojo). Los cortes se cambian en el Sheet, no aquí.
+
+    const nuevas = Alertas.evaluarSesion(Sesion.datos, sesion, filasEmg);   // sesión + sus filas de EMG
+    const nuevas = Alertas.evaluarSeguimiento(Sesion.datos, registro);       // agarre, pantorrilla, muslo, dolor
+    API.guardarAlertas(nuevas)                                              // las guarda y les pone id ALR-####
+
+  Las alertas son indicadores de seguimiento, no diagnósticos médicos.
+-->
+<script>
+const Alertas = (() => {
+  // Ejercicio -> grupo muscular al que se le atribuye la fuerza, velocidad y simetría de esa sesión
+  const GRUPO_DE_EJERCICIO = { sentadilla: 'cuadriceps', peso_muerto: 'erectores_espinales', elevacion_talones: 'gastrocnemio_soleo', remo_sentado: 'dorsal_ancho' };
+  // Indicadores de seguimiento -> grupo (agarre no pertenece a un grupo de los cinco)
+  const GRUPO_DE_SEGUIMIENTO = { pantorrilla_cm: 'gastrocnemio_soleo', muslo_cm: 'cuadriceps', dolor_lumbar: 'erectores_espinales', agarre_kg: null };
+  const ORDEN = { verde: 0, amarillo: 1, rojo: 2 };
+
+  const media = (lista) => lista.length ? lista.reduce((t, x) => t + x, 0) / lista.length : null;
+  // Un campo vacío (null, '') NO es 0: se descarta para no inventar alertas
+  const num = (v) => (v === null || v === undefined || v === '') ? NaN : Number(v);
+  const valores = (filas, campo) => filas.map((f) => num(f[campo])).filter((v) => Number.isFinite(v));
+  const redondear = (n, d = 1) => Math.round(n * 10 ** d) / 10 ** d;
+  const pad = (n) => String(n).padStart(2, '0');
+  const ahora = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+  const nombreEjercicio = (e) => String(e || '').replace(/_/g, ' ');
+
+  /** Nivel según la regla del umbral. "actual" y "basal" son números; devuelve 'verde' | 'amarillo' | 'rojo'. */
+  function nivelDe(regla, actual, basal) {
+    if (!Number.isFinite(actual)) return 'verde';
+    const sube = regla.malo_si === 'sube';
+    let medida;
+    if (regla.modo === 'pct_vs_basal') {
+      if (!Number.isFinite(basal) || basal === 0) return 'verde';
+      medida = (actual / basal - 1) * 100;
+    } else medida = actual;                                   // modo 'absoluto'
+    const cruza = (corte) => sube ? medida >= corte : medida <= corte;
+    if (cruza(Number(regla.rojo))) return 'rojo';
+    if (cruza(Number(regla.amarillo))) return 'amarillo';
+    return 'verde';
+  }
+
+  function crear(regla, ctx, actual, basal, nivel) {
+    const cambio = Number.isFinite(basal) && basal !== 0 ? redondear((actual / basal - 1) * 100) : null;
+    const dir = cambio === null ? '' : cambio < 0 ? 'por debajo de' : 'por encima de';
+    const contexto = ctx.ejercicio ? ` en ${nombreEjercicio(ctx.ejercicio)}` : '';
+    const mensaje = cambio === null
+      ? `${regla.nombre_visible}${contexto}: ${redondear(actual)} ${regla.unidad}`
+      : `${regla.nombre_visible}${contexto}: ${Math.round(Math.abs(cambio))} % ${dir} la basal`;
+    return {
+      creada_en: ahora(), id_astronauta: ctx.id_astronauta, origen: ctx.origen, grupo_muscular: ctx.grupo,
+      indicador: regla.indicador, valor_actual: redondear(actual, 2), valor_basal: Number.isFinite(basal) ? redondear(basal, 2) : null,
+      cambio_pct: cambio, nivel, mensaje, recomendacion: nivel === 'rojo' ? regla.recomendacion_rojo : regla.recomendacion_amarillo,
+      estado: 'abierta', atendida_por: '', nota_cierre: ''
+    };
+  }
+
+  /** Solo se avisa si el nivel es nuevo o peor que la última alerta del mismo indicador y grupo (así no se repite cada sesión). */
+  function esEscalada(datos, a) {
+    const previas = (datos.Alertas || []).filter((x) => x.id_astronauta === a.id_astronauta && x.indicador === a.indicador && (x.grupo_muscular || null) === (a.grupo_muscular || null));
+    if (!previas.length) return true;
+    const ultima = previas.sort((p, q) => String(q.creada_en).localeCompare(String(p.creada_en)))[0];
+    return ORDEN[a.nivel] > ORDEN[ultima.nivel];
+  }
+
+  const reglasDe = (datos, tabla) => (datos.Umbrales || []).filter((u) => u.tabla === tabla);
+
+  /** Alertas de una sesión nueva (Sesiones + EMG). Una sesión basal nunca genera alertas. */
+  function evaluarSesion(datos, sesion, filasEmg = []) {
+    if (!sesion || sesion.fase === 'basal') return [];
+    const basales = datos.Sesiones.filter((s) => s.id_astronauta === sesion.id_astronauta && s.fase === 'basal' && s.ejercicio === sesion.ejercicio);
+    if (!basales.length) return [];
+    const salida = [], grupoEj = GRUPO_DE_EJERCICIO[sesion.ejercicio] || null;
+    const ctx = { id_astronauta: sesion.id_astronauta, origen: sesion.id_sesion, ejercicio: sesion.ejercicio, grupo: grupoEj };
+
+    reglasDe(datos, 'Sesiones').forEach((r) => {
+      const actual = num(sesion[r.indicador]), basal = media(valores(basales, r.indicador));
+      const nivel = nivelDe(r, actual, basal);
+      if (nivel !== 'verde') salida.push(crear(r, ctx, actual, basal, nivel));
+    });
+
+    // EMG: se compara cada grupo contra su propia basal (mismo ejercicio), promediando ambos lados
+    const idsBasal = new Set(basales.map((s) => s.id_sesion));
+    const grupos = [...new Set(filasEmg.map((e) => e.grupo_muscular))];
+    reglasDe(datos, 'EMG').forEach((r) => grupos.forEach((g) => {
+      const actual = media(valores(filasEmg.filter((e) => e.grupo_muscular === g), r.indicador));
+      const basal = media(valores(datos.EMG.filter((e) => e.id_astronauta === sesion.id_astronauta && e.grupo_muscular === g && idsBasal.has(e.id_sesion)), r.indicador));
+      const nivel = nivelDe(r, actual, basal);
+      if (nivel !== 'verde') salida.push(crear(r, { ...ctx, grupo: g }, actual, basal, nivel));
+    }));
+    return salida.filter((a) => esEscalada(datos, a));
+  }
+
+  /** Alertas de un registro de seguimiento (agarre, circunferencias, dolor lumbar). */
+  function evaluarSeguimiento(datos, registro) {
+    if (!registro || registro.fase === 'basal') return [];
+    const basales = datos.Seguimiento.filter((s) => s.id_astronauta === registro.id_astronauta && s.fase === 'basal');
+    const origen = `SEG-${registro.id_astronauta}-${registro.fecha}`, salida = [];
+    reglasDe(datos, 'Seguimiento').forEach((r) => {
+      const actual = num(registro[r.indicador]), basal = media(valores(basales, r.indicador));
+      const nivel = nivelDe(r, actual, basal);
+      if (nivel !== 'verde') salida.push(crear(r, { id_astronauta: registro.id_astronauta, origen, ejercicio: null, grupo: GRUPO_DE_SEGUIMIENTO[r.indicador] ?? null }, actual, basal, nivel));
+    });
+    return salida.filter((a) => esEscalada(datos, a));
+  }
+
+  /** El peor nivel de una lista de alertas (para el veredicto del día). */
+  const peorNivel = (lista) => lista.reduce((p, a) => ORDEN[a.nivel] > ORDEN[p] ? a.nivel : p, 'verde');
+
+  return { evaluarSesion, evaluarSeguimiento, nivelDe, peorNivel };
+})();
+if (typeof module !== 'undefined') module.exports = Alertas;
+</script>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ASTRA-FIT · Componentes</title>
+  <link rel="icon" href="data:,">
+  <?!= include('Estilos'); ?>
+</head>
+<body>
+  <!-- Componentes.html — Muestra de cada pieza del formato. Copia de aquí el HTML que necesites.
+       Se abre con ?page=componentes (en local: http://localhost:3000/?page=componentes) -->
+  <nav class="nav" aria-label="Componentes">
+    <div class="contenedor">
+      <a class="nav-marca" href="#tipografia">ASTRA-FIT</a>
+      <a class="nav-enlace" href="#tipografia">Tipografía</a>
+      <a class="nav-enlace" href="#color">Color</a>
+      <a class="nav-enlace" href="#controles">Controles</a>
+      <a class="nav-enlace" href="#contenido">Contenido</a>
+      <a class="nav-enlace" href="#formularios">Formularios</a>
+      <span class="nav-etiqueta">Guía de componentes</span>
+    </div>
+  </nav>
+
+  <!-- ============================== TIPOGRAFÍA -->
+  <header class="hero" id="tipografia">
+    <div class="contenedor">
+      <p class="nota">.hero-titulo</p>
+      <h1 class="hero-titulo">Cada músculo, en tiempo de misión.</h1>
+      <p class="nota">.subtitulo</p>
+      <p class="subtitulo">Seguimiento de la fuerza, la activación muscular y el movimiento de cada astronauta.</p>
+    </div>
+  </header>
+
+  <section class="seccion seccion--gris">
+    <div class="contenedor rejilla rejilla-2">
+      <div class="tarjeta pila">
+        <p class="nota">.titulo</p>
+        <h2 class="titulo">Título de sección.</h2>
+        <p class="nota">.titulo-tarjeta</p>
+        <h3 class="titulo-tarjeta">Título de tarjeta</h3>
+        <p class="nota">.texto</p>
+        <p class="texto">Texto normal de lectura. Frases cortas, en español y con verbos claros.</p>
+        <p class="nota">.texto-2 y .pequeno</p>
+        <p class="pequeno texto-2">Texto secundario para explicaciones breves.</p>
+        <p class="nota">.nota — fuentes, unidades, aclaraciones.</p>
+      </div>
+      <div class="tarjeta pila">
+        <p class="nota">.cifra</p>
+        <span class="cifra">−12,9<small>%</small></span>
+        <span class="estado estado--amarillo">Precaución</span>
+        <p class="nota">Fuerza pico en sentadilla frente a la basal</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== COLOR -->
+  <section class="seccion seccion--blanca" id="color">
+    <div class="contenedor">
+      <div class="seccion-cabecera">
+        <h2 class="titulo">Color con significado.</h2>
+        <p class="subtitulo">El azul es para acciones. Verde, amarillo y rojo son solo para el semáforo.</p>
+      </div>
+      <div class="rejilla rejilla-3">
+        <div class="tarjeta pila"><span class="estado estado--verde">Estable</span><p class="pequeno texto-2">Dentro de lo esperado frente a la basal.</p><code class="nota">.estado .estado--verde</code></div>
+        <div class="tarjeta pila"><span class="estado estado--amarillo">Precaución</span><p class="pequeno texto-2">Cambio relevante: vigilar o repetir la medición.</p><code class="nota">.estado .estado--amarillo</code></div>
+        <div class="tarjeta pila"><span class="estado estado--rojo">Alerta</span><p class="pequeno texto-2">Requiere valoración del médico de vuelo.</p><code class="nota">.estado .estado--rojo</code></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== CONTROLES -->
+  <section class="seccion seccion--gris" id="controles">
+    <div class="contenedor">
+      <div class="seccion-cabecera">
+        <h2 class="titulo">Controles.</h2>
+        <p class="subtitulo">Botones en forma de píldora y un control segmentado para elegir una opción.</p>
+      </div>
+      <div class="tarjeta pila" style="justify-items:start">
+        <div class="acciones">
+          <button class="boton" type="button" onclick="UI.aviso('Evaluación guardada.', 'completado')">Guardar evaluación</button>
+          <button class="boton boton--secundario" type="button" onclick="UI.aviso('Medición fuera de rango. Revisa el valor.', 'advertencia')">Ver advertencia</button>
+          <button class="boton boton--pequeno" type="button" onclick="UI.aviso('No se pudo conectar con el Sheet.', 'error')">Ver error</button>
+          <a class="enlace" href="#contenido">Ver contenido</a>
+        </div>
+        <p class="nota">.boton · .boton--secundario · .boton--pequeno · .enlace — Al presionar se encogen un poco. Los avisos se muestran con UI.aviso(texto, tipo).</p>
+        <div class="segmentado" data-segmentado role="group" aria-label="Ejercicio">
+          <button type="button" aria-pressed="true">Sentadilla</button>
+          <button type="button" aria-pressed="false">Peso muerto</button>
+          <button type="button" aria-pressed="false">Elevación de talones</button>
+          <button type="button" aria-pressed="false">Remo</button>
+        </div>
+        <p class="nota">.segmentado con data-segmentado — JsUi.html marca el botón elegido y dispara el evento "cambio".</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== CONTENIDO (sobre negro) -->
+  <section class="seccion seccion--negra" id="contenido">
+    <div class="contenedor">
+      <div class="seccion-cabecera">
+        <h2 class="titulo">Sección negra.</h2>
+        <p class="subtitulo">Para lo visual: el cuerpo y los momentos clave. Todos los componentes se adaptan solos.</p>
+      </div>
+      <div class="rejilla rejilla-2">
+        <div class="tarjeta">
+          <ul class="lista">
+            <li><div><div class="texto" style="font-weight:600">Cuádriceps</div><div class="pequeno texto-2">Fuerza −14 % frente a la basal</div></div><span class="estado estado--amarillo">Precaución</span></li>
+            <li><div><div class="texto" style="font-weight:600">Gastrocnemio y sóleo</div><div class="pequeno texto-2">Fuerza −21 % frente a la basal</div></div><span class="estado estado--rojo">Alerta</span></li>
+            <li><div><div class="texto" style="font-weight:600">Dorsal ancho</div><div class="pequeno texto-2">Fuerza −1 % frente a la basal</div></div><span class="estado estado--verde">Estable</span></li>
+          </ul>
+          <p class="nota" style="margin-top:var(--e-4)">.lista dentro de .tarjeta</p>
+        </div>
+        <div class="reservado">
+          <strong>Espacio reservado</strong>
+          <span class="pequeno">Marca dónde va algo que aún se construye</span>
+          <code>.reservado</code>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== FORMULARIOS -->
+  <section class="seccion seccion--gris" id="formularios">
+    <div class="contenedor">
+      <div class="seccion-cabecera">
+        <h2 class="titulo">Formularios.</h2>
+        <p class="subtitulo">Etiqueta arriba, unidad entre paréntesis y el error justo debajo del campo.</p>
+      </div>
+      <form class="tarjeta formulario" onsubmit="event.preventDefault(); UI.aviso('Así se confirma un guardado.', 'completado')">
+        <div class="formulario-filas">
+          <div class="campo">
+            <label for="c-astro">Astronauta</label>
+            <select id="c-astro"><option>Astronauta 001</option><option>Astronauta 002</option><option>Astronauta 003</option></select>
+          </div>
+          <div class="campo">
+            <label for="c-fecha">Fecha</label>
+            <input id="c-fecha" type="date">
+          </div>
+          <div class="campo">
+            <label for="c-agarre">Fuerza de agarre <span class="texto-2">(kg)</span></label>
+            <input id="c-agarre" type="number" step="0.1" placeholder="46,2">
+            <span class="ayuda">Mejor de 3 intentos, mano dominante</span>
+          </div>
+          <div class="campo" data-error>
+            <label for="c-dolor">Dolor lumbar <span class="texto-2">(0 a 10)</span></label>
+            <input id="c-dolor" type="number" value="14">
+            <span class="error">Debe estar entre 0 y 10.</span>
+          </div>
+        </div>
+        <div><button class="boton" type="submit">Guardar seguimiento</button></div>
+      </form>
+    </div>
+  </section>
+
+  <footer class="pie"><div class="contenedor">Guía de componentes de ASTRA-FIT. Fuente: Estilos.html.</div></footer>
+
+  <?!= include('JsUi'); ?>
+</body>
+</html>

@@ -1,0 +1,211 @@
+<!-- SeccionInicio.html — Resumen del astronauta: datos de registro, IMC, signos vitales y última actualización.
+     Fondo: blanco (encabezado) y gris (tarjetas).  Escucha "astronauta-elegido" y "astronauta-actualizado".
+     Los signos vitales son SIMULADOS: en la Estación los registra una camiseta biomonitor (Bio-Monitor, Agencia Espacial Canadiense). -->
+<header class="hero" id="inicio">
+  <div class="contenedor">
+    <div id="resumen-avatar"></div>
+    <p class="texto-2" id="resumen-id"></p>
+    <h1 class="hero-titulo" id="resumen-titulo">Resumen.</h1>
+    <p class="subtitulo" id="resumen-sub"></p>
+    <div class="acciones">
+      <button type="button" class="boton" id="btn-editar-perfil">Editar perfil</button>
+      <a class="enlace" href="#registro">Registrar una evaluación</a>
+    </div>
+  </div>
+</header>
+
+<section class="seccion seccion--gris seccion--compacta" aria-label="Resumen del astronauta">
+  <div class="contenedor pila-grande">
+    <div class="rejilla rejilla-resumen">
+      <article class="tarjeta pila" aria-labelledby="t-perfil">
+        <div class="tarjeta-cabecera"><h2 class="titulo-tarjeta" id="t-perfil">Datos de registro</h2><span class="nota" id="resumen-registrado"></span></div>
+        <dl class="datos" id="resumen-datos"></dl>
+      </article>
+      <article class="tarjeta pila" aria-labelledby="t-imc">
+        <h2 class="titulo-tarjeta" id="t-imc">Índice de masa corporal</h2>
+        <div class="pila" id="resumen-imc"></div>
+      </article>
+    </div>
+
+    <div class="pila">
+      <div class="bloque-cabecera">
+        <h2 class="titulo-tarjeta">Signos vitales</h2>
+        <p class="pequeno texto-2">Lo que registra la camiseta biomonitor que el astronauta lleva bajo la ropa o el traje. Datos simulados que se actualizan cada pocos segundos.</p>
+      </div>
+      <div class="rejilla rejilla-4" id="resumen-vitales"></div>
+    </div>
+
+    <article class="tarjeta" aria-labelledby="t-actual">
+      <div class="tarjeta-cabecera"><h2 class="titulo-tarjeta" id="t-actual">Última actualización</h2><span class="nota">Lo que se mide cada semana se marca si lleva más de 7 días sin registro.</span></div>
+      <ul class="lista" id="resumen-actualizaciones"></ul>
+    </article>
+  </div>
+</section>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const esc = UI.esc;
+  let temporizador = null;
+
+  /* ======================================================== ENCABEZADO */
+  function dibujarEncabezado(a) {
+    const entorno = Calc.ENTORNOS[a.entorno] || Calc.ENTORNOS.orbita;
+    const dia = Calc.diasDesde(a.fecha_inicio_mision);
+    $('resumen-avatar').innerHTML = UI.avatar(a, 'avatar--grande');
+    $('resumen-id').textContent = `${a.id_astronauta}, ${String(a.rol || 'tripulante').toLowerCase()}`;
+    $('resumen-titulo').textContent = `Resumen de ${a.nombre}.`;
+    const textoDia = dia === null ? '' : dia < 0 ? `Despega en ${-dia} días hacia ${entorno.enFrase}.` : `Día ${dia} de misión en ${entorno.enFrase}.`;
+    $('resumen-sub').textContent = `${textoDia} Perfil actualizado ${Calc.relativo(a.actualizado_en || a.registrado_en).toLowerCase()}.`;
+  }
+
+  /* ======================================================== DATOS DE REGISTRO */
+  function dibujarDatos(a) {
+    const peso = Calc.pesoActual(a);
+    const fila = (titulo, valor, nota) => `<div><dt class="nota">${titulo}</dt><dd class="texto">${valor}</dd>${nota ? `<dd class="nota">${nota}</dd>` : ''}</div>`;
+    $('resumen-registrado').textContent = a.registrado_en ? `Registrado el ${Calc.fechaCorta(a.registrado_en)}` : '';
+    $('resumen-datos').innerHTML = [
+      fila('Sexo', a.sexo === 'F' ? 'Femenino' : a.sexo === 'M' ? 'Masculino' : '—'),
+      fila('Edad', a.edad ? `${a.edad} años` : '—'),
+      fila('Talla', a.talla_cm ? `${Calc.numero(a.talla_cm, 0)} cm` : '—', `Actualizada ${Calc.relativo(a.talla_actualizada_en || a.registrado_en).toLowerCase()}`),
+      fila('Peso', `${Calc.decimal(peso.valor)} kg`, `${peso.fuente === 'seguimiento' ? 'Seguimiento diario' : 'Perfil'}, ${Calc.relativo(peso.fecha).toLowerCase()}`),
+      fila('Mano dominante', a.mano_dominante === 'izquierda' ? 'Izquierda' : 'Derecha'),
+      fila('Despegue', Calc.fechaCorta(a.fecha_inicio_mision)),
+      fila('Entorno', esc((Calc.ENTORNOS[a.entorno] || Calc.ENTORNOS.orbita).nombre))
+    ].join('');
+  }
+
+  /* ======================================================== IMC */
+  function dibujarImc(a) {
+    const peso = Calc.pesoActual(a);
+    const v = Calc.imc(peso.valor, a.talla_cm);
+    const c = Calc.categoriaImc(v);
+    if (!c) { $('resumen-imc').innerHTML = '<p class="texto-2">Falta el peso o la talla para calcular el IMC.</p>'; return; }
+    const MIN = 15, MAX = 42;
+    const pos = (x) => ((Math.min(Math.max(x, MIN), MAX) - MIN) / (MAX - MIN)) * 100;
+    const tramos = Calc.IMC_CATEGORIAS.map((k) => {
+      const ancho = pos(Math.min(k.hasta, MAX)) - pos(Math.max(k.desde, MIN));
+      return `<span class="imc-tramo imc-tramo--${k.nivel}${k === c ? ' activo' : ''}" style="width:${ancho}%" title="${esc(k.nombre)}"></span>`;
+    }).join('');
+    const marcas = [18.5, 25, 30, 35, 40].map((m) => `<span style="left:${pos(m)}%">${Calc.numero(m)}</span>`).join('');
+    $('resumen-imc').innerHTML = `
+      <p class="cifra">${Calc.decimal(v)}<small>kg/m²</small></p>
+      <span class="estado estado--${c.nivel}">${esc(c.nombre)}</span>
+      <div class="imc-escala" role="img" aria-label="IMC ${Calc.decimal(v)} en la escala: ${esc(c.nombre)}">
+        <div class="imc-barra">${tramos}<span class="imc-marcador" style="left:${pos(v)}%"></span></div>
+        <div class="imc-marcas">${marcas}</div>
+      </div>
+      <p class="nota">Peso de ${Calc.decimal(peso.valor)} kg (${peso.fuente === 'seguimiento' ? 'seguimiento' : 'perfil'}, ${Calc.fechaCorta(peso.fecha)}) y talla de ${Calc.numero(a.talla_cm, 0)} cm. Clasificación del documento ASTRA-FIT.</p>`;
+  }
+
+  /* ======================================================== SIGNOS VITALES (simulados) */
+  const BASE_VITALES = {
+    'AST-001': { fc: 58, fr: 13, sis: 112, dia: 72, spo2: 98 },
+    'AST-002': { fc: 74, fr: 16, sis: 126, dia: 82, spo2: 97 },
+    'AST-003': { fc: 66, fr: 15, sis: 118, dia: 76, spo2: 98 }
+  };
+  function baseDe(a) {
+    if (BASE_VITALES[a.id_astronauta]) return { ...BASE_VITALES[a.id_astronauta] };
+    const h = [...a.id_astronauta].reduce((s, ch) => s + ch.charCodeAt(0), 0);
+    return { fc: 62 + (h % 12), fr: 13 + (h % 4), sis: 112 + (h % 10), dia: 72 + (h % 8), spo2: 97 + (h % 2) };
+  }
+  const NIVEL_TEXTO = { verde: 'En rango', amarillo: 'Vigilar', rojo: 'Fuera de rango' };
+  const VITALES = [
+    { id: 'fc', nombre: 'Frecuencia cardíaca', unidad: 'lpm', rango: 'En reposo: 60 a 100 lpm', icono: 'corazon',
+      valor: (v) => Math.round(v.fc), nivel: (v) => (v.fc >= 50 && v.fc <= 100 ? 'verde' : v.fc >= 45 && v.fc <= 110 ? 'amarillo' : 'rojo') },
+    { id: 'fr', nombre: 'Frecuencia respiratoria', unidad: 'rpm', rango: 'En reposo: 12 a 20 por minuto', icono: 'pulmones',
+      valor: (v) => Math.round(v.fr), nivel: (v) => (v.fr >= 12 && v.fr <= 20 ? 'verde' : v.fr >= 10 && v.fr <= 24 ? 'amarillo' : 'rojo') },
+    { id: 'pa', nombre: 'Presión arterial', unidad: 'mmHg', rango: 'Normal: menos de 120/80', icono: 'presion',
+      valor: (v) => `${Math.round(v.sis)}/${Math.round(v.dia)}`, nivel: (v) => (v.sis < 130 && v.dia < 85 ? 'verde' : v.sis < 140 && v.dia < 90 ? 'amarillo' : 'rojo') },
+    { id: 'spo2', nombre: 'Saturación de oxígeno', unidad: '%', rango: 'Normal: 95 % o más', icono: 'oxigeno',
+      valor: (v) => Math.round(v.spo2), nivel: (v) => (v.spo2 >= 95 ? 'verde' : v.spo2 >= 90 ? 'amarillo' : 'rojo') }
+  ];
+  const ICONOS = {
+    corazon: '<svg viewBox="0 0 24 24" class="vital-icono latido"><path d="M12 20.5s-7.2-4.4-9.3-8.6C1 8.4 3.2 5 6.6 5c2.1 0 3.6 1.1 5.4 3.1C13.8 6.1 15.3 5 17.4 5c3.4 0 5.6 3.4 3.9 6.9-2.1 4.2-9.3 8.6-9.3 8.6z"/></svg>',
+    pulmones: '<svg viewBox="0 0 24 24" class="vital-icono respira"><path d="M12 3v8"/><path d="M12 9c-1.5 0-3-1.6-4.6-1.6C5 7.4 3 11 3 15.5 3 18.3 4.3 20 6.2 20 9 20 11 18 11 15V11"/><path d="M12 9c1.5 0 3-1.6 4.6-1.6C19 7.4 21 11 21 15.5c0 2.8-1.3 4.5-3.2 4.5C15 20 13 18 13 15V11"/></svg>',
+    presion: '<svg viewBox="0 0 24 24" class="vital-icono"><path d="M4 16a8 8 0 1 1 16 0"/><path d="M12 16l4-5"/><circle cx="12" cy="16" r="1.4"/></svg>',
+    oxigeno: '<svg viewBox="0 0 36 36" class="vital-anillo"><circle cx="18" cy="18" r="15" class="anillo-fondo"/><circle cx="18" cy="18" r="15" class="anillo-valor" pathLength="100"/></svg>'
+  };
+
+  function dibujarVitales(a) {
+    clearInterval(temporizador);
+    const v = baseDe(a), base = { ...v };
+    $('resumen-vitales').innerHTML = VITALES.map((k) => `
+      <article class="tarjeta vital" data-vital="${k.id}">
+        <div class="vital-cabecera">${ICONOS[k.icono]}<span class="pequeno texto-2">${k.nombre}</span></div>
+        <p class="cifra"><span data-valor></span><small>${k.unidad}</small></p>
+        <span class="estado" data-estado></span>
+        <p class="nota">${k.rango}</p>
+      </article>`).join('');
+
+    const pintar = () => {
+      VITALES.forEach((k) => {
+        const tarjeta = document.querySelector(`[data-vital="${k.id}"]`);
+        if (!tarjeta) return;
+        const n = k.nivel(v);
+        tarjeta.querySelector('[data-valor]').textContent = k.valor(v);
+        const est = tarjeta.querySelector('[data-estado]');
+        est.className = `estado estado--${n}`;
+        est.textContent = NIVEL_TEXTO[n];
+      });
+      const tarjetas = $('resumen-vitales');
+      tarjetas.style.setProperty('--ritmo-corazon', `${(60 / v.fc).toFixed(2)}s`);
+      tarjetas.style.setProperty('--ritmo-respira', `${(60 / v.fr).toFixed(2)}s`);
+      tarjetas.style.setProperty('--spo2', v.spo2);
+    };
+    pintar();
+    // Variación pequeña alrededor de la base, como una lectura continua
+    const mover = (x, b, paso, rango) => Math.min(b + rango, Math.max(b - rango, x + (Math.random() - 0.5) * paso));
+    temporizador = setInterval(() => {
+      if (!Sesion.astronauta || document.hidden) return;
+      v.fc = mover(v.fc, base.fc, 3, 4);
+      v.fr = mover(v.fr, base.fr, 1, 1.5);
+      v.sis = mover(v.sis, base.sis, 3, 4);
+      v.dia = mover(v.dia, base.dia, 2, 3);
+      v.spo2 = mover(v.spo2, base.spo2, 0.8, 1);
+      pintar();
+    }, 2500);
+  }
+
+  /* ======================================================== ÚLTIMA ACTUALIZACIÓN */
+  function dibujarActualizaciones(a) {
+    const id = a.id_astronauta;
+    const peso = Calc.pesoActual(a);
+    const agarre = Calc.ultimo('Seguimiento', id, 'agarre_kg');
+    const pantorrilla = Calc.ultimo('Seguimiento', id, 'pantorrilla_cm');
+    const evaluacion = Calc.ultimo('Sesiones', id, 'fuerza_pico_n');
+    const filas = [
+      { nombre: 'Peso', detalle: `${Calc.decimal(peso.valor)} kg, ${peso.fuente === 'seguimiento' ? 'seguimiento diario' : 'perfil'}`, fecha: peso.fecha, semanal: true },
+      { nombre: 'Talla', detalle: `${Calc.numero(a.talla_cm, 0)} cm, perfil`, fecha: a.talla_actualizada_en || a.registrado_en },
+      { nombre: 'Fuerza de agarre', detalle: agarre ? `${Calc.numero(agarre.valor)} kg` : 'Sin registros', fecha: agarre && agarre.fecha, semanal: true },
+      { nombre: 'Circunferencia de pantorrilla', detalle: pantorrilla ? `${Calc.numero(pantorrilla.valor)} cm` : 'Sin registros', fecha: pantorrilla && pantorrilla.fecha, semanal: true },
+      { nombre: 'Evaluación neuromuscular', detalle: evaluacion ? `Semana ${evaluacion.fila.semana_mision} de misión` : 'Sin evaluaciones', fecha: evaluacion && evaluacion.fecha, semanal: true },
+      { nombre: 'Perfil', detalle: 'Datos de registro', fecha: a.actualizado_en || a.registrado_en }
+    ];
+    $('resumen-actualizaciones').innerHTML = filas.map((f) => {
+      const dias = Calc.diasDesde(f.fecha);
+      const nivel = !f.semanal ? null : dias === null || dias > 7 ? 'amarillo' : 'verde';
+      return `<li>
+        <div><div class="texto" style="font-weight:600">${f.nombre}</div><div class="nota">${esc(f.detalle)}${f.fecha ? `, ${Calc.fechaCorta(f.fecha)}` : ''}</div></div>
+        ${nivel ? `<span class="estado estado--${nivel}">${Calc.relativo(f.fecha)}</span>` : `<span class="pequeno texto-2">${Calc.relativo(f.fecha)}</span>`}
+      </li>`;
+    }).join('');
+  }
+
+  /* ======================================================== EVENTOS */
+  function dibujar(a) {
+    dibujarEncabezado(a);
+    dibujarDatos(a);
+    dibujarImc(a);
+    dibujarVitales(a);
+    dibujarActualizaciones(a);
+  }
+  $('btn-editar-perfil').addEventListener('click', () => Perfil.abrir('editar', Sesion.astronauta));
+  document.addEventListener('astronauta-elegido', (e) => dibujar(e.detail));
+  // Al guardar una evaluación o un seguimiento (SeccionRegistro) cambian las fechas de "Última actualización"
+  document.addEventListener('datos-actualizados', () => { if (Sesion.astronauta) dibujar(Sesion.astronauta); });
+  document.addEventListener('astronauta-actualizado', (e) => {
+    if (Sesion.astronauta && e.detail.id_astronauta === Sesion.astronauta.id_astronauta) dibujar(e.detail);
+  });
+})();
+</script>

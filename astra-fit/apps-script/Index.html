@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ASTRA-FIT</title>
+  <link rel="icon" href="data:,">
+  <?!= include('Estilos'); ?>
+  <!-- Scripts compartidos: van primero porque las secciones los usan -->
+  <?!= include('JsUi'); ?>
+  <?!= include('JsApi'); ?>
+  <?!= include('JsCalculos'); ?>
+  <?!= include('JsAvatares'); ?>
+  <?!= include('JsAlertas'); ?>
+  <?!= include('JsErdm'); ?>
+</head>
+<body>
+
+  <!-- ===================== VISTA 1: pantalla de entrada ===================== -->
+  <div class="vista" id="vista-acceso">
+    <?!= include('SeccionAcceso'); ?>
+  </div>
+
+  <!-- ===================== VISTA 2: panel del astronauta elegido ===================== -->
+  <div class="vista" id="vista-panel" hidden>
+    <nav class="nav" aria-label="Secciones">
+      <div class="contenedor">
+        <a class="nav-marca" href="#inicio">ASTRA-FIT</a>
+        <span class="nav-etiqueta">Datos simulados</span>
+        <button type="button" class="nav-boton" id="nav-boton" aria-expanded="false" aria-controls="nav-enlaces">Secciones <span aria-hidden="true">▾</span></button>
+        <div class="nav-enlaces" id="nav-enlaces">
+          <a class="nav-enlace" href="#bienestar">Bienestar</a>
+          <a class="nav-enlace" href="#monitoreo">Monitoreo</a>
+          <a class="nav-enlace" href="#entorno">Entorno</a>
+          <a class="nav-enlace" href="#cuerpo">Cuerpo</a>
+          <a class="nav-enlace" href="#evolucion">Evolución</a>
+          <a class="nav-enlace" href="#mision">Destinos</a>
+          <a class="nav-enlace" href="#erdm">ERDM-A</a>
+          <a class="nav-enlace" href="#alertas">Alertas</a>
+          <a class="nav-enlace" href="#registro">Registro</a>
+        </div>
+        <span class="nav-astronauta"><span id="nav-avatar"></span><span id="nav-nombre"></span></span>
+        <button type="button" class="enlace nav-cambiar" style="font-size:var(--t-nota)" onclick="Sesion.salir()">Cambiar</button>
+      </div>
+    </nav>
+    <script>
+      /* Menú de secciones en móvil */
+      (() => {
+        const b = document.getElementById('nav-boton'), m = document.getElementById('nav-enlaces');
+        const poner = (abierto) => { m.classList.toggle('abierto', abierto); b.setAttribute('aria-expanded', String(abierto)); };
+        b.addEventListener('click', () => poner(!m.classList.contains('abierto')));
+        m.addEventListener('click', (e) => { if (e.target.closest('a')) poner(false); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && m.classList.contains('abierto')) { poner(false); b.focus(); } });
+        document.addEventListener('click', (e) => { if (!e.target.closest('.nav')) poner(false); });
+      })();
+    </script>
+
+    <main>
+      <?!= include('SeccionInicio'); ?>
+      <?!= include('SeccionBienestar'); ?>
+      <?!= include('SeccionMonitoreo'); ?>
+      <?!= include('SeccionEntorno'); ?>
+      <?!= include('SeccionCuerpo'); ?>
+      <?!= include('SeccionEvolucion'); ?>
+      <?!= include('SeccionMision'); ?>
+      <?!= include('SeccionErdm'); ?>
+      <?!= include('SeccionAlertas'); ?>
+      <?!= include('SeccionRegistro'); ?>
+    </main>
+
+    <footer class="pie">
+      <div class="contenedor">
+        Prototipo de Sinergia Cósmica para NASA Space Apps Challenge 2026, con datos simulados. Las alertas son indicadores de seguimiento, no diagnósticos médicos.
+      </div>
+    </footer>
+  </div>
+
+  <!-- Ventana para registrar o editar astronautas (la usan SeccionAcceso y SeccionInicio) -->
+  <?!= include('FormPerfil'); ?>
+
+  <script>
+    /* Velocidad: mientras la persona mira la pantalla de entrada, el navegador ya baja en segundo plano las librerías 3D
+       y, al pasar el cursor por un astronauta, los modelos que va a necesitar. Así, al elegirlo, casi todo está en caché. */
+    (() => {
+      const CDN = 'https://cdn.jsdelivr.net/npm/three@0.160.0/';
+      const LIBS = ['build/three.module.js', 'examples/jsm/controls/OrbitControls.js', 'examples/jsm/loaders/GLTFLoader.js', 'examples/jsm/libs/meshopt_decoder.module.js',
+        'examples/jsm/environments/RoomEnvironment.js', 'examples/jsm/loaders/DRACOLoader.js', 'examples/jsm/postprocessing/EffectComposer.js', 'examples/jsm/postprocessing/RenderPass.js',
+        'examples/jsm/postprocessing/UnrealBloomPass.js', 'examples/jsm/postprocessing/OutputPass.js'];
+      const calentados = new Set();
+      const calentar = (url) => { if (calentados.has(url)) return; calentados.add(url); fetch(url, { mode: 'cors', credentials: 'omit', priority: 'low' }).catch(() => calentados.delete(url)); };
+      const idle = window.requestIdleCallback || ((f) => setTimeout(f, 1200));
+      idle(() => LIBS.forEach((l) => calentar(CDN + l)));
+      const base = () => (typeof API !== 'undefined' && API.modo === 'local') ? '/assets/' : 'https://astra-fit-modelos.dapxco.workers.dev/assets/';
+      const porSexo = { M: ['avatar-male.glb', 'anatomy-male.glb'], F: ['Michelle.glb', 'anatomy-female.glb'] };
+      const alPasar = (e) => {
+        const t = e.target.closest && e.target.closest('.perfil[data-id]'); if (!t || typeof Sesion === 'undefined' || !Sesion.datos) return;
+        const a = Sesion.datos.Astronautas.find((x) => x.id_astronauta === t.dataset.id); if (!a) return;
+        ['Xbot.glb', ...porSexo[String(a.sexo).toUpperCase() === 'F' ? 'F' : 'M'], 'astronaut.glb'].forEach((f) => calentar(base() + f));
+      };
+      document.addEventListener('pointerover', alPasar); document.addEventListener('focusin', alPasar); document.addEventListener('touchstart', alPasar, { passive: true });
+    })();
+  </script>
+
+  <script>
+    /* Barra superior: muestra quién está activo */
+    function pintarNav(a) {
+      document.getElementById('nav-avatar').innerHTML = UI.avatar(a);
+      document.getElementById('nav-nombre').textContent = a.nombre;
+    }
+    document.addEventListener('astronauta-elegido', (e) => pintarNav(e.detail));
+    document.addEventListener('astronauta-actualizado', (e) => {
+      if (Sesion.astronauta && e.detail.id_astronauta === Sesion.astronauta.id_astronauta) pintarNav(e.detail);
+    });
+  </script>
+</body>
+</html>

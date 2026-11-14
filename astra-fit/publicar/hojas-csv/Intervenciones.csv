@@ -1,0 +1,2 @@
+﻿id_intervencion,fecha,id_astronauta,id_alerta,tipo,descripcion,responsable,fecha_reevaluacion,resultado
+INT-0001,2026-10-27,AST-002,ALR-0003,ajuste_carga,Subir la carga de sentadilla 10 % y añadir 3 series de elevación de talones por sesión.,Médico de vuelo,2026-11-09,mejoro

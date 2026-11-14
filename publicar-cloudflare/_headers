@@ -1,0 +1,4 @@
+# Permite que la página de Apps Script (otro dominio) descargue los modelos 3D (CORS).
+/assets/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=86400

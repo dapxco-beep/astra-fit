@@ -1,0 +1,99 @@
+<!-- SeccionErdm.html — Escala ERDM-A: riesgo de desacondicionamiento muscular por músculo.  Fondo: blanco.
+     Implementa la pestaña ESCALA del documento ASTRA-FIT: 6 músculos, 5 dimensiones de 0 a 2 puntos (máximo 10),
+     clasificación bajo / moderado / alto, regla de alerta prioritaria y plan de fortalecimiento por nivel.
+     SIMULADO: los cambios frente al basal salen de JsErdm.html según el escenario del astronauta (no hay mediciones reales).
+     Se vuelve a dibujar con "astronauta-elegido" y "astronauta-actualizado". -->
+<section class="seccion seccion--blanca" id="erdm">
+  <div class="contenedor pila-grande">
+    <div class="seccion-cabecera">
+      <h2 class="titulo">Riesgo muscular, músculo por músculo.</h2>
+      <p class="subtitulo">Escala ERDM-A: cinco mediciones comparadas con la línea basal del propio astronauta, de 0 a 10 puntos por músculo.</p>
+    </div>
+
+    <div class="tarjeta" style="display:flex; gap:var(--e-6); align-items:center; flex-wrap:wrap">
+      <label for="erdm-semana" class="titulo-tarjeta">Semana de misión: <span id="erdm-semana-txt">12</span></label>
+      <input type="range" id="erdm-semana" min="0" max="12" step="1" value="12" style="flex:1; min-width:200px" aria-describedby="erdm-semana-ayuda">
+      <span class="nota" id="erdm-semana-ayuda">La semana 0 es la evaluación basal.</span>
+    </div>
+
+    <div class="rejilla rejilla-3" id="erdm-musculos" aria-live="polite"></div>
+
+    <article class="tarjeta pila" id="erdm-detalle" aria-live="polite"></article>
+
+    <p class="nota" style="text-align:center">
+      ERDM-A es una propuesta conceptual, no una escala clínica validada: los puntos de corte y las ponderaciones son provisionales y los datos son simulados.
+      Los resultados son indicadores de seguimiento, no diagnósticos médicos. El VO₂pico es un indicador sistémico y se comparte entre los seis músculos.
+    </p>
+  </div>
+</section>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const TEXTO = { verde: 'Riesgo bajo', amarillo: 'Riesgo moderado', rojo: 'Riesgo alto' };
+  const PLAN = {  // sección 6.2 del documento
+    soleo:        ['Elevación de talones con rodillas flexionadas', 'Flexión plantar sentado con resistencia progresiva', 'Flexión plantar aislada con carga baja y progresión supervisada'],
+    gastrocnemio: ['Elevación de talones con rodillas extendidas', 'Flexión plantar de pie con resistencia', 'Flexión plantar controlada con carga baja y progresión supervisada'],
+    cuadriceps:   ['Sentadillas y extensión de rodilla', 'Extensión de rodilla con resistencia y sentadillas asistidas', 'Extensión de rodilla aislada con carga baja y progresión supervisada'],
+    biceps:       ['Curl de bíceps', 'Curl con bandas o resistencia progresiva', 'Curl aislado con carga baja y control del movimiento'],
+    triceps:      ['Extensión de codo y ejercicios de empuje adaptados', 'Extensión de tríceps con bandas', 'Extensión aislada de codo con carga baja y progresión supervisada'],
+    antebrazo:    ['Prensión manual y ejercicios de agarre', 'Flexión de muñeca con resistencia', 'Prensión de baja intensidad y flexión de muñeca controlada']
+  };
+  const DOSIS = [
+    'Mantener el programa preventivo. Dosificación orientativa: 2–3 sesiones por semana, 2–3 series de 10–15 repeticiones.',
+    'Incrementar el entrenamiento específico y la resistencia, y reevaluar con más frecuencia. Dosificación orientativa: 3 sesiones por semana, 2–3 series de 8–12 repeticiones.',
+    'Valoración individualizada antes de intensificar. Dosificación orientativa: 2–3 series de 8–10 repeticiones con carga baja, bajo supervisión y con seguimiento estrecho del equipo médico.'
+  ];
+  const INDICE = { verde: 0, amarillo: 1, rojo: 2 };
+  let semana = 12, elegido = 'cuadriceps';
+
+  const pct = (v, firmado) => `${firmado && v > 0 ? '+' : ''}${Number(v).toLocaleString('es', { maximumFractionDigits: 1, minimumFractionDigits: 1 })} %`;
+  const resultados = () => {
+    const datos = Erdm.simular(Sesion.astronauta, semana), r = {};
+    Erdm.MUSCULOS.forEach((m) => { r[m.clave] = { cambios: datos[m.clave], ...Erdm.puntuar(datos[m.clave]) }; });
+    return r;
+  };
+
+  function dibujar() {
+    if (!Sesion.astronauta) return;
+    const r = resultados();
+    $('erdm-musculos').innerHTML = Erdm.MUSCULOS.map((m) => {
+      const x = r[m.clave];
+      return `<button type="button" class="tarjeta pila" data-musculo="${m.clave}" aria-pressed="${m.clave === elegido}" style="text-align:left; ${m.clave === elegido ? 'outline:2px solid currentColor' : ''}">
+        <span class="titulo-tarjeta">${UI.esc(m.nombre)}</span>
+        <span class="cifra" style="color:var(--${x.nivel === 'verde' ? 'verde-texto' : x.nivel === 'amarillo' ? 'amarillo-texto' : 'rojo-texto'})">${x.total}<span class="nota">/10</span></span>
+        <span class="estado estado--${x.nivel}">${TEXTO[x.nivel]}</span>
+        ${x.prioritaria ? '<span class="estado estado--rojo">Evaluación prioritaria</span>' : ''}
+      </button>`;
+    }).join('');
+    detalle(r[elegido]);
+  }
+
+  function detalle(x) {
+    const m = Erdm.MUSCULOS.find((k) => k.clave === elegido), i = INDICE[x.nivel];
+    const filas = Erdm.DIMENSIONES.map((d) => {
+      const v = x.cambios[d.clave], firmado = d.clave === 'coord' || d.clave === 'emg';
+      return `<tr><td>${d.nombre}<br><span class="nota">${d.metodo}</span></td><td>${d.detalle}</td><td>${pct(v, firmado)}</td><td><strong>${x.puntos[d.clave]}</strong> / 2</td></tr>`;
+    }).join('');
+    $('erdm-detalle').innerHTML = `
+      <div class="tarjeta-cabecera"><h3 class="titulo-tarjeta">${UI.esc(m.nombre)}: ${x.total} / 10</h3><span class="estado estado--${x.nivel}">${TEXTO[x.nivel]}</span></div>
+      <div style="overflow-x:auto"><table class="tabla" style="width:100%"><thead><tr style="text-align:left"><th style="text-align:left">Dimensión</th><th style="text-align:left">Qué se compara</th><th style="text-align:left">Cambio vs basal</th><th style="text-align:left">Puntaje</th></tr></thead><tbody>${filas}</tbody></table></div>
+      ${x.prioritaria ? `<p class="estado estado--rojo" role="alert">Alerta prioritaria: ${x.motivos.map(UI.esc).join('; ')}. Se recomienda evaluación prioritaria aunque el puntaje total sea menor.</p>` : ''}
+      <p><strong>Intervención sugerida:</strong> ${UI.esc(PLAN[elegido][i])}.</p>
+      <p class="texto-2">${UI.esc(DOSIS[i])}</p>
+      <p class="nota">Puntaje = fuerza + coordinación + circunferencia + EMG + VO₂pico. 0–3 bajo, 4–6 moderado, 7–10 alto.</p>`;
+  }
+
+  $('erdm-musculos').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-musculo]');
+    if (b) { elegido = b.dataset.musculo; dibujar(); }
+  });
+  $('erdm-semana').addEventListener('input', (e) => {
+    semana = Number(e.target.value);
+    $('erdm-semana-txt').textContent = semana;
+    dibujar();
+  });
+  document.addEventListener('astronauta-elegido', dibujar);
+  document.addEventListener('astronauta-actualizado', dibujar);
+})();
+</script>

@@ -1,0 +1,343 @@
+<!-- SeccionMonitoreo.html — Pantalla de monitoreo neuromuscular.  Fondo: gris.  Responsable: Dashboard
+     Tres columnas: la figura (vista de frente y de espalda, con una zona por grupo muscular), el estado de cada sensor
+     y el detalle del músculo elegido: señal EMG, RMS, acelerómetro, giroscopio y cuatro indicadores.
+     SIMULADO: no hay sensores físicos. Las señales se generan en el navegador a partir de los valores guardados de la
+     última sesión (RMS, frecuencia mediana, velocidad y simetría), así que el RMS de la gráfica coincide con el de la base de datos.
+     Se vuelve a dibujar con "astronauta-elegido", "datos-actualizados" y "astronauta-actualizado". -->
+<section class="seccion seccion--gris seccion--compacta" id="monitoreo">
+  <div class="contenedor contenedor--ancho pila-grande">
+    <div class="seccion-cabecera">
+      <h2 class="titulo">Monitoreo neuromuscular.</h2>
+      <p class="subtitulo">Elige un músculo para ver su señal y cómo va frente a la evaluación basal.</p>
+    </div>
+
+    <div class="tarjeta monitor-barra" id="monitor-barra"></div>
+
+    <article class="tarjeta monitor-orientacion" id="monitor-orientacion" aria-labelledby="mon-t-orient" aria-live="polite"></article>
+
+    <div class="monitor-rejilla">
+      <article class="tarjeta monitor-cuerpo" aria-labelledby="mon-t-cuerpo">
+        <h3 class="titulo-tarjeta" id="mon-t-cuerpo">Dónde se mide</h3>
+        <div class="monitor-figuras" id="monitor-figuras"></div>
+        <div class="segmentado" data-segmentado id="ctl-anat" role="group" aria-label="Vista del cuerpo" style="justify-self:center">
+          <button type="button" data-valor="front" aria-pressed="true">De frente</button>
+          <button type="button" data-valor="back" aria-pressed="false">De espalda</button>
+        </div>
+        <p class="nota" id="monitor-pista" aria-live="polite"></p>
+      </article>
+
+      <article class="tarjeta" aria-labelledby="mon-t-sensores">
+        <h3 class="titulo-tarjeta" id="mon-t-sensores">Estado de sensores</h3>
+        <ul class="lista monitor-sensores" id="monitor-sensores"></ul>
+      </article>
+
+      <div class="monitor-detalle" aria-live="polite">
+        <article class="tarjeta pila" id="monitor-cabecera"></article>
+        <div class="rejilla rejilla-2">
+          <article class="tarjeta pila"><div class="tarjeta-cabecera"><h3 class="titulo-tarjeta">Señal EMG</h3><span class="nota">µV</span></div><canvas class="grafica" id="g-emg" role="img" aria-label="Señal electromiográfica simulada de los últimos 10 segundos"></canvas></article>
+          <article class="tarjeta pila"><div class="tarjeta-cabecera"><h3 class="titulo-tarjeta">RMS / activación</h3><span class="nota">µV</span></div><canvas class="grafica" id="g-rms" role="img" aria-label="Valor RMS de la señal en los últimos 10 segundos"></canvas></article>
+          <article class="tarjeta pila"><div class="tarjeta-cabecera"><h3 class="titulo-tarjeta">Acelerómetro</h3><span class="nota monitor-leyenda"><i data-s="0"></i>ax <i data-s="1"></i>ay <i data-s="2"></i>az · g</span></div><canvas class="grafica" id="g-acc" role="img" aria-label="Aceleración simulada en los tres ejes"></canvas></article>
+          <article class="tarjeta pila"><div class="tarjeta-cabecera"><h3 class="titulo-tarjeta">Giroscopio</h3><span class="nota monitor-leyenda"><i data-s="0"></i>gx <i data-s="1"></i>gy <i data-s="2"></i>gz · °/s</span></div><canvas class="grafica" id="g-gir" role="img" aria-label="Velocidad angular simulada en los tres ejes"></canvas></article>
+        </div>
+        <div class="rejilla rejilla-4" id="monitor-kpis"></div>
+      </div>
+    </div>
+
+    <p class="nota" style="text-align:center" id="monitor-nota"></p>
+  </div>
+</section>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const NIVEL = { verde: 0, amarillo: 1, rojo: 2 }, NOMBRE_NIVEL = ['verde', 'amarillo', 'rojo'];
+  const TEXTO_NIVEL = { verde: 'Estable', amarillo: 'Vigilar', rojo: 'Atender' };
+  // Qué ejercicio carga cada grupo (para tomar su velocidad y su simetría)
+  const EJERCICIO_DE = { cuadriceps: 'sentadilla', gluteo_mayor: 'sentadilla', gastrocnemio_soleo: 'elevacion_talones', erectores_espinales: 'peso_muerto', dorsal_ancho: 'remo_sentado' };
+  const GRUPOS = ['cuadriceps', 'gluteo_mayor', 'gastrocnemio_soleo', 'erectores_espinales', 'dorsal_ancho'];
+  const REDUCIR = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const VENTANA = 10;           // segundos que se ven en cada gráfica
+  let grupoActivo = 'cuadriceps', serie = null, visible = false, t0 = performance.now(), series = {}, nivelesPorGrupo = {};
+
+  const num = (n, d = 0) => Number(n).toLocaleString('es', { maximumFractionDigits: d, minimumFractionDigits: d });
+  const pct = (v) => v === null ? 'sin basal' : `${v < 0 ? '−' : '+'}${num(Math.abs(v), 1)} %`;
+  const etiquetaGrupo = (v) => { const c = Sesion.datos.Catalogos.find((x) => x.lista === 'grupo_muscular' && x.valor === v); return c ? c.etiqueta : v; };
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+  /* ============================================================
+     FIGURA: una zona por grupo, en vista de frente y de espalda
+     Cada zona lleva data-grupo; el número es el del sensor (1 a 5).
+     ============================================================ */
+  // Anatomía real del modelo 3D (músculos), dibujada con luz de estudio de frente y de espalda: assets/anatomia2d/.
+  // Cada grupo es una máscara que se tiñe con su estado. El modelo trae erectores y dorsal juntos en una sola pieza ("back").
+  const BASE_IMG = (typeof API !== 'undefined' && API.modo === 'local') ? '/assets/anatomia2d/' : 'https://astra-fit-modelos.dapxco.workers.dev/assets/anatomia2d/';
+  const ZONAS = {"M":{"front":{"quad":{"x0":0.3648792938775991,"y0":0.4340569322623258,"x1":0.6364696833699164,"y1":0.7784007634591723}},"back":{"glute":{"x0":0.3616933993998699,"y0":0.40711131135008916,"x1":0.637651570547983,"y1":0.7564019338765351},"back":{"x0":0.41173647122026524,"y0":0.10589440187989996,"x1":0.5871130005069273,"y1":0.47341342728744684},"gastro":{"x0":0.35731553172048625,"y0":0.6814347287122767,"x1":0.6415655421726777,"y1":0.9683351087017433}}},"F":{"front":{"quad":{"x0":0.30246802048423405,"y0":0.41013433558179924,"x1":0.676537513804452,"y1":0.7559460995740364}},"back":{"glute":{"x0":0.29693416111547827,"y0":0.3899068684023096,"x1":0.6997490569832568,"y1":0.7300607208606266},"back":{"x0":0.39459402378303704,"y0":0.09728076058358881,"x1":0.589923242377549,"y1":0.44468753542410033},"gastro":{"x0":0.3434973540914128,"y0":0.6521867077380108,"x1":0.6548978978652928,"y1":0.9681416598465709}}}};   // caja de cada pieza en la imagen (0 a 1), para colocar las marcas
+  const MALLA = { cuadriceps: 'quad', gluteo_mayor: 'glute', gastrocnemio_soleo: 'gastro', erectores_espinales: 'back', dorsal_ancho: 'back' };
+  const VISTA = { quad: 'front', glute: 'back', gastro: 'back', back: 'back' };
+  const LADO = { cuadriceps: 'd', gluteo_mayor: 'i', gastrocnemio_soleo: 'd', erectores_espinales: 'd', dorsal_ancho: 'i' };   // de qué lado va la marca
+  const ANCLA = { cuadriceps: [.3, .45], gluteo_mayor: [.26, .4], gastrocnemio_soleo: [.26, .5], erectores_espinales: [.5, .66], dorsal_ancho: [.3, .22] };   // punto de la pieza (fracción de su caja)
+  let vistaActual = 'front', sexoImg = null;
+
+  function construirFiguras(sexo) {
+    const sx = sexo === 'F' ? 'F' : 'M', p = sx.toLowerCase(); sexoImg = sx;
+    const capa = (vista) => {
+      const mallas = vista === 'front' ? ['quad'] : ['back', 'glute', 'gastro'];
+      const zonas = mallas.map((m) => `<span class="anat-zona" data-malla="${m}" style="--mascara:url(${BASE_IMG}${p}-${vista}-${m}.png)"></span>`).join('');
+      let lineas = '', marcas = '';
+      GRUPOS.filter((g) => VISTA[MALLA[g]] === vista).forEach((g) => {
+        const bb = ZONAS[sx][vista][MALLA[g]]; if (!bb) return;
+        const ax = bb.x0 + (bb.x1 - bb.x0) * (LADO[g] === 'd' ? 1 - ANCLA[g][0] : ANCLA[g][0]), ay = bb.y0 + (bb.y1 - bb.y0) * ANCLA[g][1], mx = LADO[g] === 'd' ? .94 : .06;
+        lineas += `<line data-grupo="${g}" x1="${(ax * 100).toFixed(2)}" y1="${(ay * 156.25).toFixed(2)}" x2="${mx * 100}" y2="${(ay * 156.25).toFixed(2)}"/><circle data-grupo="${g}" cx="${(ax * 100).toFixed(2)}" cy="${(ay * 156.25).toFixed(2)}" r="1.1"/>`;
+        marcas += `<button type="button" class="anat-marca" data-grupo="${g}" style="left:${mx * 100}%;top:${(ay * 100).toFixed(2)}%" aria-label="${UI.esc(etiquetaGrupo(g))}">${GRUPOS.indexOf(g) + 1}</button>`;
+      });
+      return `<div class="anat-capa" data-vista="${vista}"><img class="anat-base" src="${BASE_IMG}${p}-${vista}-base.png" alt="Anatomía muscular, vista ${vista === 'front' ? 'de frente' : 'de espalda'}" width="640" height="1000" decoding="async">${zonas}<svg class="anat-lineas" viewBox="0 0 100 156.25" aria-hidden="true">${lineas}</svg>${marcas}</div>`;
+    };
+    $('monitor-figuras').innerHTML = capa('front') + capa('back');
+    mostrarVista(vistaActual);
+  }
+  function mostrarVista(v) {
+    vistaActual = v;
+    document.querySelectorAll('#monitor-figuras .anat-capa').forEach((c) => c.classList.toggle('visible', c.dataset.vista === v));
+    document.querySelectorAll('#ctl-anat button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.valor === v)));
+  }
+
+  /* ============================================================
+     DATOS: de la base de datos a lo que muestra cada músculo
+     ============================================================ */
+  const ultimaAlerta = (id, g) => Sesion.datos.Alertas.filter((a) => a.id_astronauta === id && a.grupo_muscular === g)
+    .sort((p, q) => String(q.creada_en).localeCompare(String(p.creada_en)))[0] || null;
+  const nivelGrupo = (id, g) => { const a = ultimaAlerta(id, g); return a ? (NIVEL[a.nivel] ?? 0) : 0; };
+  const media = (l) => l.length ? l.reduce((t, x) => t + x, 0) / l.length : null;
+
+  /** Lo último que se sabe de un grupo: EMG de su sesión más reciente frente a su basal, y velocidad y simetría de esa sesión. */
+  function resumen(id, g) {
+    const D = Sesion.datos, sesiones = D.Sesiones.filter((s) => s.id_astronauta === id), porId = new Map(sesiones.map((s) => [s.id_sesion, s]));
+    const filas = D.EMG.filter((e) => e.id_astronauta === id && e.grupo_muscular === g && porId.has(e.id_sesion)).map((e) => ({ ...e, ses: porId.get(e.id_sesion) }));
+    if (!filas.length) return null;
+    const fecha = filas.map((f) => f.ses.fecha).sort().pop(), ult = filas.filter((f) => f.ses.fecha === fecha), basal = filas.filter((f) => f.ses.fase === 'basal');
+    const m = (arr, k) => media(arr.map((x) => Number(x[k])));
+    const sesUlt = ult[0].ses, ej = EJERCICIO_DE[g];
+    const basalSes = sesiones.filter((s) => s.fase === 'basal' && s.ejercicio === sesUlt.ejercicio);
+    return {
+      fecha, rms: m(ult, 'rms_uv'), frec: m(ult, 'frec_mediana_hz'),
+      rmsBasal: basal.length ? m(basal, 'rms_uv') : null, frecBasal: basal.length ? m(basal, 'frec_mediana_hz') : null,
+      vel: Number(sesUlt.velocidad_media_ms), velBasal: media(basalSes.map((s) => Number(s.velocidad_media_ms))), sim: Number(sesUlt.simetria_pct), ejercicio: sesUlt.ejercicio || ej
+    };
+  }
+
+  /* ============================================================
+     SEÑALES SIMULADAS (deterministas: la misma semilla da la misma señal)
+     ============================================================ */
+  function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  const semilla = (s) => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
+
+  function crearSerie(id, g, r) {
+    const R = mulberry(semilla(id + g)), rms = r.rms, frec = r.frec;
+    const T = Math.min(5, Math.max(2, 2.2 / (r.vel || .7)));                   // segundos por repetición: más lento = más largo
+    // Señal EMG: 12 sinusoides alrededor de la frecuencia mediana, con fases al azar, moduladas por la contracción
+    const comp = Array.from({ length: 12 }, (_, k) => ({ f: frec * (.55 + .09 * k), p: R() * 6.283 }));
+    const env = (t) => { const x = ((t % T) + T) % T / T; return .12 + .88 * Math.pow(Math.max(0, Math.sin(Math.PI * Math.min(1, x * 1.35))), 2); };
+    let m2 = 0; for (let i = 0; i < 400; i++) m2 += env(i / 400 * T) ** 2; m2 /= 400;
+    const A = rms / Math.sqrt(6 * m2);              // 12 sinusoides de amplitud 1 tienen RMS √6; así el RMS total es el guardado
+    const emg = (t) => { let s = 0; for (const c of comp) s += Math.sin(6.283 * c.f * t + c.p); return A * env(t) * s; };
+    // Movimiento: mismo ritmo que la repetición. La velocidad escala la amplitud; la simetría reparte la carga entre ejes.
+    const w = 6.283 / T, v = (r.vel || .7) / .7, s = Math.max(.5, Math.min(1, (r.sim || 96) / 100));
+    const ph = [R() * 6.283, R() * 6.283, R() * 6.283];
+    const acc = [(t) => .9 + .30 * v * Math.sin(w * t + ph[0]), (t) => .12 * v * Math.sin(2 * w * t + ph[1]) + .05 * (1 - s) * Math.sin(9 * w * t), (t) => -.2 + .25 * v * Math.sin(w * t + ph[2])];
+    const gir = [(t) => 70 * v * Math.sin(w * t + ph[0]), (t) => 45 * v * Math.sin(2 * w * t + ph[1]) + 30 * (1 - s) * Math.sin(7 * w * t), (t) => 55 * v * Math.sin(w * t + ph[2] + 1)];
+    return { emg, acc, gir, T, act: env };
+  }
+
+  /* ============================================================
+     GRÁFICAS (canvas)
+     ============================================================ */
+  function preparar(c) {
+    const r = c.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2);
+    if (c.width !== Math.round(r.width * d) || c.height !== Math.round(r.height * d)) { c.width = Math.round(r.width * d); c.height = Math.round(r.height * d); }
+    const x = c.getContext('2d'); x.setTransform(d, 0, 0, d, 0, 0); return { x, w: r.width, h: r.height };
+  }
+  function ejes(x, w, h, lo, hi, paso, fmt) {
+    const ml = 38, mb = 18, mt = 6, mr = 6, pw = w - ml - mr, ph = h - mb - mt;
+    x.clearRect(0, 0, w, h); x.font = '10px ' + css('--fuente'); x.fillStyle = css('--tinta-3'); x.strokeStyle = css('--linea-suave'); x.lineWidth = 1;
+    x.textAlign = 'right'; x.textBaseline = 'middle';
+    for (let v = lo; v <= hi + 1e-9; v += paso) { const yy = mt + ph - (v - lo) / (hi - lo) * ph; x.beginPath(); x.moveTo(ml, yy); x.lineTo(w - mr, yy); x.stroke(); x.fillText(fmt(v), ml - 5, yy); }
+    x.textAlign = 'center'; x.textBaseline = 'top';
+    for (let s = 0; s <= VENTANA; s += 2) x.fillText(String(s), ml + s / VENTANA * pw, h - mb + 4);
+    return { ml, mt, pw, ph, X: (s) => ml + s / VENTANA * pw, Y: (v) => mt + ph - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo) * ph };
+  }
+  function trazar(x, P, f, t, color, ancho = 1.4) {
+    const n = Math.floor(P.pw); x.strokeStyle = color; x.lineWidth = ancho; x.lineJoin = 'round'; x.beginPath();
+    for (let i = 0; i <= n; i++) { const s = i / n * VENTANA, px = P.ml + i, py = P.Y(f(t - VENTANA + s)); i ? x.lineTo(px, py) : x.moveTo(px, py); }
+    x.stroke();
+  }
+  const rango = (v) => { const m = Math.max(1e-6, v), e = Math.pow(10, Math.floor(Math.log10(m))), n = m / e, paso = (n <= 1.2 ? .2 : n <= 2.4 ? .5 : n <= 6 ? 1 : 2) * e; return { hi: Math.ceil(m / paso) * paso, paso }; };
+
+  function dibujar(t) {
+    if (!serie) return;
+    const azul = css('--marca-azul'), turq = css('--marca-turquesa'), mor = css('--marca-morado'), pico = serie.pico;
+    // EMG
+    { const { x, w, h } = preparar($('g-emg')), q = rango(pico * .8), P = ejes(x, w, h, -q.hi, q.hi, q.hi / 2, (v) => num(v, v % 1 ? 1 : 0));
+      x.save(); x.shadowColor = azul; x.shadowBlur = REDUCIR ? 0 : 7; trazar(x, P, serie.emg, t, azul, 1.1); x.restore();
+      punto(x, P, serie.emg(t), azul); }
+    // RMS (ventana de 0,5 s sobre la señal)
+    { const { x, w, h } = preparar($('g-rms')), q = rango(serie.rmsMax * 1.15), P = ejes(x, w, h, 0, q.hi, q.hi / 4, (v) => num(v, v % 1 ? 1 : 0));
+      const rms = (tt) => { let s = 0; const N = 40; for (let i = 0; i < N; i++) { const e = serie.emg(tt - .5 + i / N * .5); s += e * e; } return Math.sqrt(s / N); };
+      x.beginPath(); const n = Math.floor(P.pw); for (let i = 0; i <= n; i++) { const px = P.ml + i, py = P.Y(rms(t - VENTANA + i / n * VENTANA)); i ? x.lineTo(px, py) : x.moveTo(px, py); }
+      x.lineTo(P.ml + n, P.Y(0)); x.lineTo(P.ml, P.Y(0)); x.closePath(); x.fillStyle = azul + '26'; x.fill();
+      trazar(x, P, rms, t, azul, 1.8); punto(x, P, rms(t), azul); }
+    // Acelerómetro y giroscopio
+    { const { x, w, h } = preparar($('g-acc')), P = ejes(x, w, h, -1, 1.5, .5, (v) => num(v, 1)); [azul, turq, mor].forEach((c, i) => trazar(x, P, serie.acc[i], t, c)); }
+    { const { x, w, h } = preparar($('g-gir')), P = ejes(x, w, h, -150, 150, 100, (v) => num(v)); [azul, turq, mor].forEach((c, i) => trazar(x, P, serie.gir[i], t, c)); }
+  }
+  // La leyenda de colores usa las mismas variables que las líneas
+  document.querySelectorAll('.monitor-leyenda i').forEach((i) => { i.style.background = css(['--marca-azul', '--marca-turquesa', '--marca-morado'][i.dataset.s]); });
+
+  function bucle(now) {
+    requestAnimationFrame(bucle);
+    if (!visible || document.hidden || !serie) return;
+    const t = REDUCIR ? serie.T * 1.2 : (now - t0) / 1000;
+    dibujar(t); latir(t);
+  }
+  requestAnimationFrame(bucle);
+  new IntersectionObserver((en) => { visible = en[0].isIntersecting; if (visible && serie) dibujar(REDUCIR ? serie.T * 1.2 : (performance.now() - t0) / 1000); }).observe($('monitoreo'));
+  new ResizeObserver(() => { if (serie) dibujar(REDUCIR ? serie.T * 1.2 : (performance.now() - t0) / 1000); }).observe($('g-emg'));
+
+
+  /* ============================================================
+     ANIMACIÓN: punto al frente de la señal, latido de las zonas, ondas por sensor y cifras que suben
+     ============================================================ */
+  function punto(x, P, valor, color) {
+    const px = P.X(VENTANA), py = P.Y(valor);
+    x.save(); x.fillStyle = color + '33'; x.beginPath(); x.arc(px, py, 7, 0, 6.283); x.fill();
+    x.fillStyle = color; x.beginPath(); x.arc(px, py, 3.2, 0, 6.283); x.fill(); x.restore();
+  }
+  /** Cada zona del cuerpo late con su propia contracción; la elegida, con más fuerza. */
+  function latir(t) {
+    document.querySelectorAll('#monitor-figuras .anat-zona').forEach((z) => {
+      const activa = z.classList.contains('activa'), g = activa ? grupoActivo : GRUPOS.find((x) => MALLA[x] === z.dataset.malla), s = series[g];
+      if (!s) { z.style.opacity = ''; return; }
+      const a = s.act(t + GRUPOS.indexOf(g) * .35);
+      z.style.opacity = String(activa ? .5 + .5 * a : .62 + .3 * a);
+    });
+    document.querySelectorAll('.sensor-onda').forEach((c) => {
+      const s = series[c.dataset.g]; if (!s) return;
+      const { x, w, h } = preparar(c), n = Math.max(2, Math.floor(w)), activa = c.dataset.g === grupoActivo;
+      x.clearRect(0, 0, w, h); x.beginPath();
+      for (let i = 0; i <= n; i++) { const tt = t - 6 + i / n * 6, v = s.act(tt); const px = i / n * w, py = h - 2 - v * (h - 5); i ? x.lineTo(px, py) : x.moveTo(px, py); }
+      x.strokeStyle = activa ? css('--marca-azul') : css('--tinta-3'); x.lineWidth = 1.4; x.stroke();
+      x.lineTo(w, h); x.lineTo(0, h); x.closePath(); x.fillStyle = (activa ? css('--marca-azul') : css('--tinta-3')) + '22'; x.fill();
+    });
+  }
+  function subirCifras() {
+    const els = [...document.querySelectorAll('#monitor-kpis .n[data-v]')]; if (!els.length) return;
+    if (REDUCIR) return;
+    const inicio = performance.now(), dur = 750;
+    const paso = (ahora) => {
+      const k = Math.min(1, (ahora - inicio) / dur), e = 1 - Math.pow(1 - k, 3);
+      els.forEach((el) => { el.textContent = num(Number(el.dataset.v) * e, Number(el.dataset.d)); });
+      if (k < 1) requestAnimationFrame(paso); else els.forEach((el) => { el.textContent = num(Number(el.dataset.v), Number(el.dataset.d)); });
+    };
+    requestAnimationFrame(paso);
+  }
+  function recalcularSeries(a) {
+    series = {};
+    GRUPOS.forEach((g) => { const r = resumen(a.id_astronauta, g); if (r) series[g] = crearSerie(a.id_astronauta, g, r); });
+  }
+
+  /* ============================================================
+     PANTALLA
+     ============================================================ */
+  function dibujarBarra(a) {
+    $('monitor-barra').innerHTML = `
+      <div class="monitor-barra-id">${UI.avatar(a)}<div><p class="texto" style="font-weight:600">${UI.esc(a.nombre)}</p><p class="nota">${UI.esc(a.id_astronauta)} · Sesión de monitoreo activa</p></div></div>
+      <ul class="monitor-barra-estado" aria-label="Estado del equipo, simulado">
+        <li><span class="estado estado--verde">Enlace BLE conectado</span></li>
+        <li><span class="estado estado--verde">Batería 92 %</span></li>
+        <li><span class="estado estado--verde">Unidad ASTRA-FIT operativa</span></li>
+      </ul>`;
+  }
+
+  /** Lo primero que ve el astronauta: cómo está hoy y qué hacer. Sale de las alertas abiertas y sus recomendaciones. */
+  function dibujarOrientacion(a) {
+    const abiertas = Sesion.datos.Alertas.filter((x) => x.id_astronauta === a.id_astronauta && x.estado !== 'cerrada');
+    const peor = typeof Alertas !== 'undefined' ? Alertas.peorNivel(abiertas) : 'verde';
+    const titulo = { rojo: 'Hoy hay algo que atender.', amarillo: 'Hoy conviene vigilar.', verde: 'Hoy todo va dentro de lo esperado.' }[peor];
+    // Una recomendación por grupo y por tipo de indicador, las más graves primero, máximo tres
+    const vistos = new Set(), acciones = abiertas.slice().sort((p, q) => (NIVEL[q.nivel] ?? 0) - (NIVEL[p.nivel] ?? 0) || String(q.creada_en).localeCompare(String(p.creada_en)))
+      .filter((x) => { if (!x.recomendacion || vistos.has(x.recomendacion)) return false; vistos.add(x.recomendacion); return true; }).slice(0, 3);
+    const rojas = abiertas.filter((x) => x.nivel === 'rojo').length, amarillas = abiertas.filter((x) => x.nivel === 'amarillo').length;
+    $('monitor-orientacion').innerHTML = `
+      <div class="orientacion-cabecera">
+        <div><p class="nota">Orientación de hoy</p><h3 class="titulo-tarjeta" id="mon-t-orient">${titulo}</h3>
+          <p class="pequeno texto-2">${abiertas.length ? `${rojas} ${rojas === 1 ? 'alerta' : 'alertas'} y ${amarillas} de precaución abiertas.` : 'No hay alertas abiertas. Sigue con tu entrenamiento habitual.'}</p></div>
+        <span class="estado estado--${peor}">${TEXTO_NIVEL[peor]}</span>
+      </div>
+      ${acciones.length ? `<ol class="orientacion-lista">${acciones.map((x) => `<li><span class="estado estado--${x.nivel}" aria-label="${TEXTO_NIVEL[x.nivel]}"></span><span class="pequeno"><strong>${UI.esc(etiquetaGrupo(x.grupo_muscular) || 'General')}.</strong> ${UI.esc(x.recomendacion)}</span></li>`).join('')}</ol>` : ''}
+      <div class="acciones" style="justify-content:flex-start"><a class="boton boton--pequeno" href="#registro">Registrar una evaluación</a><a class="enlace pequeno" href="#alertas">Ver las alertas</a></div>
+      <p class="nota">Son indicadores de seguimiento, no diagnósticos. Ante una alerta roja, consulta al médico de vuelo.</p>`;
+  }
+
+  function dibujarSensores(a) {
+    $('monitor-sensores').innerHTML = GRUPOS.map((g, i) => {
+      const n = NOMBRE_NIVEL[nivelGrupo(a.id_astronauta, g)], r = resumen(a.id_astronauta, g), cambio = r && r.rmsBasal ? (r.rms / r.rmsBasal - 1) * 100 : null;
+      return `<li aria-current="${g === grupoActivo}"><button type="button" class="sensor-fila" data-grupo="${g}">
+        <span class="sensor-num" aria-hidden="true">${i + 1}</span>
+        <span class="sensor-texto"><span class="texto" style="font-weight:600">${UI.esc(etiquetaGrupo(g))}</span><span class="nota">Conectado · RMS ${r ? pct(cambio) : 'sin registros'}</span></span>
+        <span class="estado estado--${n}">${TEXTO_NIVEL[n]}</span>
+        <canvas class="sensor-onda" data-g="${g}" aria-hidden="true"></canvas></button></li>`;
+    }).join('');
+  }
+
+  function marcarZonas(a) {
+    const nivelDeMalla = (m) => Math.max(...GRUPOS.filter((g) => MALLA[g] === m).map((g) => nivelGrupo(a.id_astronauta, g)));
+    document.querySelectorAll('#monitor-figuras .anat-zona').forEach((z) => { z.dataset.nivel = NOMBRE_NIVEL[nivelDeMalla(z.dataset.malla)]; z.classList.toggle('activa', MALLA[grupoActivo] === z.dataset.malla); });
+    document.querySelectorAll('#monitor-figuras [data-grupo]').forEach((el) => {
+      const activa = el.dataset.grupo === grupoActivo; el.classList.toggle('activa', activa);
+      if (el.classList.contains('anat-marca')) el.setAttribute('aria-pressed', String(activa));
+    });
+  }
+
+  function dibujarDetalle(a) {
+    const g = grupoActivo, r = resumen(a.id_astronauta, g), n = NOMBRE_NIVEL[nivelGrupo(a.id_astronauta, g)], alerta = ultimaAlerta(a.id_astronauta, g);
+    $('monitor-pista').textContent = `${GRUPOS.indexOf(g) + 1}. ${etiquetaGrupo(g)}, ambos lados`;
+    $('monitor-cabecera').innerHTML = `
+      <div class="tarjeta-cabecera"><h3 class="titulo-tarjeta">${UI.esc(etiquetaGrupo(g))} seleccionado</h3><span class="monitor-vivo"><i></i>En vivo · simulado</span><span class="estado estado--${n}">${TEXTO_NIVEL[n]}</span></div>
+      <p class="pequeno texto-2">${r ? `Sesión del ${UI.esc(r.fecha)}, ${UI.esc(String(r.ejercicio).replace(/_/g, ' '))}. ` : ''}${alerta ? UI.esc(alerta.mensaje) : 'Sin alertas para este grupo.'}</p>`;
+    if (!r) {
+      serie = null;
+      ['g-emg', 'g-rms', 'g-acc', 'g-gir'].forEach((id) => { const { x, w, h } = preparar($(id)); x.clearRect(0, 0, w, h); });
+      $('monitor-kpis').innerHTML = '<p class="pequeno texto-2" style="grid-column:1/-1">Todavía no hay registros de EMG para este grupo.</p>';
+      return;
+    }
+    serie = series[g] || (series[g] = crearSerie(a.id_astronauta, g, r));
+    // Escalas: el pico de la señal y el RMS máximo en una repetición
+    let pico = 0, rmsMax = 0; for (let i = 0; i < 1500; i++) { const tt = i / 1500 * serie.T * 2; pico = Math.max(pico, Math.abs(serie.emg(tt))); }
+    for (let i = 0; i < 150; i++) { const tt = i / 150 * serie.T * 2; let s = 0; for (let k = 0; k < 40; k++) { const e = serie.emg(tt - .5 + k / 40 * .5); s += e * e; } rmsMax = Math.max(rmsMax, Math.sqrt(s / 40)); }
+    serie.pico = pico; serie.rmsMax = rmsMax;
+    const activ = r.rmsBasal ? r.rms / r.rmsBasal * 100 : null, caida = r.frecBasal ? Math.max(0, (1 - r.frec / r.frecBasal) * 100) : null;
+    const kpi = (titulo, valor, dec, unidad, nota) => `<article class="tarjeta pila"><p class="nota">${titulo}</p><span class="cifra"><span class="n"${valor === null ? '' : ` data-v="${valor}" data-d="${dec}"`}>${valor === null ? '—' : num(valor, dec)}</span><small>${valor === null ? '' : unidad}</small></span><p class="nota">${nota}</p></article>`;
+    $('monitor-kpis').innerHTML =
+      kpi('Activación', activ, 0, '%', 'RMS frente a su basal') +
+      kpi('Velocidad', r.vel, 2, 'm/s', r.velBasal ? `Basal ${num(r.velBasal, 2)} m/s` : 'Sin basal') +
+      kpi('Simetría', r.sim, 1, '%', '100 % = lados iguales') +
+      kpi('Fatiga estimada', caida, 0, '%', 'Caída de la frecuencia mediana');
+    subirCifras();
+  }
+
+  function dibujarTodo() {
+    const a = Sesion.astronauta; if (!a) return;
+    const sx = String(a.sexo).toUpperCase() === 'F' ? 'F' : 'M'; if (sexoImg !== sx) construirFiguras(sx);
+    recalcularSeries(a); dibujarBarra(a); dibujarOrientacion(a); dibujarSensores(a); marcarZonas(a); dibujarDetalle(a);
+    $('monitor-nota').textContent = 'Datos simulados: no hay sensores físicos. Las señales se generan a partir de la última sesión guardada y son indicadores de seguimiento, no diagnósticos. Anatomía: BodyParts3D © DBCLS (CC BY 4.0), adaptada por open-anatomy-3d.';
+    requestAnimationFrame(() => dibujar(REDUCIR ? (serie ? serie.T * 1.2 : 0) : (performance.now() - t0) / 1000));
+  }
+  function elegir(g) { if (!GRUPOS.includes(g)) return; grupoActivo = g; mostrarVista(VISTA[MALLA[g]]); dibujarTodo(); }
+
+  $('monitor-sensores').addEventListener('click', (e) => { const b = e.target.closest('[data-grupo]'); if (b) elegir(b.dataset.grupo); });
+  $('monitor-figuras').addEventListener('click', (e) => { const z = e.target.closest('[data-grupo]'); if (z) elegir(z.dataset.grupo); });
+  $('ctl-anat').addEventListener('cambio', (e) => mostrarVista(e.detail));
+  document.addEventListener('astronauta-elegido', () => { grupoActivo = 'cuadriceps'; vistaActual = 'front'; t0 = performance.now(); dibujarTodo(); });
+  document.addEventListener('datos-actualizados', dibujarTodo);
+  document.addEventListener('astronauta-actualizado', (e) => { if (Sesion.astronauta && e.detail.id_astronauta === Sesion.astronauta.id_astronauta) dibujarTodo(); });
+})();
+</script>

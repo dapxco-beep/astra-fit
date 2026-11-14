@@ -1,0 +1,317 @@
+<!--
+  Estilos.html — FORMATO ÚNICO DE ASTRA-FIT
+  Lenguaje visual inspirado en el sitio de Apple + reglas de la skill apple-design
+  (tipografía por tamaño, barra translúcida, respuesta al presionar, accesibilidad).
+
+  REGLA DEL EQUIPO: ningún otro archivo define colores, tamaños de letra, radios ni sombras.
+  Si necesitas algo nuevo, agrégalo AQUÍ como variable o clase y avisa al equipo.
+  Ver la página de componentes:  ?page=componentes
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+<style>
+/* ================================================================ 1. TOKENS */
+:root {
+  /* Superficies */
+  --fondo: #f5f5f7;             /* gris de página */
+  --blanco: #ffffff;            /* secciones y tarjetas claras */
+  --negro: #000000;             /* secciones oscuras (lo visual: el cuerpo) */
+  --carbon: #1d1d1f;            /* tarjetas sobre negro */
+
+  /* Texto */
+  --tinta: #1d1d1f;             /* principal */
+  --tinta-2: #6e6e73;           /* secundario */
+  --tinta-3: #86868b;           /* notas, ejes, ayudas */
+  --tinta-clara: #f5f5f7;       /* principal sobre negro */
+  --tinta-clara-2: #a1a1a6;     /* secundario sobre negro */
+
+  /* Líneas */
+  --linea: #d2d2d7;
+  --linea-suave: rgba(0, 0, 0, .08);
+  --linea-oscura: rgba(255, 255, 255, .14);
+
+  /* Acento: acciones y enlaces */
+  --azul: #0071e3;
+  --azul-hover: #0077ed;
+  --azul-enlace: #0066cc;
+  --azul-sobre-negro: #2997ff;
+  --anillo-foco: rgba(0, 113, 227, .45);
+
+  /* Semáforo: punto, texto legible y fondo suave */
+  --verde: #34c759;     --verde-texto: #248a3d;     --verde-fondo: #e9f8ee;
+  --amarillo: #ff9f0a;  --amarillo-texto: #b25000;  --amarillo-fondo: #fff4e5;
+  --rojo: #ff3b30;      --rojo-texto: #d70015;      --rojo-fondo: #ffeceb;
+  --gris-estado: #aeaeb2;
+
+  /* Tipografía: fuente del sistema (en Mac se ve San Francisco; en Windows, Inter) */
+  --fuente: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --t-hero: clamp(2.75rem, 6vw, 4.75rem);       /* 44–76 px */
+  --t-titulo: clamp(2rem, 4.2vw, 3rem);          /* 32–48 px */
+  --t-subtitulo: clamp(1.1875rem, 2vw, 1.5rem);  /* 19–24 px */
+  --t-tarjeta: 1.5rem;                            /* 24 px */
+  --t-cuerpo: 1.0625rem;                          /* 17 px */
+  --t-pequeno: .875rem;                           /* 14 px */
+  --t-nota: .75rem;                               /* 12 px */
+
+  /* Espacios (múltiplos de 4) */
+  --e-1: 4px; --e-2: 8px; --e-3: 12px; --e-4: 16px; --e-5: 20px; --e-6: 24px;
+  --e-8: 32px; --e-10: 40px; --e-12: 48px; --e-16: 64px;
+  --seccion-y: clamp(72px, 10vw, 128px);
+
+  /* Forma y profundidad */
+  --radio-tarjeta: 28px;
+  --radio-control: 12px;
+  --radio-pildora: 980px;
+  --sombra-suave: 0 2px 12px rgba(0, 0, 0, .06);
+  --ancho: 1080px;
+  --material-claro: rgba(251, 251, 253, .78);
+  --material-oscuro: rgba(22, 22, 23, .78);
+}
+
+/* ================================================================ 2. BASE */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 56px; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--fondo); color: var(--tinta);
+  font-family: var(--fuente); font-size: var(--t-cuerpo); line-height: 1.47;
+  letter-spacing: -0.01em; font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+}
+h1, h2, h3, h4, p, figure { margin: 0; }
+img, svg, canvas { display: block; max-width: 100%; }
+button, input, select, textarea { font: inherit; letter-spacing: inherit; color: inherit; }
+a { color: var(--azul-enlace); }
+:focus-visible { outline: 3px solid var(--anillo-foco); outline-offset: 2px; border-radius: 8px; }
+.contenedor { width: min(var(--ancho), 100% - 44px); margin-inline: auto; }
+.oculto, [hidden] { display: none !important; }
+.solo-lector { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ================================================================ 3. TIPOGRAFÍA
+   Regla: cuanto más grande la letra, más apretado el espaciado y menor el interlineado. */
+.hero-titulo { font-size: var(--t-hero); line-height: 1.05; font-weight: 600; letter-spacing: -0.02em; }
+.titulo      { font-size: var(--t-titulo); line-height: 1.08; font-weight: 600; letter-spacing: -0.02em; }
+.subtitulo   { font-size: var(--t-subtitulo); line-height: 1.33; font-weight: 400; letter-spacing: -0.005em; color: var(--tinta-2); }
+.titulo-tarjeta { font-size: var(--t-tarjeta); line-height: 1.17; font-weight: 600; letter-spacing: -0.012em; }
+.texto       { font-size: var(--t-cuerpo); line-height: 1.47; }
+.texto-2     { color: var(--tinta-2); }
+.pequeno     { font-size: var(--t-pequeno); line-height: 1.43; letter-spacing: -0.005em; }
+.nota        { font-size: var(--t-nota); line-height: 1.33; letter-spacing: 0; color: var(--tinta-3); }
+.hero-titulo, .titulo, .subtitulo { text-wrap: balance; }
+.cifra       { font-size: clamp(2.5rem, 5vw, 3.5rem); line-height: 1.05; font-weight: 600; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; }
+.cifra small { font-size: .45em; font-weight: 600; margin-left: 2px; letter-spacing: 0; }
+
+/* ================================================================ 4. BARRA SUPERIOR (material translúcido) */
+.nav {
+  position: sticky; top: 0; z-index: 50; height: 48px;
+  background: var(--material-claro);
+  backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--linea-suave);
+}
+.nav .contenedor { height: 100%; display: flex; align-items: center; gap: var(--e-8); }
+.nav-marca { margin-right: auto; font-size: 1.1875rem; font-weight: 600; letter-spacing: -0.015em; color: var(--tinta); text-decoration: none; white-space: nowrap; }
+.nav-enlace { font-size: var(--t-nota); color: var(--tinta); opacity: .8; text-decoration: none; transition: opacity .15s; }
+.nav-enlace:hover, .nav-enlace[aria-current="true"] { opacity: 1; }
+.nav-etiqueta { font-size: 11px; padding: 3px 10px; border-radius: var(--radio-pildora); background: var(--amarillo-fondo); color: var(--amarillo-texto); }
+@media (max-width: 640px) { .nav-enlace { display: none; } }
+
+/* ================================================================ 5. SECCIONES */
+.seccion { padding: var(--seccion-y) 0; }
+.seccion--blanca { background: var(--blanco); }
+.seccion--gris { background: var(--fondo); }
+.seccion--negra { background: var(--negro); color: var(--tinta-clara); }
+.seccion--negra .subtitulo, .seccion--negra .texto-2 { color: var(--tinta-clara-2); }
+.seccion-cabecera { max-width: 880px; margin: 0 auto var(--e-16); text-align: center; display: grid; gap: var(--e-4); justify-items: center; }
+
+/* Hero: lo primero que se ve */
+.hero { padding: clamp(64px, 9vw, 112px) 0 clamp(56px, 7vw, 88px); background: var(--blanco); text-align: center; }
+.hero .contenedor { display: grid; gap: var(--e-5); justify-items: center; }
+.hero .subtitulo { max-width: 720px; }
+.acciones { display: flex; flex-wrap: wrap; gap: var(--e-4); justify-content: center; align-items: center; }
+
+/* ================================================================ 6. TARJETAS Y REJILLAS */
+.tarjeta { background: var(--blanco); border-radius: var(--radio-tarjeta); padding: clamp(24px, 3.5vw, 40px); }
+.seccion--blanca .tarjeta { background: var(--fondo); }
+.seccion--negra .tarjeta { background: var(--carbon); }
+.tarjeta--elevada { box-shadow: var(--sombra-suave); }
+.pila { display: grid; gap: var(--e-3); align-content: start; }
+.rejilla { display: grid; gap: var(--e-5); }
+.rejilla-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rejilla-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 833px) { .rejilla-2, .rejilla-3 { grid-template-columns: 1fr; } }
+
+/* Espacio reservado: dónde va algo que aún se está construyendo */
+.reservado {
+  width: 100%; min-height: 300px; border-radius: var(--radio-tarjeta); border: 1.5px dashed var(--linea);
+  display: grid; place-content: center; justify-items: center; gap: var(--e-2); padding: var(--e-10); text-align: center; color: var(--tinta-3);
+}
+.reservado strong { color: var(--tinta-2); font-weight: 600; font-size: var(--t-cuerpo); }
+.reservado code { font-size: var(--t-nota); background: rgba(0, 0, 0, .05); padding: 2px 8px; border-radius: 6px; }
+.seccion--negra .reservado { border-color: var(--linea-oscura); color: var(--tinta-clara-2); }
+.seccion--negra .reservado strong { color: var(--tinta-clara); }
+.seccion--negra .reservado code { background: rgba(255, 255, 255, .1); }
+.reservado--alto { min-height: 520px; }
+
+/* ---- Visor del cuerpo (SeccionCuerpo): lienzo 3D + panel de grupos musculares ---- */
+.cuerpo-rejilla { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr); gap: var(--e-5); align-items: stretch; }
+.visor { position: relative; min-height: 560px; border-radius: var(--radio-tarjeta); overflow: hidden; background: var(--carbon); }
+.visor canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.visor-carga { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: var(--e-3); text-align: center; padding: var(--e-6); color: var(--tinta-clara-2); background: var(--carbon); }
+.visor-carga[hidden] { display: none; }
+.visor-pista { position: absolute; left: var(--e-4); top: var(--e-4); padding: var(--e-1) var(--e-3); border-radius: var(--radio-pildora); background: rgba(0, 0, 0, .55); font-size: var(--t-nota); color: var(--tinta-clara); pointer-events: none; opacity: 0; transition: opacity .15s; }
+.visor-pista.visible { opacity: 1; }
+.cuerpo-controles { display: flex; flex-wrap: wrap; gap: var(--e-4) var(--e-6); margin-top: var(--e-5); align-items: center; }
+.cuerpo-controles .nota { margin-right: var(--e-2); color: var(--tinta-clara-2); }
+.cuerpo-panel { display: flex; flex-direction: column; gap: var(--e-4); }
+.cuerpo-panel .lista > li { padding: var(--e-3) 0; }
+.cuerpo-panel .lista button { all: unset; cursor: pointer; display: contents; }
+.cuerpo-panel .lista li[aria-current="true"] .texto { color: var(--azul-sobre-negro); }
+.cuerpo-panel .lista li:focus-within { outline: 2px solid var(--azul-sobre-negro); outline-offset: 2px; border-radius: 8px; }
+.cuerpo-datos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--e-3); margin: var(--e-3) 0; }
+@media (max-width: 900px) { .cuerpo-rejilla { grid-template-columns: minmax(0, 1fr); } .visor { min-height: 420px; } }
+
+/* ================================================================ 7. BOTONES Y ENLACES
+   Responden al presionar (no al soltar): se encogen un poco en 100 ms. */
+.boton {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--e-2);
+  min-height: 44px; padding: 11px 22px; border: 0; border-radius: var(--radio-pildora);
+  background: var(--azul); color: #fff; font-size: var(--t-cuerpo); font-weight: 400; text-decoration: none; cursor: pointer;
+  transition: background-color .2s, transform .1s;
+}
+.boton:hover { background: var(--azul-hover); }
+.boton:active { transform: scale(.97); }
+.boton:disabled { opacity: .4; cursor: default; transform: none; }
+.boton--secundario { background: transparent; color: var(--azul); box-shadow: inset 0 0 0 1px var(--azul); }
+.boton--secundario:hover { background: rgba(0, 113, 227, .06); }
+.seccion--negra .boton--secundario { color: var(--azul-sobre-negro); box-shadow: inset 0 0 0 1px var(--azul-sobre-negro); }
+.boton--pequeno { min-height: 32px; padding: 6px 14px; font-size: var(--t-pequeno); }
+.enlace { display: inline; padding: 0; border: 0; background: none; color: var(--azul-enlace); font-size: inherit; text-decoration: none; cursor: pointer; }
+.enlace:hover { text-decoration: underline; }
+.enlace::after { content: "\00a0›"; }
+.enlace--simple::after { content: none; }
+.seccion--negra .enlace { color: var(--azul-sobre-negro); }
+
+/* ================================================================ 8. CONTROL SEGMENTADO (elegir una opción) */
+.segmentado { display: inline-flex; flex-wrap: nowrap; max-width: 100%; overflow-x: auto; scrollbar-width: none; gap: 2px; padding: 3px; border-radius: var(--radio-pildora); background: rgba(0, 0, 0, .06); }
+.segmentado::-webkit-scrollbar { display: none; }
+.segmentado button {
+  flex: none; white-space: nowrap; border: 0; background: transparent; padding: 8px 18px; border-radius: var(--radio-pildora);
+  font-size: var(--t-pequeno); color: var(--tinta); cursor: pointer; transition: background-color .2s, transform .1s;
+}
+.segmentado button:active { transform: scale(.97); }
+.segmentado button[aria-pressed="true"] { background: var(--blanco); box-shadow: 0 1px 4px rgba(0, 0, 0, .12); font-weight: 600; }
+.seccion--negra .segmentado { background: rgba(255, 255, 255, .12); }
+.seccion--negra .segmentado button { color: var(--tinta-clara); }
+.seccion--negra .segmentado button[aria-pressed="true"] { background: rgba(255, 255, 255, .92); color: var(--tinta); }
+
+/* ================================================================ 9. SEMÁFORO */
+.estado { display: inline-flex; align-items: center; gap: 7px; font-size: var(--t-pequeno); font-weight: 600; }
+.estado::before { content: ""; flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--gris-estado); }
+.estado--verde    { color: var(--verde-texto); }    .estado--verde::before    { background: var(--verde); }
+.estado--amarillo { color: var(--amarillo-texto); } .estado--amarillo::before { background: var(--amarillo); }
+.estado--rojo     { color: var(--rojo-texto); }     .estado--rojo::before     { background: var(--rojo); }
+.estado--gris     { color: var(--tinta-3); }
+.seccion--negra .estado--verde { color: var(--verde); }
+.seccion--negra .estado--amarillo { color: var(--amarillo); }
+.seccion--negra .estado--rojo { color: #ff6961; }
+
+/* ================================================================ 10. LISTAS */
+.lista { list-style: none; margin: 0; padding: 0; }
+.lista > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--e-1) var(--e-4); align-items: center; padding: var(--e-4) 0; border-top: 1px solid var(--linea-suave); }
+.lista > li:first-child { border-top: 0; }
+.seccion--negra .lista > li { border-color: var(--linea-oscura); }
+
+/* ================================================================ 11. FORMULARIOS */
+.formulario { display: grid; gap: var(--e-6); }
+.formulario-filas { display: grid; gap: var(--e-4) var(--e-5); grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+.campo { display: grid; gap: 6px; align-content: start; }
+.campo label { font-size: var(--t-pequeno); font-weight: 500; }
+.campo input, .campo select, .campo textarea {
+  width: 100%; min-height: 44px; padding: 10px 14px; border-radius: var(--radio-control);
+  border: 1px solid var(--linea); background: var(--blanco); transition: border-color .15s, box-shadow .15s;
+}
+.campo input:focus, .campo select:focus, .campo textarea:focus { outline: none; border-color: var(--azul); box-shadow: 0 0 0 4px rgba(0, 113, 227, .15); }
+.campo .ayuda { font-size: var(--t-nota); color: var(--tinta-3); }
+.campo .error { font-size: var(--t-nota); color: var(--rojo-texto); }
+.campo[data-error] input, .campo[data-error] select { border-color: var(--rojo); }
+
+/* ================================================================ 12. AVISOS (los 4 tipos: estado, completado, advertencia, error) */
+.aviso {
+  position: fixed; left: 50%; bottom: 28px; z-index: 100; display: flex; align-items: center; gap: var(--e-2);
+  padding: 12px 20px; border-radius: var(--radio-pildora); font-size: var(--t-pequeno);
+  background: var(--material-oscuro); color: #fff; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  opacity: 0; transform: translate(-50%, 16px) scale(.98); pointer-events: none; transition: opacity .25s, transform .25s;
+}
+.aviso.visible { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.aviso::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--gris-estado); }
+.aviso--completado::before { background: var(--verde); }
+.aviso--advertencia::before { background: var(--amarillo); }
+.aviso--error::before { background: var(--rojo); }
+
+/* ================================================================ 13. PIE */
+.pie { padding: var(--e-6) 0 var(--e-10); border-top: 1px solid var(--linea-suave); background: var(--fondo); font-size: var(--t-nota); color: var(--tinta-3); }
+
+/* ================================================================ 14. PANTALLA DE ENTRADA (SeccionAcceso.html) */
+:root {
+  /* Colores del logo de Sinergia Cósmica: solo para la marca y los avatares */
+  --marca-azul: #1f56c8;
+  --marca-morado: #6b46c1;
+  --marca-turquesa: #1c9a99;
+  --marca-tinta: #0f1f4b;
+}
+.vista[hidden] { display: none !important; }
+.acceso { min-height: 100vh; background: var(--blanco); padding: clamp(40px, 6vw, 72px) 0 var(--e-16); }
+.acceso .contenedor { display: grid; gap: var(--e-6); justify-items: center; text-align: center; }
+.logo { width: clamp(150px, 18vw, 210px); height: auto; }
+.acceso .subtitulo { max-width: 640px; }
+
+.perfiles { width: 100%; display: grid; gap: var(--e-5); grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: var(--e-6); }
+.perfil {
+  display: grid; justify-items: center; gap: var(--e-2); padding: var(--e-8) var(--e-6);
+  background: var(--fondo); border: 0; border-radius: var(--radio-tarjeta); text-align: center; cursor: pointer;
+  transition: transform .1s, box-shadow .2s, background-color .2s;
+}
+.perfil:hover { background: #ededf0; }
+.perfil:active { transform: scale(.98); }
+.perfil .enlace { margin-top: var(--e-2); font-size: var(--t-pequeno); }
+.avatar {
+  width: 88px; height: 88px; border-radius: 50%; display: grid; place-items: center; margin-bottom: var(--e-2);
+  font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; color: #fff; background: var(--marca-azul);
+}
+.avatar--1 { background: var(--marca-azul); }
+.avatar--2 { background: var(--marca-morado); }
+.avatar--0 { background: var(--marca-turquesa); }
+@media (max-width: 600px) {
+  .perfiles { gap: var(--e-3); }
+  .perfil { grid-template-columns: 56px minmax(0, 1fr); justify-items: start; text-align: left; column-gap: var(--e-4); row-gap: 2px; padding: var(--e-4) var(--e-5); border-radius: 20px; }
+  .perfil .avatar { grid-row: span 4; width: 56px; height: 56px; font-size: 1.25rem; margin: 0; align-self: center; }
+  .perfil .titulo-tarjeta { font-size: 1.1875rem; }
+  .perfil .enlace { margin-top: 0; }
+}
+.perfil-nuevo { background: transparent; box-shadow: inset 0 0 0 1.5px var(--linea); }
+.perfil-nuevo:hover { background: var(--fondo); }
+.perfil-nuevo .avatar { background: var(--fondo); color: var(--azul); font-weight: 400; font-size: 2.5rem; }
+
+.hoja { width: 100%; max-width: 760px; text-align: left; background: var(--fondo); }
+.hoja-cabecera { display: flex; justify-content: space-between; align-items: baseline; gap: var(--e-4); }
+
+/* Barra superior del panel: astronauta activo y botón para cambiarlo */
+.nav-astronauta { display: inline-flex; align-items: center; gap: var(--e-2); font-size: var(--t-nota); color: var(--tinta-2); white-space: nowrap; }
+.nav-astronauta .avatar { width: 24px; height: 24px; margin: 0; font-size: 10px; }
+
+/* ================================================================ 15. ACCESIBILIDAD */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  .boton:active, .segmentado button:active { transform: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .nav { background: var(--blanco); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .aviso { background: var(--carbon); backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+@media (prefers-contrast: more) {
+  :root { --tinta-2: #3a3a3c; --tinta-3: #48484a; --linea: #8e8e93; --linea-suave: rgba(0, 0, 0, .3); }
+  .nav { background: var(--blanco); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .tarjeta { box-shadow: inset 0 0 0 1px var(--linea); }
+}
+</style>

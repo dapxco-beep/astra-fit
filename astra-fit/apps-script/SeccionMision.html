@@ -1,0 +1,427 @@
+<!-- SeccionMision.html — El astronauta en cada destino (ISS, Gateway, cápsula, Luna y Marte).  Fondo: negro.  Responsable: equipo 3D
+     Qué hace: muestra al astronauta animado en el escenario que se elija. En microgravedad flota y se balancea; en la Luna y
+     en Marte salta con la gravedad de cada lugar; se puede girar la cámara y hacerlo entrenar.
+     El motor 3D viene de astrafit-mision.html (prototipo). Se carga solo cuando la sección está cerca de verse y ya hay un
+     astronauta elegido (los escenarios pesan unos 4 MB y el rover de la Luna unos 21 MB, que se baja aparte). -->
+
+<!-- importmap: mismo contenido que el de SeccionCuerpo. Si el navegador ya leyó uno, este se ignora sin problema. -->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<section class="seccion seccion--negra" id="mision">
+  <div class="contenedor">
+    <div class="seccion-cabecera">
+      <h2 class="titulo">El mismo astronauta, en cada destino.</h2>
+      <p class="subtitulo">La gravedad cambia cómo se mueve el cuerpo y cuánto trabaja cada músculo. Elige un lugar y míralo desde varios ángulos.</p>
+      <div class="segmentado" data-segmentado id="ctl-mision-escenario" role="group" aria-label="Destino">
+        <button type="button" data-valor="iss" aria-pressed="true">Estación Espacial</button>
+        <button type="button" data-valor="gateway" aria-pressed="false">Gateway</button>
+        <button type="button" data-valor="transit" aria-pressed="false">Tránsito</button>
+        <button type="button" data-valor="moon" aria-pressed="false">Luna</button>
+        <button type="button" data-valor="mars" aria-pressed="false">Marte</button>
+      </div>
+    </div>
+
+    <div class="cuerpo-rejilla">
+      <div class="visor" id="visor-mision">
+        <canvas id="mision-lienzo" aria-label="Astronauta en 3D en el destino elegido. Arrastra para girar." role="img"></canvas>
+        <div class="visor-carga" id="mision-carga">
+          <p class="texto" id="mision-carga-texto">Elige un astronauta para ver su destino.</p>
+        </div>
+      </div>
+
+      <div class="cuerpo-panel">
+        <div class="tarjeta" id="mision-info" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div class="cuerpo-controles">
+      <div><span class="nota">Cámara</span>
+        <div class="segmentado" data-segmentado id="ctl-mision-camara" role="group" aria-label="Cámara">
+          <button type="button" data-valor="front" aria-pressed="true">Astronauta</button>
+          <button type="button" data-valor="wide" aria-pressed="false">Escenario</button>
+          <button type="button" data-valor="back" aria-pressed="false">Espalda</button>
+        </div></div>
+      <div class="acciones">
+        <button type="button" class="boton boton--pequeno boton--secundario" id="mision-girar" aria-pressed="false">Girar</button>
+        <button type="button" class="boton boton--pequeno boton--secundario" id="mision-saltar">Saltar</button>
+        <button type="button" class="boton boton--pequeno boton--secundario" id="mision-entrenar" aria-pressed="false">Hacer sentadillas</button>
+      </div>
+    </div>
+    <p class="nota" style="margin-top: var(--e-5); color: var(--tinta-clara-2)">
+      Escenas ilustrativas. La gravedad, la duración y el retraso del enlace son valores de referencia aproximados.
+      Origen y licencia de los modelos: pendiente de confirmar.
+    </p>
+  </div>
+</section>
+
+<script>
+(() => {
+  /* ============================================================
+     CONFIGURACIÓN
+     ============================================================ */
+  // Dónde viven los .glb. En local los sirve local/server.js; en Apps Script NO caben, hay que alojarlos fuera
+  // (mismo lugar que SeccionCuerpo: carpeta publicar-cloudflare/assets/ con la subcarpeta escenarios/).
+  const BASE = (typeof API !== 'undefined' && API.modo === 'local')
+    ? '/assets/'
+    : 'https://astra-fit-modelos.dapxco.workers.dev/assets/';   // Cloudflare: carpeta publicar-cloudflare/ (para actualizar: npx wrangler deploy)
+
+  // Datos de cada destino (valores de referencia aproximados, tomados del prototipo; falta citar fuente)
+  const SCEN = {
+    iss:     { short: 'Estación Espacial', name: 'Estación Espacial Internacional', sub: 'Órbita terrestre baja, a unos 400 km', float: true,  g: 0,    gtxt: '≈ 0 g', dur: '6 meses típicos', eq: 'Completo', nota: 'Tiene equipo de resistencia (ARED), cinta con arnés y bicicleta.', link: 'Retraso ≈ 0,6 s' },
+    gateway: { short: 'Gateway', name: 'Gateway', sub: 'Estación en órbita lunar', float: true, g: 0, gtxt: '≈ 0 g', dur: 'Semanas a meses', eq: 'Compacto', link: 'Retraso ≈ 1,3 s' },
+    transit: { short: 'Tránsito', name: 'Cápsula en tránsito', sub: 'Viaje entre la Tierra, la Luna o Marte', float: true, g: 0, gtxt: '≈ 0 g', dur: 'Días a meses', eq: 'Mínimo', link: 'Retraso variable' },
+    moon:    { short: 'Luna', name: 'Superficie lunar', sub: 'Gravedad parcial', float: false, g: 1.62, gtxt: '0,16 g (1,62 m/s²)', dur: 'Días a semanas', eq: 'En el hábitat', link: 'Retraso ≈ 1,3 s' },
+    mars:    { short: 'Marte', name: 'Superficie de Marte', sub: 'Gravedad parcial', float: false, g: 3.71, gtxt: '0,38 g (3,71 m/s²)', dur: 'Cientos de días', eq: 'En el hábitat', link: 'Retraso de 3 a 22 min' }
+  };
+  const SC_ORDER = ['iss', 'gateway', 'transit', 'moon', 'mars'];
+  const TEX = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/textures/planets/';
+
+  const $ = (id) => document.getElementById(id);
+  const visor = $('visor-mision'), lienzo = $('mision-lienzo');
+  let motor = null, iniciando = null, elegido = false, cerca = false;
+  let escenario = 'iss', camaraNombre = 'front', astronauta = null;
+
+  /* ============================================================
+     FICHA DEL DESTINO (no necesita el motor 3D)
+     ============================================================ */
+  function dibujarInfo() {
+    const P = SCEN[escenario];
+    $('mision-info').innerHTML = `
+      <h3 class="titulo-tarjeta">${UI.esc(P.name)}</h3>
+      <p class="pequeno texto-2">${UI.esc(P.sub)}</p>
+      <ul class="lista" style="margin-top: var(--e-3)">
+        ${astronauta ? `<li><span class="pequeno texto-2">Astronauta</span><span class="texto">${UI.esc(astronauta.nombre)}, ${UI.esc(astronauta.talla_cm)} cm</span></li>` : ''}
+        <li><span class="pequeno texto-2">Gravedad</span><span class="texto">${UI.esc(P.gtxt)}</span></li>
+        <li><span class="pequeno texto-2">Enlace con la Tierra</span><span class="texto">${UI.esc(P.link)}</span></li>
+        <li><span class="pequeno texto-2">Estancia típica</span><span class="texto">${UI.esc(P.dur)}</span></li>
+        <li><span class="pequeno texto-2">Equipo de ejercicio</span><span class="texto">${UI.esc(P.eq)}</span></li>
+      </ul>
+      <p class="nota" style="margin-top: var(--e-3)">${P.float ? 'Sin gravedad el cuerpo flota: los músculos y los huesos no cargan peso.' : 'Con gravedad parcial el cuerpo carga menos peso que en la Tierra.'}${P.nota ? ' ' + UI.esc(P.nota) : ''}</p>`;
+    $('mision-saltar').disabled = P.float;
+  }
+  dibujarInfo();
+
+  /* ============================================================
+     MOTOR 3D (se crea cuando hay astronauta elegido y la sección está cerca)
+     ============================================================ */
+  async function crearMotor() {
+    // Las librerías se piden todas a la vez (antes iban una tras otra y cada una esperaba a la anterior)
+    const [THREE, { OrbitControls }, { GLTFLoader }, { DRACOLoader }, { MeshoptDecoder }, { RoomEnvironment }, { EffectComposer }, { RenderPass }, { UnrealBloomPass }, { OutputPass }] = await Promise.all([
+      import('three'), import('three/addons/controls/OrbitControls.js'), import('three/addons/loaders/GLTFLoader.js'), import('three/addons/loaders/DRACOLoader.js'),
+      import('three/addons/libs/meshopt_decoder.module.js'), import('three/addons/environments/RoomEnvironment.js'), import('three/addons/postprocessing/EffectComposer.js'),
+      import('three/addons/postprocessing/RenderPass.js'), import('three/addons/postprocessing/UnrealBloomPass.js'), import('three/addons/postprocessing/OutputPass.js')]);
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+    const renderer = new THREE.WebGLRenderer({ canvas: lienzo, antialias: false, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+    renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    const scene = new THREE.Scene();
+    scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = .35;
+    const camera = new THREE.PerspectiveCamera(34, 1, .05, 2500);
+    const controls = new OrbitControls(camera, lienzo);
+    controls.enableDamping = true; controls.dampingFactor = .07; controls.minDistance = 1.5; controls.maxDistance = 60; controls.autoRotateSpeed = 1.1;
+
+    const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 });
+    const composer = new EffectComposer(renderer, rt);
+    composer.addPass(new RenderPass(scene, camera));
+    const bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), .35, .7, .88); composer.addPass(bloom);
+    composer.addPass(new OutputPass());
+
+    /* ---------- luces, estrellas, figura y cargadores (copiado del prototipo) ---------- */
+const hemi = new THREE.HemisphereLight(0xbcd2ff,0x1a2036,.3); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffffff,3); sun.castShadow = true;
+sun.shadow.mapSize.set(2048,2048); { const c=sun.shadow.camera; c.left=-22;c.right=22;c.top=22;c.bottom=-22;c.near=1;c.far=120; } sun.shadow.bias=-.0004; sun.shadow.normalBias=.02;
+scene.add(sun, sun.target);
+const fill = new THREE.DirectionalLight(0x9fc4ff,.6); scene.add(fill);
+
+const glowTex = (()=>{ const c=document.createElement('canvas'); c.width=c.height=256; const x=c.getContext('2d'); const g=x.createRadialGradient(128,128,0,128,128,128);
+  g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(.12,'rgba(255,244,214,.95)'); g.addColorStop(.35,'rgba(255,200,120,.25)'); g.addColorStop(1,'rgba(255,170,80,0)'); x.fillStyle=g; x.fillRect(0,0,256,256); return new THREE.CanvasTexture(c); })();
+const sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map:glowTex, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, fog:false, toneMapped:false })); scene.add(sunSprite);
+
+// estrellas de distinto brillo
+const stars = (()=>{ const n=2600,p=new Float32Array(n*3),c=new Float32Array(n*3);
+  for(let i=0;i<n;i++){ const r=900,t=Math.random()*6.283,f=Math.acos(2*Math.random()-1); p[i*3]=r*Math.sin(f)*Math.cos(t); p[i*3+1]=r*Math.cos(f); p[i*3+2]=r*Math.sin(f)*Math.sin(t);
+    const b=Math.pow(Math.random(),3)*.9+.1, tint=Math.random(); c[i*3]=b*(.8+.2*tint); c[i*3+1]=b*.9; c[i*3+2]=b*(1-.2*tint); }
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(p,3)); g.setAttribute('color',new THREE.BufferAttribute(c,3));
+  const s=new THREE.Points(g,new THREE.PointsMaterial({size:1.6,vertexColors:true,sizeAttenuation:false,transparent:true,depthWrite:false,fog:false})); scene.add(s); return s; })();
+
+const fig = new THREE.Group(); scene.add(fig);
+let astroModel = null;
+const draco = new DRACOLoader().setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+const gltf = new GLTFLoader().setDRACOLoader(draco).setMeshoptDecoder(MeshoptDecoder);
+const cache = {}, loadGLB = u => cache[u] || (cache[u]=new Promise((res,rej)=>gltf.load(u,res,undefined,rej)));
+const texL = new THREE.TextureLoader();
+const loadTex = (u,srgb=true)=>{ const t=texL.load(u); if(srgb) t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=8; return t; };
+function fit(obj,size,{center=false}={}){
+  let b=new THREE.Box3().setFromObject(obj), s=b.getSize(new THREE.Vector3()); obj.scale.multiplyScalar(size/Math.max(s.x,s.y,s.z));
+  b=new THREE.Box3().setFromObject(obj); const c=b.getCenter(new THREE.Vector3()); obj.position.set(obj.position.x-c.x, obj.position.y-(center?c.y:b.min.y), obj.position.z-c.z); return obj;
+}
+const shadowize = o => o.traverse(m=>{ if(m.isMesh){ m.castShadow=true; m.receiveShadow=true; if(m.material){ [].concat(m.material).forEach(x=>{ x.envMapIntensity=.8; }); } } });
+
+    /* ---------- mundo: terreno, planetas (copiado del prototipo) ---------- */
+/* ---------- ruido y terreno ---------- */
+const hash = (x,y,p)=>{ if(p){ x=((x%p)+p)%p; y=((y%p)+p)%p; } let h=(Math.imul(x|0,374761393)+Math.imul(y|0,668265263))|0; h=Math.imul(h^(h>>>13),1274126177); return ((h^(h>>>16))>>>0)/4294967296; };
+function vnoise(x,y,p){ const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);
+  const a=hash(xi,yi,p),b=hash(xi+1,yi,p),c=hash(xi,yi+1,p),d=hash(xi+1,yi+1,p); return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v; }
+const fbm = (x,y,o=5)=>{ let s=0,a=.5,f=1,n=0; for(let i=0;i<o;i++){ s+=a*vnoise(x*f,y*f); n+=a; f*=2; a*=.5; } return s/n; };
+function rng(seed){ return ()=>{ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+const sstep = (a,b,x)=>{ const t=clamp((x-a)/(b-a),0,1); return t*t*(3-2*t); };
+
+function noiseTexture(size,tint,period=8){   // textura repetible de grano (para el relieve fino del suelo)
+  const c=document.createElement('canvas'); c.width=c.height=size; const x=c.getContext('2d'), im=x.createImageData(size,size);
+  for(let j=0;j<size;j++) for(let i=0;i<size;i++){
+    let v=0,a=.5,f=period,n=0; for(let o=0;o<5;o++){ v+=a*vnoise(i/size*f,j/size*f,f); n+=a; f*=2; a*=.5; } v/=n;
+    const g=Math.round(clamp(v,0,1)*255), k=(j*size+i)*4; im.data[k]=g*tint[0]; im.data[k+1]=g*tint[1]; im.data[k+2]=g*tint[2]; im.data[k+3]=255; }
+  x.putImageData(im,0,0); const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.anisotropy=8; return t;
+}
+
+function buildTerrain(g,kind){
+  const R=rng(kind==='moon'?7:21), craters=[];
+  for(let i=0;i<46;i++){ const r=7+Math.pow(R(),2.2)*70, d=18+R()*(i<14?240:140), t=R()*6.283; craters.push({x:Math.cos(t)*d,z:Math.sin(t)*d,r,dp:r*(kind==='moon'?.2:.14)}); }
+  const H=(x,z)=>{
+    const r=Math.hypot(x,z); let h=(fbm(x*.011+3,z*.011+8,5)-.5)*34*(.35+r/190) + (fbm(x*.07,z*.07,4)-.5)*(kind==='moon'?2.6:1.5);
+    for(const c of craters){ const d=Math.hypot(x-c.x,z-c.z)/c.r; if(d<1.7){ h += d<1 ? -c.dp*(1-d*d)*(1-.1*Math.sin(d*9)) : c.dp*.32*Math.exp(-Math.pow((d-1)*3.2,2)); } }
+    if(kind==='mars') h += (Math.abs(Math.sin((x*.05+fbm(x*.02,z*.02,3)*9)))*1.1)*sstep(20,60,r);   // dunas con cresta
+    return h*sstep(13,58,r);
+  };
+  const N=480, S=720, geo=new THREE.PlaneGeometry(S,S,N,N); geo.rotateX(-Math.PI/2);
+  const p=geo.attributes.position, col=new Float32Array(p.count*3), base=new THREE.Color(kind==='moon'?0x6b6a67:0xa8532f), dark=new THREE.Color(kind==='moon'?0x2a2a29:0x4f2314), lite=new THREE.Color(kind==='moon'?0x9a9994:0xcf7f50), tmp=new THREE.Color();
+  for(let i=0;i<p.count;i++){ const x=p.getX(i), z=p.getZ(i), h=H(x,z); p.setY(i,h);
+    const n=fbm(x*.04,z*.04,4), m=fbm(x*.3+9,z*.3,3); tmp.copy(base).lerp(n>.5?lite:dark,Math.abs(n-.5)*1.5).multiplyScalar(.82+.36*m); col[i*3]=tmp.r; col[i*3+1]=tmp.g; col[i*3+2]=tmp.b; }
+  geo.setAttribute('color',new THREE.BufferAttribute(col,3)); geo.computeVertexNormals();
+  const bump=noiseTexture(512,[1,1,1],8); bump.repeat.set(70,70);
+  const mat=new THREE.MeshStandardMaterial({ vertexColors:true, roughness:1, metalness:0, bumpMap:bump, bumpScale:kind==='moon'?5:4 });
+  const mesh=new THREE.Mesh(geo,mat); mesh.receiveShadow=true; g.add(mesh);
+  // rocas con forma irregular (esfera deformada con ruido), tres variantes
+  const rockMat=new THREE.MeshStandardMaterial({ color:kind==='moon'?0x6f6e6a:0x7d3b22, roughness:1 });
+  for(let v=0;v<3;v++){
+    const rg=new THREE.IcosahedronGeometry(1,3), rp=rg.attributes.position;
+    for(let i=0;i<rp.count;i++){ const x=rp.getX(i),y=rp.getY(i),z=rp.getZ(i); const k=1+.42*(vnoise(x*1.7+v*5,y*1.7+z*2.1,0)-.5)+.12*(vnoise(x*5,z*5+y*4,0)-.5); rp.setXYZ(i,x*k,(y<0?y*.35:y)*k,z*k); }
+    rg.computeVertexNormals();
+    const n=90, im=new THREE.InstancedMesh(rg,rockMat,n), d=new THREE.Object3D();
+    for(let i=0;i<n;i++){ const rr=5+Math.pow(R(),1.5)*110, t=R()*6.283, x=Math.cos(t)*rr, z=Math.sin(t)*rr, s=.1+Math.pow(R(),3)*1.6;
+      d.position.set(x,H(x,z)+s*.05,z); d.rotation.set(0,R()*6.28,0); d.scale.set(s*(.8+R()*.5),s*(.5+R()*.5),s*(.8+R()*.5)); d.updateMatrix(); im.setMatrixAt(i,d.matrix); }
+    im.castShadow=im.receiveShadow=true; g.add(im);
+  }
+  return H;
+}
+
+/* ---------- astros ---------- */
+const atmoMat = (col,pw=2.2,k=1.4)=>new THREE.ShaderMaterial({ transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.BackSide, uniforms:{c:{value:new THREE.Color(col)},pw:{value:pw},k:{value:k}},
+  vertexShader:'varying vec3 n;varying vec3 v;void main(){n=normalize(normalMatrix*normal);vec4 m=modelViewMatrix*vec4(position,1.);v=normalize(-m.xyz);gl_Position=projectionMatrix*m;}',
+  fragmentShader:'uniform vec3 c;uniform float pw;uniform float k;varying vec3 n;varying vec3 v;void main(){float i=pow(clamp(abs(dot(n,v)),0.,1.),pw);gl_FragColor=vec4(c*i*k,i);}' });
+function makeEarth(r,pos){
+  const g=new THREE.Group();
+  const m=new THREE.MeshPhongMaterial({ map:loadTex(TEX+'earth_atmos_2048.jpg'), specularMap:loadTex(TEX+'earth_specular_2048.jpg',false), specular:new THREE.Color(0x4a5a6a), shininess:18,
+    normalMap:loadTex(TEX+'earth_normal_2048.jpg',false), normalScale:new THREE.Vector2(.8,-.8), emissiveMap:loadTex(TEX+'earth_lights_2048.png'), emissive:new THREE.Color(0xffc27a), emissiveIntensity:.0 });
+  const planet=new THREE.Mesh(new THREE.SphereGeometry(r,96,64),m); g.add(planet);
+  const cl=new THREE.Mesh(new THREE.SphereGeometry(r*1.006,96,64), new THREE.MeshPhongMaterial({ map:loadTex(TEX+'earth_clouds_1024.png'), transparent:true, opacity:.85, depthWrite:false, blending:THREE.NormalBlending })); g.add(cl);
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(r*1.16,64,48),atmoMat(0x4a8dff,3,1.6)));
+  g.userData.spin=[planet,cl]; g.position.set(...pos); return g;
+}
+function makeMoon(r,pos){
+  const t=loadTex(TEX+'moon_1024.jpg'); const m=new THREE.Mesh(new THREE.SphereGeometry(r,96,64), new THREE.MeshStandardMaterial({ map:t, bumpMap:t, bumpScale:r*.012, roughness:1 })); m.position.set(...pos); return m;
+}
+const anchorOf = (o,f)=>{ const b=new THREE.Box3().setFromObject(o), s=b.getSize(new THREE.Vector3()); return b.min.clone().add(s.multiply(new THREE.Vector3(...f))); };
+
+
+    /* ---------- escenarios (copiado del prototipo) ---------- */
+/* ---------- escenarios ---------- */
+// cfg: cielo, luces y cámaras. Los "callouts" son las tarjetas con línea que se anclan a puntos 3D.
+const CFG = {
+  iss:{ bg:0x01030a, fog:null, stars:true, env:.35, expo:1.0, sunDir:[-34,16,-60], sunCol:0xfff2de, sunI:4.2, fillI:.55, hemiI:.18, bloom:.5,
+    astro:[-2.0,1.35,0.5], cam:{front:[[2.6,1.7,7.6],[.9,1.45,-2]],back:[[-4.5,1.8,-5.5],[-2,1.3,0]],wide:[[16,7,34],[6,2,-24]]},
+    calls:[{t:'hab',a:[8,10,-70],o:[-150,-60]},{t:'co2',a:[17,11,-71],o:[-10,-95]},{t:'life',a:[22,6,-71],o:[10,70]},{t:'ex',a:[0,0,0],o:[60,0]}] },
+  gateway:{ bg:0x01030a, fog:null, stars:true, env:.35, expo:1.0, sunDir:[-40,20,-50], sunCol:0xfff2de, sunI:4.0, fillI:.5, hemiI:.16, bloom:.5,
+    astro:[-2.0,1.35,0.5], cam:{front:[[2.6,1.7,7.6],[.9,1.45,-2]],back:[[-4.5,1.8,-5.5],[-2,1.3,0]],wide:[[12,6,30],[4,2,-22]]},
+    calls:[{t:'hab',a:[6,3,-20],o:[-150,-80]},{t:'co2',a:[10,6,-20],o:[60,-90]},{t:'ex',a:[0,0,0],o:[60,0]}] },
+  transit:{ bg:0x010206, fog:null, stars:true, env:.35, expo:1.0, sunDir:[-30,14,-50], sunCol:0xfff2de, sunI:4.0, fillI:.5, hemiI:.16, bloom:.5,
+    astro:[-2.0,1.35,0.5], cam:{front:[[2.6,1.7,7.6],[.9,1.45,-2]],back:[[-4.5,1.8,-5.5],[-2,1.3,0]],wide:[[10,5,28],[4,2,-18]]},
+    calls:[{t:'hab',a:[8,2,-16],o:[-140,-90]},{t:'life',a:[10,2,-17],o:[40,70]},{t:'ex',a:[0,0,0],o:[60,0]}] },
+  moon:{ bg:0x000000, fog:null, stars:true, env:.05, expo:1.0, sunDir:[-22,13,26], sunCol:0xfff6ea, sunI:4.6, fillI:.12, hemiI:.1, bloom:.35,
+    astro:[0,0,0], cam:{front:[[2.4,1.7,7.6],[-.2,1.1,0]],back:[[-2,1.9,-7.6],[0,1.1,0]],wide:[[12,6,24],[0,2.5,-9]]},
+    calls:[{t:'hab',a:[-6.5,4,-9],o:[-170,30]},{t:'rad',a:[7,3,-8],o:[40,-70]},{t:'ex',a:[0,0,0],o:[70,-10]}] },
+  mars:{ bg:0xc99569, fog:[0xc99569,40,420], stars:false, env:.22, expo:1.0, sunDir:[-20,16,24], sunCol:0xffe2c0, sunI:3.6, fillI:.25, hemiI:.45, bloom:.28,
+    astro:[0,0,0], cam:{front:[[2.4,1.7,7.6],[-.2,1.1,0]],back:[[-2,1.9,-7.6],[0,1.1,0]],wide:[[12,6,24],[-2,2.5,-9]]},
+    calls:[{t:'hab',a:[-6,4.5,-11],o:[-170,30]},{t:'rad',a:[6,4,-9],o:[50,-60]},{t:'ex',a:[0,0,0],o:[70,-10]}] }
+};
+
+const groups={}, built={}, heights={};
+SC_ORDER.forEach(id=>{ groups[id]=new THREE.Group(); groups[id].visible=false; scene.add(groups[id]); });
+const marsSky = new THREE.Mesh(new THREE.SphereGeometry(1500,32,16), new THREE.ShaderMaterial({ side:THREE.BackSide, depthWrite:false, fog:false,
+  uniforms:{ top:{value:new THREE.Color(0x6f4a45)}, hor:{value:new THREE.Color(0xe0aa80)} },
+  vertexShader:'varying float h;void main(){h=normalize(position).y;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+  fragmentShader:'uniform vec3 top;uniform vec3 hor;varying float h;void main(){float t=pow(clamp(h,0.,1.),.45);gl_FragColor=vec4(mix(hor,top,t),1.);}' }));
+marsSky.visible=false; scene.add(marsSky);
+
+const B = {
+  async iss(g){
+    const e=makeEarth(120,[-20,-124,-95]); e.rotation.set(.35,.6,.2); g.add(e); g.userData.earth=e;
+    const holder=new THREE.Group(), m=(await loadGLB(BASE+'escenarios/iss.glb')).scene.clone(); holder.add(m); fit(m,44,{center:true}); holder.position.set(13,8,-70); holder.rotation.set(.16,-.5,.05); shadowize(holder); g.add(holder);
+  },
+  async gateway(g){
+    g.add(makeMoon(60,[-40,-70,-120]));
+    const e=makeEarth(5,[60,20,-210]); g.add(e); g.userData.earth=e;
+    const tex=await new THREE.TextureLoader().loadAsync(BASE+'escenarios/gateway.png'); tex.colorSpace=THREE.SRGBColorSpace; tex.anisotropy=8;
+    const b=new THREE.Mesh(new THREE.PlaneGeometry(26,14.6), new THREE.MeshBasicMaterial({map:tex,transparent:true,toneMapped:false,depthWrite:false})); b.position.set(7,2.5,-20); b.userData.billboard=true; g.add(b);
+  },
+  async transit(g){
+    const e=makeEarth(4,[-60,22,-200]); g.add(e); g.userData.earth=e; g.add(makeMoon(1.2,[50,26,-210]));
+    const h=new THREE.Group(), m=(await loadGLB(BASE+'escenarios/capsula.glb')).scene.clone(); h.add(m); fit(m,8,{center:true}); h.position.set(8,1.5,-16); h.rotation.set(.35,-.9,.1); shadowize(h); g.add(h);
+  },
+  async moon(g){
+    const H=buildTerrain(g,'moon'); heights.moon=H;
+    const e=makeEarth(7,[-70,32,-190]); e.rotation.set(.2,2.2,.3); g.add(e); g.userData.earth=e;
+    const lem=(await loadGLB(BASE+'escenarios/lem.glb')).scene.clone(); fit(lem,7.5); lem.position.x+=-6.5; lem.position.z+=-9; lem.position.y+=H(-6.5,-9); lem.rotation.y=.5; shadowize(lem); g.add(lem);
+    loadGLB(BASE+'escenarios/rover.glb').then(r=>{ const rv=r.scene.clone(); fit(rv,5.2); rv.position.x+=7; rv.position.z+=-8; rv.position.y+=H(7,-8); rv.rotation.y=-.6; shadowize(rv); g.add(rv); }).catch(()=>{});
+  },
+  async mars(g){
+    const H=buildTerrain(g,'mars'); heights.mars=H;
+    const [a,b]=await Promise.all([loadGLB(BASE+'escenarios/hab1.glb'),loadGLB(BASE+'escenarios/hab2.glb')]);
+    const hab=new THREE.Group(); hab.add(a.scene.clone(),b.scene.clone()); fit(hab,10); hab.position.x+=-6; hab.position.z+=-11; hab.position.y+=H(-6,-11); hab.rotation.y=.4; shadowize(hab); g.add(hab);
+  }
+};
+    // Encuadre: el astronauta que flota queda centrado en el visor (en el prototipo la vista era más ancha)
+    ['iss', 'gateway', 'transit'].forEach((k) => { CFG[k].cam.front = [[1.0, 1.8, 6.0], [-1.8, 1.4, .4]]; });
+
+    /* ---------- estado, cámara y cambio de escenario ---------- */
+    const S = { sc: 'iss', t: 0, jump: null, spin: false, trained: false, visible: true, escala: 1 };
+    // Luz de contorno con el color de acento del perfil (la misma del avatar)
+    const acento = new THREE.DirectionalLight(0xffffff, 0); acento.position.set(-6, 4, -6); scene.add(acento);
+    const COLOR_ACENTO = { turquesa: '--marca-turquesa', azul: '--marca-azul', morado: '--marca-morado' };
+    const FIJO_ACENTO = { grafito: '#8a93a6', plata: '#dfe5f0' };
+    const camTween = { on: false, t: 0, p0: new THREE.Vector3(), p1: new THREE.Vector3(), t0: new THREE.Vector3(), t1: new THREE.Vector3() };
+    const reducir = matchMedia('(prefers-reduced-motion: reduce)').matches, mov = reducir ? 0 : 1;
+    let alCambiarGiro = () => {};
+    function goCam(name, instant) {
+      const [p, t] = CFG[S.sc].cam[name];
+      if (instant) { camera.position.set(...p); controls.target.set(...t); return; }
+      camTween.p0.copy(camera.position); camTween.t0.copy(controls.target); camTween.p1.set(...p); camTween.t1.set(...t); camTween.t = 0; camTween.on = true;
+      if (S.spin) { S.spin = false; controls.autoRotate = false; alCambiarGiro(false); }
+    }
+    async function setScenario(id, camara, instant) {
+      const P = SCEN[id], C = CFG[id]; S.sc = id; S.jump = null;
+      SC_ORDER.forEach((k) => { groups[k].visible = k === id; });
+      scene.background = C.bg === 0xc99569 ? null : new THREE.Color(C.bg); marsSky.visible = id === 'mars';
+      scene.fog = C.fog ? new THREE.Fog(C.fog[0], C.fog[1], C.fog[2]) : null;
+      stars.visible = C.stars; renderer.toneMappingExposure = C.expo; scene.environmentIntensity = C.env; bloom.strength = C.bloom;
+      sun.color.set(C.sunCol); sun.intensity = C.sunI; sun.position.set(...C.sunDir); sun.target.position.set(0, 0, 0);
+      fill.intensity = C.fillI; fill.position.set(8, 3, 12); hemi.intensity = C.hemiI; hemi.color.set(id === 'mars' ? 0xffcfa8 : 0xbcd2ff);
+      const sd = new THREE.Vector3(...C.sunDir).normalize(); sunSprite.position.copy(sd).multiplyScalar(700); sunSprite.scale.setScalar(id === 'mars' ? 90 : 220); sunSprite.visible = !P.float || sd.z < 0;
+      sunSprite.material.opacity = P.float ? 1 : .7;
+      if (!P.float) fig.position.set(C.astro[0], 0, C.astro[2]); else fig.position.set(C.astro[0], C.astro[1] - .97, C.astro[2]);
+      goCam(camara, instant);
+      if (!built[id]) {
+        built[id] = true; $('mision-carga').hidden = false; $('mision-carga-texto').textContent = 'Preparando ' + P.name.toLowerCase() + '…';
+        try { await B[id](groups[id]); } catch (e) { console.warn('[mision] escenario ' + id, e); built[id] = false; }
+        $('mision-carga').hidden = true;
+      }
+    }
+
+    /* ---------- tamaño y bucle (solo dibuja cuando se ve) ---------- */
+    function ajustar() { const r = visor.getBoundingClientRect(); if (!r.width) return; renderer.setSize(r.width, r.height, false); composer.setSize(r.width, r.height); bloom.setSize(r.width, r.height); camera.aspect = r.width / r.height; camera.updateProjectionMatrix(); }
+    new ResizeObserver(ajustar).observe(visor); ajustar();
+    new IntersectionObserver((en) => { S.visible = en[0].isIntersecting; }).observe(visor);
+
+    let last = performance.now(), trainPh = 0;
+    function frame(now) {
+      requestAnimationFrame(frame);
+      const dt = Math.min(.05, (now - last) / 1000); last = now;
+      if (!S.visible || document.hidden) return;
+      S.t += dt; const t = S.t, P = SCEN[S.sc], C = CFG[S.sc], k = 1 - Math.exp(-3 * dt);
+      const ax = C.astro[0], az = C.astro[2];
+      if (P.float) {
+        fig.position.x += (ax - fig.position.x) * k; fig.position.z += (az - fig.position.z) * k; fig.position.y += ((C.astro[1] - .97 + .09 * Math.sin(t * .8) * mov) - fig.position.y) * k;
+        fig.rotation.x += (.12 * Math.sin(t * .37) * mov - fig.rotation.x) * k; fig.rotation.z += (.16 * Math.sin(t * .45) * mov - fig.rotation.z) * k; fig.rotation.y += ((-.5 + .55 * Math.sin(t * .25) * mov) - fig.rotation.y) * k;
+      } else {
+        let y = 0; if (S.jump) { S.jump.t += dt; y = S.jump.v * S.jump.t - .5 * P.g * S.jump.t * S.jump.t; if (y <= 0) { y = 0; S.jump = null; } }
+        fig.position.set(ax, y, az); fig.rotation.x += (0 - fig.rotation.x) * k; fig.rotation.z += (0 - fig.rotation.z) * k; fig.rotation.y += (.35 - fig.rotation.y) * k;
+      }
+      // entrenamiento: el cuerpo se "comprime" en cada repetición
+      trainPh += (S.trained ? 1 : 0) * dt * 2.4; fig.scale.x = fig.scale.z = S.escala;
+      fig.scale.y += ((S.trained ? 1 - .07 * (.5 - .5 * Math.cos(trainPh * 2)) : 1) * S.escala - fig.scale.y) * (1 - Math.exp(-10 * dt));
+      if (camTween.on) { camTween.t = Math.min(1, camTween.t + dt / .9); const e = 1 - Math.pow(1 - camTween.t, 3); camera.position.lerpVectors(camTween.p0, camTween.p1, e); controls.target.lerpVectors(camTween.t0, camTween.t1, e); if (camTween.t >= 1) camTween.on = false; }
+      controls.update();
+      const g = groups[S.sc]; g.children.forEach((o) => { if (o.userData.billboard) o.lookAt(camera.position); });
+      if (g.userData.earth) g.userData.earth.userData.spin.forEach((m, i) => { m.rotation.y += dt * (i ? .012 : .006) * mov; });
+      stars.position.copy(camera.position); marsSky.position.copy(camera.position); sunSprite.position.copy(camera.position).addScaledVector(new THREE.Vector3(...C.sunDir).normalize(), 700);
+      composer.render();
+    }
+
+    /* ---------- astronauta ---------- */
+    const ga = await loadGLB(BASE + "astronaut.glb");
+    astroModel = ga.scene; const b = new THREE.Box3().setFromObject(astroModel), sz = b.getSize(new THREE.Vector3()); astroModel.scale.setScalar(1.95 / sz.y);
+    const b2 = new THREE.Box3().setFromObject(astroModel), c = b2.getCenter(new THREE.Vector3()); astroModel.position.set(-c.x, -b2.min.y, -c.z);
+    astroModel.traverse((o) => { if (o.isMesh) { o.castShadow = true; [].concat(o.material).forEach((m) => { m.envMapIntensity = .9; }); } });
+    fig.add(astroModel);
+    await setScenario(escenario, camaraNombre, true);
+    requestAnimationFrame(frame);
+
+    return {
+      escenario: (id) => setScenario(id, camaraNombre, false),
+      camara: (n) => goCam(n, false),
+      girar: (on) => { S.spin = on; controls.autoRotate = on && !reducir; },
+      saltar: () => { if (!SCEN[S.sc].float && !S.jump) S.jump = { t: 0, v: 2.6 }; },
+      entrenar: (on) => { S.trained = on; },
+      // Ajusta la figura al perfil: la estatura real escala el cuerpo y el acento del avatar tiñe la luz de contorno
+      ponerAstronauta: (a) => {
+        S.escala = clamp((Number(a.talla_cm) || 178) / 178, .9, 1.1);
+        const clave = Avatares.claveDe(a);
+        const css = COLOR_ACENTO[clave] ? getComputedStyle(document.documentElement).getPropertyValue(COLOR_ACENTO[clave]).trim() : FIJO_ACENTO[clave];
+        acento.color.set(css || '#ffffff'); acento.intensity = 1.6;
+      },
+      alCambiarGiro: (fn) => { alCambiarGiro = fn; }
+    };
+  }
+
+  /* ============================================================
+     CONTROLES DE LA INTERFAZ
+     ============================================================ */
+  $('ctl-mision-escenario').addEventListener('cambio', (e) => { escenario = e.detail; dibujarInfo(); if (motor) motor.escenario(escenario); });
+  $('ctl-mision-camara').addEventListener('cambio', (e) => { camaraNombre = e.detail; if (motor) motor.camara(camaraNombre); });
+
+  function alternar(id, textoOn, textoOff, accion) {
+    const b = $(id);
+    b.addEventListener('click', () => {
+      const on = b.getAttribute('aria-pressed') !== 'true';
+      b.setAttribute('aria-pressed', String(on)); b.textContent = on ? textoOn : textoOff;
+      if (motor) motor[accion](on);
+    });
+  }
+  alternar('mision-girar', 'Detener giro', 'Girar', 'girar');
+  alternar('mision-entrenar', 'Detener sentadillas', 'Hacer sentadillas', 'entrenar');
+  $('mision-saltar').addEventListener('click', () => { if (motor) motor.saltar(); });
+
+  /* ============================================================
+     ARRANQUE: astronauta elegido + sección cerca de verse
+     ============================================================ */
+  function mostrarError(texto) { $('mision-carga').hidden = false; $('mision-carga-texto').textContent = texto; }
+  async function iniciar() {
+    if (motor || !elegido || !cerca) return;
+    $('mision-carga').hidden = false; $('mision-carga-texto').textContent = 'Cargando astronauta…';
+    iniciando = iniciando || crearMotor();
+    try { motor = await iniciando; }
+    catch (err) {
+      console.warn('[mision]', err); iniciando = null;
+      return mostrarError(location.protocol === 'file:'
+        ? 'El navegador no deja cargar los modelos con doble clic. Abre INICIAR-WINDOWS.bat.'
+        : 'No se pudieron cargar los modelos 3D. Recarga la página.');
+    }
+    if (astronauta) motor.ponerAstronauta(astronauta);
+    motor.alCambiarGiro((on) => { const b = $('mision-girar'); b.setAttribute('aria-pressed', String(on)); b.textContent = on ? 'Detener giro' : 'Girar'; });
+    $('mision-carga').hidden = true;
+  }
+  document.addEventListener('astronauta-elegido', (e) => { astronauta = e.detail; elegido = true; dibujarInfo(); if (motor) motor.ponerAstronauta(astronauta); iniciar(); });
+  // Si se edita el perfil (estatura o avatar), la figura se ajusta sin recargar
+  document.addEventListener('astronauta-actualizado', (e) => {
+    if (astronauta && e.detail.id_astronauta === astronauta.id_astronauta) { astronauta = e.detail; dibujarInfo(); if (motor) motor.ponerAstronauta(astronauta); }
+  });
+  new IntersectionObserver((en) => { if (en[0].isIntersecting) { cerca = true; iniciar(); } }, { rootMargin: '600px 0px' }).observe(visor);
+})();
+</script>

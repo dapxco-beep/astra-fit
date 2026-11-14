@@ -1,0 +1,42 @@
+<!--
+  JsApi.html — ÚNICA PUERTA A LOS DATOS.
+
+  Ningún otro archivo llama a google.script.run ni a fetch directamente: todos usan API.xxx().
+  - En Apps Script: llama a las funciones de Code.gs.
+  - En local (node local/server.js): llama a /api/<función>, que imita a Code.gs con datos de ejemplo.
+  Así el mismo código funciona en los dos lados sin cambiar nada al subirlo.
+
+  Todas las funciones devuelven una Promesa:  API.obtenerDatos().then(datos => ...)
+-->
+<script>
+const API = (() => {
+  const enGoogle = typeof google !== 'undefined' && google.script && google.script.run;
+
+  function llamar(funcion, ...args) {
+    if (enGoogle) {
+      return new Promise((resolver, rechazar) => {
+        google.script.run.withSuccessHandler(resolver).withFailureHandler(rechazar)[funcion](...args);
+      });
+    }
+    return fetch('/api/' + funcion, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(args)
+    }).then(async (r) => {
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.error || 'Error del servidor local');
+      return json;
+    });
+  }
+
+  return {
+    modo: enGoogle ? 'google' : 'local',
+    obtenerDatos: () => llamar('obtenerDatos'),
+    guardarAstronauta: (astronauta) => llamar('guardarAstronauta', astronauta),
+    guardarSeguimiento: (registro) => llamar('guardarSeguimiento', registro),
+    guardarSesion: (sesion, filasEmg) => llamar('guardarSesion', sesion, filasEmg),
+    guardarAlertas: (lista) => llamar('guardarAlertas', lista),
+    actualizarAlerta: (idAlerta, cambios) => llamar('actualizarAlerta', idAlerta, cambios)
+  };
+})();
+</script>

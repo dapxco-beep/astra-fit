@@ -1,0 +1,18 @@
+# Dependencias y caché de herramientas
+node_modules/
+.wrangler/
+.dev.vars
+.env*
+
+# Datos que cambia cada persona al probar en local
+astra-fit/local/datos-local.json
+astra-fit/local/perfil-chrome*/
+
+# Lo genera "node astra-fit/publicar/construir-cloudflare.js" (se vuelve a armar desde apps-script/ y assets/)
+publicar-cloudflare/index.html
+publicar-cloudflare/componentes.html
+publicar-cloudflare/assets/
+
+# Sistema
+.DS_Store
+Thumbs.db

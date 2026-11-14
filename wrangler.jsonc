@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "astra-fit-modelos",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-11-13",
+  "observability": {
+    "enabled": true
+  },
+  // La página y los modelos 3D salen de publicar-cloudflare/ (se arma con: node astra-fit/publicar/construir-cloudflare.js).
+  // Solo las llamadas /api/* pasan por el Worker, que guarda los datos en KV.
+  "assets": {
+    "directory": "publicar-cloudflare",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "kv_namespaces": [
+    { "binding": "ASTRA_FIT", "id": "59a755dd53394a04bb5f74b19cde6c55" }
+  ]
+}

@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASTRA-FIT Holo</title>
+<style>
+  :root { --bg:#04080f; --glass:rgba(8,24,38,.58); --edge:rgba(90,225,255,.38); --txt:#dff6ff; --mut:#7fa6b8; --acc:#5ae1ff; --ok:#2ecc71; --warn:#f1c40f; --bad:#e74c3c; --mono:ui-monospace,"Cascadia Mono",Consolas,monospace; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--bg); color:var(--txt); font:14px/1.45 system-ui,"Segoe UI",sans-serif; }
+  header { height:46px; padding:0 18px; display:flex; align-items:center; gap:14px; border-bottom:1px solid #0f2433; }
+  header h1 { margin:0; font-size:1rem; letter-spacing:.14em; } header h1 span { color:var(--acc); }
+  header p { margin:0; color:var(--mut); font-size:.78rem; }
+
+  .stage { position:relative; height:calc(100vh - 46px); min-height:600px; overflow:hidden; background:radial-gradient(ellipse at 50% 35%,#0c2233 0%,#04080f 72%); }
+  .cv { position:absolute; inset:0; }
+  #gl { width:100%; height:100%; display:block; touch-action:none; }
+
+  .panel { position:absolute; width:268px; background:var(--glass); border:1px solid var(--edge); border-radius:6px; padding:12px 14px; backdrop-filter:blur(6px);
+           box-shadow:0 0 24px rgba(40,190,255,.18), inset 0 0 18px rgba(40,190,255,.08); clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px)); }
+  /* Sin transform 3D: en las pruebas, los canvas (gráficas) dentro de un panel inclinado no se dibujaban */
+  .panel.l { left:18px; top:20px; }
+  .panel.r { right:18px; top:20px; }
+  .panel h2 { margin:0 0 8px; font-size:.7rem; letter-spacing:.2em; text-transform:uppercase; color:var(--acc); font-weight:600; display:flex; justify-content:space-between; }
+  .panel h2 i { font-style:normal; color:var(--mut); letter-spacing:.05em; }
+  .big { font-family:var(--mono); font-size:2.2rem; line-height:1; color:#fff; text-shadow:0 0 14px rgba(90,225,255,.6); }
+  .big small { font-size:.8rem; color:var(--mut); margin-left:4px; }
+  .kv { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0 6px; }
+  .kv div { background:rgba(90,225,255,.06); border:1px solid rgba(90,225,255,.15); padding:6px 8px; border-radius:4px; }
+  .kv small { display:block; color:var(--mut); font-size:.66rem; letter-spacing:.06em; text-transform:uppercase; }
+  .kv b { font-family:var(--mono); font-size:1.05rem; }
+  .bar { height:4px; background:#10283a; border-radius:2px; margin-top:4px; overflow:hidden; } .bar span { display:block; height:100%; width:0; transition:width .3s,background .3s; }
+  .chev { display:flex; gap:2px; margin:2px 0 8px; } .chev i { width:18px; height:14px; background:var(--acc); clip-path:polygon(0 0,60% 0,100% 50%,60% 100%,0 100%,40% 50%); opacity:.25; animation:chev 1.1s infinite; }
+  .chev i:nth-child(2){ animation-delay:.15s } .chev i:nth-child(3){ animation-delay:.3s } .chev i:nth-child(4){ animation-delay:.45s }
+  @keyframes chev { 0%,100%{ opacity:.2 } 40%{ opacity:1 } }
+  canvas.c { width:100%; display:block; background:rgba(2,10,18,.6); border:1px solid rgba(90,225,255,.15); border-radius:4px; margin-top:6px; }
+  .badge { display:inline-block; min-width:78px; text-align:center; padding:4px 10px; border-radius:3px; font-weight:700; font-size:.78rem; letter-spacing:.1em; color:#04121a; }
+  .badge.g { background:var(--ok); } .badge.y { background:var(--warn); } .badge.r { background:var(--bad); color:#fff; animation:pulse 1.2s infinite; }
+  @keyframes pulse { 50% { box-shadow:0 0 0 5px rgba(231,76,60,.28); } }
+  .note { color:var(--mut); font-size:.7rem; margin:6px 0 0; }
+
+  .bar-ctl { position:absolute; left:50%; transform:translateX(-50%); bottom:14px; width:min(1080px,calc(100% - 24px)); background:var(--glass); border:1px solid var(--edge); border-radius:8px; padding:8px 12px; backdrop-filter:blur(6px);
+             display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; }
+  .grp { display:flex; gap:5px; align-items:center; flex-wrap:wrap; } .lbl { font-size:.64rem; letter-spacing:.14em; text-transform:uppercase; color:var(--mut); margin-right:3px; }
+  .chip { background:rgba(10,30,46,.8); border:1px solid rgba(90,225,255,.22); color:var(--txt); border-radius:999px; padding:5px 11px; font-size:.78rem; cursor:pointer; }
+  .chip:hover { border-color:var(--acc); } .chip.on { background:var(--acc); color:#03202b; border-color:var(--acc); font-weight:600; }
+  input[type=range] { width:170px; accent-color:var(--acc); } .day { font-family:var(--mono); min-width:58px; }
+  #tip { position:absolute; pointer-events:none; background:rgba(4,16,26,.94); border:1px solid var(--edge); padding:4px 9px; border-radius:4px; font-size:.78rem; display:none; white-space:nowrap; z-index:4; }
+  #load { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; background:rgba(4,8,15,.94); z-index:6; text-align:center; padding:24px; }
+  #load .barw { width:min(320px,70%); height:5px; background:#10283a; border-radius:3px; overflow:hidden; } #load .barw span { display:block; height:100%; width:0; background:var(--acc); transition:width .2s; }
+  #load code { background:#0c2233; padding:2px 6px; border-radius:4px; }
+
+  .more { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:14px; padding:14px; }
+  .box { background:#0a1722; border:1px solid #12293a; border-radius:10px; padding:14px; }
+  .box h2 { margin:0 0 6px; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--mut); }
+  .rec { margin:8px 0 0; }
+  footer { padding:10px 18px 18px; color:var(--mut); font-size:.72rem; border-top:1px solid #0f2433; line-height:1.55; } footer a { color:var(--acc); }
+
+  @media (max-width:980px){
+    .stage { height:auto; min-height:0; display:flex; flex-direction:column; }
+    .cv { position:relative; height:62vh; inset:auto; }
+    .panel, .panel.l, .panel.r { position:relative; width:auto; left:auto; right:auto; top:auto; margin:10px 12px 0; transform:none; }
+    .bar-ctl { position:relative; left:auto; bottom:auto; transform:none; width:auto; margin:10px 12px 12px; }
+    .more { grid-template-columns:1fr; }
+  }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<header>
+  <h1>ASTRA<span>-FIT</span> · HOLO</h1>
+  <p>Monitoreo neuromuscular de astronautas · NASA Space Apps Challenge 2026 · datos simulados</p>
+</header>
+
+<section class="stage" id="stage">
+  <div class="cv"><canvas id="gl"></canvas></div>
+
+  <div class="panel l">
+    <h2>Vectores de fuerza <i id="grfMode">—</i></h2>
+    <div class="chev"><i></i><i></i><i></i><i></i></div>
+    <div class="kv">
+      <div><small>Pico pierna izq.</small><b id="pkL">—</b></div>
+      <div><small>Pico pierna der.</small><b id="pkR">—</b></div>
+    </div>
+    <canvas class="c" id="grf" height="96"></canvas>
+    <p class="note">Fuerza de reacción del suelo simulada, en múltiplos del peso corporal (PC).</p>
+    <h2 style="margin-top:12px" id="musTitle">Músculo</h2>
+    <div class="kv" id="metrics"></div>
+  </div>
+
+  <div class="panel r">
+    <h2>Datos de velocidad <i id="astroLbl">—</i></h2>
+    <div class="big"><span id="spd">0.0</span><small>m/s</small></div>
+    <div class="kv">
+      <div><small>Cadencia</small><b id="cad">0</b></div>
+      <div><small>Fuerza media</small><b id="avgS">100%</b></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin:6px 0 2px"><span class="badge g" id="badge">VERDE</span><span class="note" style="margin:0" id="rec"></span></div>
+    <h2 style="margin-top:12px">EMG simulada <i id="emgLbl">—</i></h2>
+    <canvas class="c" id="emg" height="86"></canvas>
+  </div>
+
+  <div class="bar-ctl">
+    <div class="grp" id="astros"><span class="lbl">Astronauta</span>
+      <button class="chip on" data-a="0">001 estable</button><button class="chip" data-a="1">002 pierde fuerza</button><button class="chip" data-a="2">003 asimetría</button></div>
+    <div class="grp"><button class="chip" id="play">▶ Avanzar misión</button><input type="range" id="day" min="0" max="180" value="0"><b class="day" id="dayLbl">Día 0</b>
+      <button class="chip" id="train">Intervención adaptativa</button></div>
+    <div class="grp" id="modes"><span class="lbl">Actividad</span>
+      <button class="chip" data-mode="idle">Reposo</button><button class="chip" data-mode="walk">Caminar</button><button class="chip on" data-mode="run">Correr en cinta</button><button class="chip" data-mode="float">Microgravedad</button></div>
+    <div class="grp" id="cams"><span class="lbl">Cámara</span>
+      <button class="chip" data-cam="side">Lateral</button><button class="chip on" data-cam="three">3/4</button><button class="chip" data-cam="front">Frente</button><button class="chip" data-cam="back">Espalda</button><button class="chip" id="spin">Girar</button></div>
+  </div>
+  <div id="tip"></div>
+  <div id="load"><div id="loadTxt">Cargando modelo 3D…</div><div class="barw"><span id="loadBar"></span></div></div>
+</section>
+
+<section class="more">
+  <div class="box"><h2 id="chartTitle">Evolución de la fuerza (clic para cambiar de día)</h2><canvas class="c" id="chart" height="170"></canvas><p class="note" id="chartLbl"></p></div>
+  <div class="box"><h2>Cómo leerlo</h2>
+    <p class="rec">Los <b>puntos grandes</b> sobre el cuerpo son los sensores EMG de los músculos monitoreados: cuádriceps, pantorrilla, glúteo y espalda. Su color es el estado (verde estable, amarillo vigilancia, rojo evaluar) y su brillo sigue la activación en cada fase de la zancada. Los <b>puntos pequeños</b> son articulaciones. Haz clic en un sensor para ver sus métricas.</p>
+    <p class="rec">Al avanzar la misión, un astronauta que pierde fuerza <b>corre más lento</b> y baja su cadencia; la intervención adaptativa reduce ese deterioro.</p>
+    <p class="note">Prototipo con datos simulados. Los umbrales (90 % y 75 %) son ilustrativos y las alertas son indicadores de seguimiento, no diagnósticos médicos.</p>
+  </div>
+</section>
+<footer>
+  <b>Créditos.</b> Modelo humanoide animado «Xbot»: ejemplos de <a href="https://github.com/mrdoob/three.js" target="_blank" rel="noopener">three.js</a> (personaje de Mixamo; revisar sus términos antes de publicar el proyecto). Visualización con three.js (MIT).
+  Los datos de fuerza, EMG y velocidad son inventados para la demostración.
+</footer>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+/* =====================================================================
+   1) DATOS SIMULADOS (misma lógica que las versiones anteriores)
+   ===================================================================== */
+const MUSCLES = {
+  quad:   { name:'Cuádriceps',                susc:1.00, base:90 },
+  gastro: { name:'Gastrocnemio y sóleo',      susc:1.15, base:85 },
+  glute:  { name:'Glúteo mayor',              susc:0.80, base:80 },
+  back:   { name:'Erectores y dorsal ancho',  susc:0.60, base:72 }
+};
+const SIDE_NAME = { L:'izquierdo', R:'derecho' };
+const RATES = [ { L:0.016, R:0.016 }, { L:0.170, R:0.170 }, { L:0.030, R:0.120 } ];
+const TRAIN_FACTOR = 0.45;
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const stS = s=>s>=90?0:s>=75?1:2, stY = y=>y>=90?0:y>=80?1:2;
+const COLORS = [0x2ecc71,0xf1c40f,0xe74c3c], CSS = ['#2ecc71','#f1c40f','#e74c3c'];
+const strengthOf = (a,key,side,day,tr)=>{
+  const loss = RATES[a][side]*MUSCLES[key].susc*day*(tr?TRAIN_FACTOR:1);
+  return clamp(100-loss+Math.sin(day*0.35+key.length*1.7+(side==='L'?0:2))*0.6*Math.min(1,day/10),0,100);
+};
+const metricsOf = (a,key,side,day,tr)=>{
+  const s=strengthOf(a,key,side,day,tr), so=strengthOf(a,key,side==='L'?'R':'L',day,tr), sym=Math.min(s,so)/Math.max(s,so)*100, f=(100-s)*0.9;
+  return { s, sym, rms:100+f*0.3, mdf:MUSCLES[key].base*(1-f/250), status:Math.max(stS(s),stY(sym)) };
+};
+const overall = (a,day,tr)=>{ let w=0; for(const k in MUSCLES) for(const sd of ['L','R']) w=Math.max(w,metricsOf(a,k,sd,day,tr).status); return w; };
+const avgStrength = (a,day,tr)=>{ let t=0,n=0; for(const k in MUSCLES) for(const sd of ['L','R']){ t+=strengthOf(a,k,sd,day,tr); n++; } return t/n; };
+const RECS = ['Mantener el entrenamiento habitual.','Repetir mediciones y ajustar intensidad.','Solicitar valoración médica.'];
+
+/* =====================================================================
+   2) ESCENA: renderizador con bloom (resplandor) para el efecto holograma
+   ===================================================================== */
+const $ = id=>document.getElementById(id), stage=$('stage'), canvas=$('gl'), tip=$('tip');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:false, alpha:false });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x04080f); scene.fog = new THREE.FogExp2(0x04080f, 0.045);
+const camera = new THREE.PerspectiveCamera(36,1,0.05,200);
+const controls = new OrbitControls(camera, canvas);
+controls.target.set(0,0.95,0); controls.enableDamping = true; controls.dampingFactor = 0.08; controls.minDistance = 1.2; controls.maxDistance = 9; controls.autoRotateSpeed = 1.4;
+
+const rt = new THREE.WebGLRenderTarget(4,4,{ type:THREE.HalfFloatType, samples:4 });
+const composer = new EffectComposer(renderer, rt);
+composer.addPass(new RenderPass(scene,camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(4,4), 0.5, 0.45, 0.55); composer.addPass(bloom);   // fuerza, radio, umbral: solo lo más brillante "sangra" luz
+composer.addPass(new OutputPass());
+
+scene.add(new THREE.HemisphereLight(0x9fe8ff,0x0a1a28,0.8));
+const key = new THREE.DirectionalLight(0xbfefff,1.2); key.position.set(3,4,4); scene.add(key);
+
+// pista / cinta: líneas que corren hacia atrás
+const trackTex = (()=>{ const c=document.createElement('canvas'); c.width=256; c.height=512; const x=c.getContext('2d');
+  x.fillStyle='#08202e'; x.fillRect(0,0,256,512); x.fillStyle='#46d4ff';
+  x.fillRect(6,0,5,512); x.fillRect(245,0,5,512); x.fillRect(128-2,0,4,512);           // líneas de carril
+  for(let y=0;y<512;y+=64){ x.globalAlpha=.55; x.fillRect(20,y,216,3); x.globalAlpha=1; }  // marcas transversales
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(1,4); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=8; return t; })();
+const track = new THREE.Mesh(new THREE.PlaneGeometry(2.4,14), new THREE.MeshStandardMaterial({ map:trackTex, emissiveMap:trackTex, emissive:0x2aa8d0, emissiveIntensity:.55, roughness:.35, metalness:.5 }));
+track.rotation.x = -Math.PI/2; scene.add(track);
+
+// Tierra (microgravedad)
+const earth = new THREE.Group();
+earth.add(new THREE.Mesh(new THREE.SphereGeometry(9,64,48), new THREE.MeshStandardMaterial({ color:0x1d4ea8, emissive:0x0a2a66, emissiveIntensity:.7, roughness:.9 })));
+earth.add(new THREE.Mesh(new THREE.SphereGeometry(9.3,64,48), new THREE.MeshBasicMaterial({ color:0x5aa9ff, transparent:true, opacity:.18, side:THREE.BackSide, blending:THREE.AdditiveBlending })));
+earth.position.set(-3,-12.2,-9); earth.visible=false; scene.add(earth);
+const stars = (()=>{ const n=800,p=new Float32Array(n*3); for(let i=0;i<n;i++){ const r=25+Math.random()*25,t=Math.random()*6.283,f=Math.acos(2*Math.random()-1); p[i*3]=r*Math.sin(f)*Math.cos(t); p[i*3+1]=r*Math.cos(f); p[i*3+2]=r*Math.sin(f)*Math.sin(t); }
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(p,3)); const s=new THREE.Points(g,new THREE.PointsMaterial({ color:0xffffff,size:0.1,transparent:true,opacity:.8 })); scene.add(s); return s; })();
+
+// esfera de "red neuronal" alrededor del cuerpo
+const web = new THREE.Group();
+web.add(new THREE.LineSegments(new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(1.35,2)), new THREE.LineBasicMaterial({ color:0x3fc8ff, transparent:true, opacity:.14, blending:THREE.AdditiveBlending, depthWrite:false })));
+web.add(new THREE.Points(new THREE.IcosahedronGeometry(1.35,2), new THREE.PointsMaterial({ color:0x9fe8ff, size:0.016, transparent:true, opacity:.55, blending:THREE.AdditiveBlending, depthWrite:false })));
+scene.add(web);
+
+/* Material holográfico: transparente, brilla en los bordes (Fresnel) y tiene líneas de escaneo.
+   Se inyecta código en el shader estándar de three.js para no perder el skinning (huesos). */
+const uT = { value:0 };
+function holoMaterial(color){
+  const m = new THREE.MeshStandardMaterial({ color, emissive:color, emissiveIntensity:.05, transparent:true, opacity:.45, roughness:.5, metalness:0, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.FrontSide });
+  m.onBeforeCompile = sh=>{
+    sh.uniforms.uT = uT;
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>','#include <common>\nuniform float uT;')
+      .replace('#include <emissivemap_fragment>',`#include <emissivemap_fragment>
+        float fres = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 2.0);
+        float scan = 0.80 + 0.20*sin(gl_FragCoord.y*0.9 - uT*7.0);
+        totalEmissiveRadiance += vec3(0.20,0.75,1.0) * fres * 0.7;
+        diffuseColor.a = clamp(opacity * (0.35 + 1.4*fres) * scan, 0.0, 1.0);`);
+  };
+  return m;
+}
+
+/* =====================================================================
+   3) CARGA DEL HUMANOIDE ANIMADO Y PUNTOS DE SENSORES
+   ===================================================================== */
+let model=null, mixer=null; const actions={}; let cur=null; const bones={};
+const fig = new THREE.Group(); scene.add(fig);          // contiene al humanoide; en microgravedad flota y gira
+const sensors=[], joints=[];
+let bonePairs=[], lineGeo=null, helmet=null, pack=null;
+const glowTex = (()=>{ const c=document.createElement('canvas'); c.width=c.height=128; const x=c.getContext('2d'), g=x.createRadialGradient(64,64,2,64,64,62);
+  g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(.25,'rgba(255,255,255,.75)'); g.addColorStop(.6,'rgba(255,255,255,.18)'); g.addColorStop(1,'rgba(255,255,255,0)'); x.fillStyle=g; x.fillRect(0,0,128,128); return new THREE.CanvasTexture(c); })();
+const mkSprite = (color,size)=>{ const s=new THREE.Sprite(new THREE.SpriteMaterial({ map:glowTex, color, transparent:true, depthTest:false, depthWrite:false, blending:THREE.AdditiveBlending, opacity:.95 })); s.scale.setScalar(size); s.renderOrder=20; scene.add(s); return s; };
+
+const prog = u=>{ if(u.total) $('loadBar').style.width = (u.loaded/u.total*100).toFixed(0)+'%'; };
+new GLTFLoader().load('assets/Xbot.glb', gltf=>{
+  model = gltf.scene; fig.add(model);
+  const hm = holoMaterial(0x58d8ff);
+  model.traverse(o=>{ if(o.isMesh){ o.material = hm; o.frustumCulled = false; o.renderOrder = 2; } });
+  model.traverse(o=>{ if(o.isBone){ bones[o.name.replace(/^mixamorig:?/,'')] = o; } });
+  mixer = new THREE.AnimationMixer(model);
+  gltf.animations.forEach(c=>{ actions[c.name] = mixer.clipAction(c); });
+  // altura real del modelo para escalarlo a ~1.8 m
+  model.updateMatrixWorld(true);
+  const head = new THREE.Vector3(), foot = new THREE.Vector3(); bones.HeadTop_End.getWorldPosition(head); bones.LeftFoot.getWorldPosition(foot);
+  model.scale.setScalar(1.75/Math.max(0.5,(head.y-foot.y)+0.08));
+
+  // 8 sensores EMG (uno por músculo y lado) y articulaciones
+  const SENS = [
+    ['quad','L','LeftUpLeg','LeftLeg',.5,[0,0,.05]], ['quad','R','RightUpLeg','RightLeg',.5,[0,0,.05]],
+    ['gastro','L','LeftLeg','LeftFoot',.3,[0,0,-.05]], ['gastro','R','RightLeg','RightFoot',.3,[0,0,-.05]],
+    ['glute','L','Hips','LeftUpLeg',.35,[.03,.05,-.11]], ['glute','R','Hips','RightUpLeg',.35,[-.03,.05,-.11]],
+    ['back','L','Spine','Spine2',.5,[.05,0,-.11]], ['back','R','Spine','Spine2',.5,[-.05,0,-.11]]
+  ];
+  SENS.forEach(([k,s,a,b,t,off])=>{ const sp=mkSprite(0x2ecc71,.3); sp.userData={ key:k, side:s, a, b, t, off:new THREE.Vector3(...off), cur:new THREE.Color(0x2ecc71), act:0 }; sensors.push(sp); });
+  ['LeftArm','RightArm','LeftForeArm','RightForeArm','LeftUpLeg','RightUpLeg','LeftLeg','RightLeg','LeftFoot','RightFoot'].forEach((n,i)=>{ const sp=mkSprite(0xb8f1ff,.1); sp.userData={ bone:n, ph:i*0.7 }; joints.push(sp); });
+
+  // líneas tipo "red" entre huesos (sin dedos ni ojos)
+  const keep = n=>!/Hand(Thumb|Index|Middle|Ring|Pinky)|Eye|_End|Toe/.test(n);
+  Object.keys(bones).forEach(n=>{ const b=bones[n], p=b.parent; if(keep(n) && p && p.isBone){ const pn=p.name.replace(/^mixamorig:?/,''); if(keep(pn)) bonePairs.push([b,p]); } });
+  lineGeo = new THREE.BufferGeometry(); lineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(bonePairs.length*6),3));
+  const lines = new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({ color:0x7fe9ff, transparent:true, opacity:.75, blending:THREE.AdditiveBlending, depthTest:false, depthWrite:false })); lines.frustumCulled=false; lines.renderOrder=15; scene.add(lines);
+
+  // casco y mochila de soporte vital (identidad "astronauta")
+  helmet = new THREE.Mesh(new THREE.SphereGeometry(.17,32,24), new THREE.MeshBasicMaterial({ color:0x8fe6ff, transparent:true, opacity:.13, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide }));
+  helmet.add(new THREE.LineSegments(new THREE.WireframeGeometry(new THREE.SphereGeometry(.17,12,8)), new THREE.LineBasicMaterial({ color:0x7fe9ff, transparent:true, opacity:.22, blending:THREE.AdditiveBlending })));
+  scene.add(helmet);
+  pack = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(.32,.46,.15)), new THREE.LineBasicMaterial({ color:0x7fe9ff, transparent:true, opacity:.7, blending:THREE.AdditiveBlending, depthWrite:false })); scene.add(pack);
+
+  setMode(S.mode,true); applyUrl(); $('load').style.display='none'; refresh(); resize();
+}, prog, e=>{
+  $('loadTxt').innerHTML = location.protocol==='file:' ? 'El navegador no deja cargar el modelo 3D con doble clic.<br>Abre <code>iniciar-servidor.bat</code> (o ejecuta <code>node server.js</code>) y entra a <code>http://localhost:8080/astrafit-holo.html</code>' : 'No se pudo cargar el modelo: '+(e&&e.message||e);
+  $('loadBar').parentNode.style.display='none';
+});
+
+/* =====================================================================
+   4) ESTADO, ACTIVIDADES Y CÁMARAS
+   ===================================================================== */
+const S = { a:0, day:0, trained:false, mode:'run', sel:{ key:'quad', side:'R' }, playing:false, t:0, spin:false };
+const BASE = { idle:{ clip:'idle', v:0 }, walk:{ clip:'walk', v:1.3 }, run:{ clip:'run', v:3.0 }, float:{ clip:'idle', v:0 } };
+const CAMS = { side:[[4.6,1.25,0.3],[0,0.95,0]], three:[[3.3,1.5,3.6],[0,0.95,0]], front:[[0.4,1.25,5.2],[0,0.95,0]], back:[[-0.4,1.25,-5.2],[0,0.95,0]] };
+const ct = { on:false, t:0, p0:new THREE.Vector3(), p1:new THREE.Vector3(), a0:new THREE.Vector3(), a1:new THREE.Vector3() };
+function goCam(n){ const [p,t]=CAMS[n]; ct.p0.copy(camera.position); ct.a0.copy(controls.target); ct.p1.set(...p); ct.a1.set(...t); ct.t=0; ct.on=true; S.spin=false; chips(); }
+camera.position.set(...CAMS.three[0]);
+
+let speedFactor = 1, phase = 0;
+function setMode(m, instant){
+  S.mode = m; const nxt = actions[BASE[m].clip]; if(!nxt) return;
+  nxt.reset().play(); nxt.enabled = true;
+  if (cur && cur!==nxt) cur.crossFadeTo(nxt, instant?0:0.4, false);
+  cur = nxt; chips();
+}
+
+function chips(){
+  document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===S.mode));
+  document.querySelectorAll('#astros [data-a]').forEach(b=>b.classList.toggle('on',+b.dataset.a===S.a));
+  $('spin').classList.toggle('on',S.spin); controls.autoRotate = S.spin;
+  $('train').classList.toggle('on',S.trained);
+}
+document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+document.querySelectorAll('#astros [data-a]').forEach(b=>b.addEventListener('click',()=>{ S.a=+b.dataset.a; chips(); refresh(); }));
+document.querySelectorAll('[data-cam]').forEach(b=>b.addEventListener('click',()=>goCam(b.dataset.cam)));
+$('spin').addEventListener('click',()=>{ S.spin=!S.spin; chips(); });
+$('train').addEventListener('click',()=>{ S.trained=!S.trained; chips(); refresh(); });
+$('day').addEventListener('input',e=>{ S.playing=false; $('play').textContent='▶ Avanzar misión'; setDay(+e.target.value); });
+$('play').addEventListener('click',()=>{ S.playing=!S.playing; if(S.playing&&S.day>=180) setDay(0); $('play').textContent=S.playing?'❚❚ Pausar':'▶ Avanzar misión'; });
+function setDay(d){ S.day=d; refresh(); }
+
+function applyUrl(){
+  const q = new URLSearchParams(location.search);
+  if(q.has('a')) S.a = clamp(+q.get('a')|0,0,2); if(q.has('day')) S.day = clamp(+q.get('day')|0,0,180); if(q.has('train')) S.trained = q.get('train')==='1';
+  if(q.has('sel')){ const [k,s]=q.get('sel').split('-'); if(MUSCLES[k]) S.sel={ key:k, side:s==='L'?'L':'R' }; }
+  if(BASE[q.get('mode')]) setMode(q.get('mode'),true);
+  if(CAMS[q.get('cam')]){ const [p,t]=CAMS[q.get('cam')]; camera.position.set(...p); controls.target.set(...t); }
+  chips();
+}
+
+/* =====================================================================
+   5) SELECCIÓN DE SENSORES (raycast sobre los sprites)
+   ===================================================================== */
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2(); let down=null, lastH=0;
+function hit(e){ const r=canvas.getBoundingClientRect(); mouse.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1); ray.setFromCamera(mouse,camera);
+  const h = ray.intersectObjects(sensors,false); return h.length ? h[0].object : null; }
+canvas.addEventListener('pointerdown',e=>{ down={x:e.clientX,y:e.clientY}; if(S.spin){ S.spin=false; chips(); } });
+canvas.addEventListener('pointerup',e=>{ if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)<5){ const s=hit(e); if(s){ S.sel={ key:s.userData.key, side:s.userData.side }; refresh(); } } down=null; });
+canvas.addEventListener('pointermove',e=>{
+  if(down||performance.now()-lastH<60) return; lastH=performance.now(); const s=hit(e), r=stage.getBoundingClientRect();
+  if(!s){ tip.style.display='none'; canvas.style.cursor=''; return; }
+  tip.textContent = MUSCLES[s.userData.key].name+' '+SIDE_NAME[s.userData.side]; tip.style.left=(e.clientX-r.left+14)+'px'; tip.style.top=(e.clientY-r.top+14)+'px'; tip.style.display='block'; canvas.style.cursor='pointer';
+});
+
+/* =====================================================================
+   6) PANELES: métricas, EMG, fuerzas de reacción y gráfica
+   ===================================================================== */
+const emgC=$('emg'), grfC=$('grf'), chartC=$('chart');
+function fit(c){ const r=c.getBoundingClientRect(), d=Math.min(devicePixelRatio,2); c.width=r.width*d; c.height=(c.getAttribute('height')|0)*d; c.getContext('2d').setTransform(d,0,0,d,0,0); c._w=r.width; c._h=c.height/d; }
+function refresh(){
+  const {key:k,side:sd}=S.sel, m=metricsOf(S.a,k,sd,S.day,S.trained), fr=m.mdf/MUSCLES[k].base;
+  $('musTitle').textContent = MUSCLES[k].name+' · '+SIDE_NAME[sd];
+  const it=[['Fuerza',m.s.toFixed(0)+'%',m.s,stS(m.s)],['Simetría',m.sym.toFixed(0)+'%',m.sym,stY(m.sym)],['RMS',m.rms.toFixed(0)+'%',clamp(m.rms-50,0,100),0],['Frec. mediana',m.mdf.toFixed(0)+' Hz',clamp(fr*100,0,100),fr>=.93?0:fr>=.85?1:2]];
+  $('metrics').innerHTML = it.map(([n,v,w,st])=>`<div><small>${n}</small><b>${v}</b><div class="bar"><span style="width:${w}%;background:${CSS[st]}"></span></div></div>`).join('');
+  const o=overall(S.a,S.day,S.trained), b=$('badge'); b.className='badge '+'gyr'[o]; b.textContent=['VERDE','AMARILLO','ROJO'][o];
+  let rec=RECS[o]; if(S.a===2&&o>0) rec+=' Trabajo unilateral.'; $('rec').textContent=rec;
+  $('astroLbl').textContent='Astronauta 00'+(S.a+1); $('emgLbl').textContent=MUSCLES[k].name.split(' ')[0]+' '+sd;
+  $('dayLbl').textContent='Día '+S.day; $('day').value=S.day; $('avgS').textContent=avgStrength(S.a,S.day,S.trained).toFixed(0)+'%';
+  drawChart();
+}
+const emgBuf=new Array(400).fill(0);
+function pushEmg(act){ const m=metricsOf(S.a,S.sel.key,S.sel.side,S.day,S.trained), amp=(0.05+act)*(m.rms/100), f=m.mdf/12;
+  for(let i=0;i<4;i++){ const n=Math.random()+Math.random()+Math.random()-1.5; emgBuf.push(amp*n*(0.7+0.5*Math.sin(S.t*f*8+i))); emgBuf.shift(); } }
+function drawEmg(){ const c=emgC,x=c.getContext('2d'),w=c._w,h=c._h; if(!w) return; x.clearRect(0,0,w,h);
+  x.strokeStyle='rgba(90,225,255,.15)'; x.beginPath(); x.moveTo(0,h/2); x.lineTo(w,h/2); x.stroke(); x.strokeStyle='#5ae1ff'; x.lineWidth=1.2; x.beginPath();
+  emgBuf.forEach((v,i)=>{ const px=i/(emgBuf.length-1)*w, py=h/2-clamp(v,-1,1)*h*0.46; i?x.lineTo(px,py):x.moveTo(px,py); }); x.stroke(); }
+
+// Fuerza de reacción del suelo simulada (en múltiplos del peso corporal, PC) para UNA pierna a lo largo de la zancada:
+// una "joroba" por apoyo al correr, dos al caminar; en reposo cada pierna carga ~0.5 PC; en microgravedad no hay peso.
+const humpRun = u=>{ u=((u%1)+1)%1; return u<0.38 ? Math.pow(Math.sin(Math.PI*u/0.38),1.4) : 0; };
+const humpWalk = u=>{ u=((u%1)+1)%1; if(u>=0.6) return 0; const v=u/0.6; return Math.pow(Math.sin(Math.PI*v),0.5)*(0.85-0.25*Math.cos(2*Math.PI*(v-0.5))); };
+const grfAt = (p,off,sc)=> S.mode==='run' ? humpRun(p-off)*2.5*sc : S.mode==='walk' ? humpWalk(p-off)*1.2*sc : S.mode==='idle' ? 0.5*sc : 0;
+function drawGrf(){ const c=grfC,x=c.getContext('2d'),w=c._w,h=c._h; if(!w) return; x.clearRect(0,0,w,h);
+  const moving=S.mode==='run'||S.mode==='walk', sL=avgSide('L')/100, sR=avgSide('R')/100;
+  x.strokeStyle='rgba(90,225,255,.12)'; for(let i=1;i<4;i++){ x.beginPath(); x.moveTo(0,h*i/4); x.lineTo(w,h*i/4); x.stroke(); }
+  [['#5ae1ff',0,sL],['#c084fc',.5,sR]].forEach(([col,off,sc])=>{ x.strokeStyle=col; x.lineWidth=1.8; x.beginPath();
+    for(let i=0;i<=120;i++){ const p=i/120, py=h-4-(grfAt(p,off,sc)/3)*(h-10); i?x.lineTo(p*w,py):x.moveTo(p*w,py); } x.stroke(); });
+  if(moving){ const px=(((phase%1)+1)%1)*w; x.strokeStyle='#fff'; x.lineWidth=1; x.beginPath(); x.moveTo(px,0); x.lineTo(px,h); x.stroke(); }
+  const peak = { run:2.5, walk:1.2, idle:0.5, float:0 }[S.mode];
+  $('pkL').textContent=(peak*sL).toFixed(1)+' PC'; $('pkR').textContent=(peak*sR).toFixed(1)+' PC';
+  $('grfMode').textContent={ idle:'reposo', walk:'caminata', run:'carrera', float:'sin peso' }[S.mode]; }
+const avgSide=s=>{ let t=0,n=0; for(const k in MUSCLES){ t+=strengthOf(S.a,k,s,S.day,S.trained); n++; } return t/n; };
+
+const ACOL=['#5ae1ff','#60a5fa','#c084fc'];
+function drawChart(){ const c=chartC,x=c.getContext('2d'),w=c._w,h=c._h,L=32,B=18,T=8,R=8; if(!w) return; x.clearRect(0,0,w,h); x.font='11px system-ui'; x.fillStyle='#7fa6b8'; x.strokeStyle='#12293a'; x.lineWidth=1;
+  const X=d=>L+d/180*(w-L-R), Y=v=>T+(100-v)/60*(h-T-B);
+  [100,90,75,60,40].forEach(v=>{ x.beginPath(); x.moveTo(L,Y(v)); x.lineTo(w-R,Y(v)); x.stroke(); x.fillText(v,4,Y(v)+4); });
+  x.setLineDash([4,4]); x.strokeStyle=CSS[1]; x.beginPath(); x.moveTo(L,Y(90)); x.lineTo(w-R,Y(90)); x.stroke(); x.strokeStyle=CSS[2]; x.beginPath(); x.moveTo(L,Y(75)); x.lineTo(w-R,Y(75)); x.stroke(); x.setLineDash([]);
+  [0,60,120,180].forEach(d=>x.fillText('d'+d,X(d)-8,h-4));
+  for(let a=0;a<3;a++){ x.strokeStyle=ACOL[a]; x.lineWidth=a===S.a?2.6:1.3; x.globalAlpha=a===S.a?1:.5; x.beginPath(); for(let d=0;d<=180;d+=3){ const v=strengthOf(a,S.sel.key,S.sel.side,d,S.trained); d?x.lineTo(X(d),Y(v)):x.moveTo(X(d),Y(v)); } x.stroke(); }
+  x.globalAlpha=1; x.strokeStyle='#dff6ff'; x.lineWidth=1; x.beginPath(); x.moveTo(X(S.day),T); x.lineTo(X(S.day),h-B); x.stroke();
+  const v=strengthOf(S.a,S.sel.key,S.sel.side,S.day,S.trained); x.fillStyle=ACOL[S.a]; x.beginPath(); x.arc(X(S.day),Y(v),4.5,0,7); x.fill();
+  $('chartLbl').innerHTML=MUSCLES[S.sel.key].name+' '+SIDE_NAME[S.sel.side]+' · '+['001','002','003'].map((n,i)=>`<span style="color:${ACOL[i]}">● ${n}</span>`).join(' &nbsp;'); }
+chartC.addEventListener('pointerdown',e=>{ const r=chartC.getBoundingClientRect(); setDay(Math.round(clamp((e.clientX-r.left-32)/(r.width-40),0,1)*180)); });
+
+/* =====================================================================
+   7) BUCLE DE ANIMACIÓN
+   ===================================================================== */
+function resize(){ const r=stage.querySelector('.cv').getBoundingClientRect(); if(!r.width) return; renderer.setSize(r.width,r.height,false); composer.setSize(r.width,r.height); bloom.setSize(r.width,r.height);
+  camera.aspect=r.width/r.height; camera.updateProjectionMatrix(); fit(emgC); fit(grfC); fit(chartC); drawChart(); }
+addEventListener('resize',resize); new ResizeObserver(resize).observe(stage);
+
+const tmp=new THREE.Color(), v1=new THREE.Vector3(), v2=new THREE.Vector3(), q=new THREE.Quaternion(); let last=performance.now(), dayAcc=0, hudT=0, ty=0.95;
+// activación relativa (0–1) de cada músculo según la fase de la zancada; solo ilustrativa
+function activation(key,side,p){
+  const amp = { run:1, walk:.55, idle:.1, float:.05 }[S.mode], off = side==='L'?0:.5;
+  const hump = x=>Math.max(0,Math.sin(2*Math.PI*x));
+  const pat = { quad:.3+.7*hump(p-off), gastro:.3+.7*hump(p-off+.25), glute:.3+.7*hump(p-off+.1), back:.55+.15*Math.sin(4*Math.PI*p) }[key];
+  return clamp(amp*pat + (S.mode==='run'||S.mode==='walk' ? 0 : .04),0,1);
+}
+function frame(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now; S.t+=dt; uT.value=S.t;
+  if(S.playing){ dayAcc+=dt*14; if(dayAcc>=1){ const n=Math.floor(dayAcc); dayAcc-=n; setDay(Math.min(180,S.day+n)); if(S.day>=180){ S.playing=false; $('play').textContent='▶ Avanzar misión'; } } }
+
+  // el astronauta con menos fuerza corre más lento
+  speedFactor += ((0.55+0.45*avgStrength(S.a,S.day,S.trained)/100)-speedFactor)*(1-Math.exp(-4*dt));
+  const fl=S.mode==='float', moving=S.mode==='run'||S.mode==='walk', B=BASE[S.mode];
+  if(cur){ cur.setEffectiveTimeScale(fl?0.35:(moving?speedFactor:1)); }
+  if(mixer){ mixer.update(dt); model.updateMatrixWorld(true); }
+  phase = cur ? (cur.time/cur.getClip().duration) : S.t*0.4;
+
+  const spd = moving ? B.v*speedFactor : 0;
+  trackTex.offset.y -= spd*dt/ (14/4);                       // la cinta se desplaza hacia atrás
+  track.visible = !fl; earth.visible = fl; scene.fog.density = fl?0.0:0.045; scene.background.setHex(fl?0x02040a:0x04080f);
+  const k=1-Math.exp(-3*dt), t=S.t;
+  fig.position.y += ((fl?0.5+0.06*Math.sin(t*0.8):0)-fig.position.y)*k;
+  fig.rotation.x += ((fl?0.14*Math.sin(t*0.37):0)-fig.rotation.x)*k; fig.rotation.z += ((fl?0.18*Math.sin(t*0.45):0)-fig.rotation.z)*k; fig.rotation.y += ((fl?0.8*Math.sin(t*0.25):0)-fig.rotation.y)*k;
+  const dTy=((fl?1.25:0.95)-ty)*k; ty+=dTy; controls.target.y+=dTy; camera.position.y+=dTy;
+  web.position.set(0,fig.position.y+0.95,0); web.rotation.y+=dt*0.12; web.rotation.x+=dt*0.04; stars.rotation.y+=dt*0.006;
+  if(ct.on){ ct.t=Math.min(1,ct.t+dt/0.9); const e=1-Math.pow(1-ct.t,3); camera.position.lerpVectors(ct.p0,ct.p1,e); controls.target.lerpVectors(ct.a0,ct.a1,e); if(ct.t>=1) ct.on=false; }
+  controls.update();
+
+  if(model){
+    fig.updateMatrixWorld(true); const bodyQ=fig.getWorldQuaternion(q), sc=model.scale.x;
+    sensors.forEach(sp=>{ const u=sp.userData; bones[u.a].getWorldPosition(v1); bones[u.b].getWorldPosition(v2); v1.lerp(v2,u.t).add(v2.copy(u.off).applyQuaternion(bodyQ)); sp.position.copy(v1);   // el desplazamiento (en metros) lo saca del hueso hacia la superficie del músculo
+      const st=metricsOf(S.a,u.key,u.side,S.day,S.trained).status; tmp.setHex(COLORS[st]); u.cur.lerp(tmp,1-Math.exp(-5*dt)); sp.material.color.copy(u.cur);
+      const act=activation(u.key,u.side,phase); u.act+=(act-u.act)*(1-Math.exp(-10*dt)); const sel=u.key===S.sel.key&&u.side===S.sel.side;
+      sp.scale.setScalar((sel?0.30:0.2)*(0.7+0.9*u.act) * (st===2?(1+0.15*Math.sin(S.t*7)):1)); sp.material.opacity=0.6+0.4*u.act; });
+    joints.forEach(sp=>{ bones[sp.userData.bone].getWorldPosition(sp.position); const e=moving?0.5+0.5*Math.sin(2*Math.PI*phase*1+sp.userData.ph):0.25; sp.scale.setScalar(0.07+0.07*e); sp.material.opacity=0.5+0.5*e; });
+    const pos=lineGeo.attributes.position; bonePairs.forEach(([b,p],i)=>{ b.getWorldPosition(v1); p.getWorldPosition(v2); pos.setXYZ(i*2,v1.x,v1.y,v1.z); pos.setXYZ(i*2+1,v2.x,v2.y,v2.z); }); pos.needsUpdate=true;
+    bones.Head.getWorldPosition(v1); bones.HeadTop_End.getWorldPosition(v2); helmet.position.copy(v1.lerp(v2,.55));
+    bones.Spine2.getWorldPosition(v1); pack.position.copy(v1.add(v2.set(0,-0.05,-0.17).applyQuaternion(bodyQ))); pack.quaternion.copy(bodyQ);
+  }
+  // paneles ~8 veces por segundo
+  hudT+=dt; if(hudT>0.12){ hudT=0; $('spd').textContent=(moving?B.v*speedFactor:0).toFixed(1);
+    $('cad').textContent=(moving&&cur?Math.round((2/cur.getClip().duration)*60*speedFactor):0)+' ppm'; }
+  const selS = sensors.find(s=>s.userData.key===S.sel.key&&s.userData.side===S.sel.side);
+  pushEmg(selS ? selS.userData.act : 0); drawEmg(); drawGrf();
+  composer.render(); requestAnimationFrame(frame);
+}
+resize(); requestAnimationFrame(frame);
+</script>
+</body>
+</html>

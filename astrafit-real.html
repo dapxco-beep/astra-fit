@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASTRA-FIT Anatomía</title>
+<style>
+  :root { --bg:#04080f; --glass:rgba(8,24,38,.62); --edge:rgba(90,225,255,.36); --txt:#dff6ff; --mut:#7fa6b8; --acc:#5ae1ff; --ok:#2ecc71; --warn:#f1c40f; --bad:#e74c3c; --mono:ui-monospace,"Cascadia Mono",Consolas,monospace; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--bg); color:var(--txt); font:14px/1.45 system-ui,"Segoe UI",sans-serif; }
+  header { height:46px; padding:0 18px; display:flex; align-items:center; gap:14px; border-bottom:1px solid #0f2433; }
+  header h1 { margin:0; font-size:1rem; letter-spacing:.14em; } header h1 span { color:var(--acc); }
+  header p { margin:0; color:var(--mut); font-size:.78rem; }
+  .stage { position:relative; height:calc(100vh - 46px); min-height:640px; overflow:hidden; background:radial-gradient(ellipse at 50% 35%,#0c2233 0%,#04080f 72%); }
+  .cv { position:absolute; inset:0; } #gl { width:100%; height:100%; display:block; touch-action:none; }
+
+  .col { position:absolute; top:14px; width:262px; display:flex; flex-direction:column; gap:10px; }
+  .col.l { left:16px; } .col.r { right:16px; }
+  .panel { background:var(--glass); border:1px solid var(--edge); border-radius:6px; padding:10px 12px; backdrop-filter:blur(6px);
+           box-shadow:0 0 24px rgba(40,190,255,.16), inset 0 0 18px rgba(40,190,255,.07); clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px)); }
+  .panel h2 { margin:0 0 6px; font-size:.68rem; letter-spacing:.2em; text-transform:uppercase; color:var(--acc); font-weight:600; display:flex; justify-content:space-between; gap:8px; }
+  .panel h2 i { font-style:normal; color:var(--mut); letter-spacing:.04em; text-transform:none; }
+  .big { font-family:var(--mono); font-size:2rem; line-height:1; color:#fff; text-shadow:0 0 14px rgba(90,225,255,.6); } .big small { font-size:.8rem; color:var(--mut); margin-left:4px; }
+  .kv { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin:8px 0 4px; }
+  .kv div { background:rgba(90,225,255,.06); border:1px solid rgba(90,225,255,.15); padding:5px 7px; border-radius:4px; }
+  .kv small { display:block; color:var(--mut); font-size:.62rem; letter-spacing:.06em; text-transform:uppercase; } .kv b { font-family:var(--mono); font-size:.98rem; }
+  .bar { height:4px; background:#10283a; border-radius:2px; margin-top:4px; overflow:hidden; } .bar span { display:block; height:100%; width:0; transition:width .3s,background .3s; }
+  .chev { display:flex; gap:2px; margin:0 0 4px; } .chev i { width:18px; height:13px; background:var(--acc); clip-path:polygon(0 0,60% 0,100% 50%,60% 100%,0 100%,40% 50%); opacity:.25; animation:chev 1.1s infinite; }
+  .chev i:nth-child(2){ animation-delay:.15s } .chev i:nth-child(3){ animation-delay:.3s } .chev i:nth-child(4){ animation-delay:.45s } @keyframes chev { 0%,100%{ opacity:.2 } 40%{ opacity:1 } }
+  canvas.c { width:100%; display:block; background:rgba(2,10,18,.6); border:1px solid rgba(90,225,255,.15); border-radius:4px; margin-top:6px; }
+  .badge { display:inline-block; min-width:74px; text-align:center; padding:4px 9px; border-radius:3px; font-weight:700; font-size:.74rem; letter-spacing:.1em; color:#04121a; }
+  .badge.g { background:var(--ok); } .badge.y { background:var(--warn); } .badge.r { background:var(--bad); color:#fff; animation:pulse 1.2s infinite; } @keyframes pulse { 50% { box-shadow:0 0 0 5px rgba(231,76,60,.28); } }
+  .note { color:var(--mut); font-size:.68rem; margin:5px 0 0; }
+  .prof { font-size:.74rem; color:var(--txt); margin:6px 0 0; line-height:1.35; } .prof b { color:var(--acc); }
+  .sys { display:grid; grid-template-columns:10px 1fr auto; gap:2px 8px; align-items:center; padding:5px 6px; border-radius:4px; cursor:pointer; border:1px solid transparent; }
+  .sys:hover { background:rgba(90,225,255,.07); } .sys.on { border-color:var(--acc); background:rgba(90,225,255,.12); }
+  .sys .d { width:9px; height:9px; border-radius:50%; } .sys b { font-size:.78rem; font-weight:600; } .sys .v { font-family:var(--mono); font-size:.78rem; } .sys .bar { grid-column:2 / 4; margin-top:0; }
+
+  .bar-ctl { position:absolute; left:50%; transform:translateX(-50%); bottom:12px; width:min(1120px,calc(100% - 560px)); min-width:560px; background:var(--glass); border:1px solid var(--edge); border-radius:8px; padding:8px 12px; backdrop-filter:blur(6px); display:flex; flex-wrap:wrap; gap:7px 14px; align-items:center; }
+  .grp { display:flex; gap:5px; align-items:center; flex-wrap:wrap; } .lbl { font-size:.62rem; letter-spacing:.14em; text-transform:uppercase; color:var(--mut); margin-right:3px; }
+  .chip { background:rgba(10,30,46,.8); border:1px solid rgba(90,225,255,.22); color:var(--txt); border-radius:999px; padding:4px 10px; font-size:.76rem; cursor:pointer; }
+  .chip:hover { border-color:var(--acc); } .chip.on { background:var(--acc); color:#03202b; border-color:var(--acc); font-weight:600; }
+  input[type=range] { width:150px; accent-color:var(--acc); } .day { font-family:var(--mono); min-width:56px; }
+  #tip { position:absolute; pointer-events:none; background:rgba(4,16,26,.94); border:1px solid var(--edge); padding:4px 9px; border-radius:4px; font-size:.78rem; display:none; white-space:nowrap; z-index:4; }
+  #load { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; background:rgba(4,8,15,.95); z-index:6; text-align:center; padding:24px; }
+  #load .barw { width:min(320px,70%); height:5px; background:#10283a; border-radius:3px; overflow:hidden; } #load .barw span { display:block; height:100%; width:0; background:var(--acc); transition:width .2s; }
+  #load code { background:#0c2233; padding:2px 6px; border-radius:4px; }
+  .more { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:14px; padding:14px; }
+  .box { background:#0a1722; border:1px solid #12293a; border-radius:10px; padding:14px; } .box h2 { margin:0 0 6px; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--mut); }
+  .rec { margin:8px 0 0; } footer { padding:10px 18px 18px; color:var(--mut); font-size:.72rem; border-top:1px solid #0f2433; line-height:1.55; } footer a { color:var(--acc); }
+  @media (max-width:1180px){ .bar-ctl { width:calc(100% - 24px); min-width:0; } .stage { min-height:760px; } }
+  @media (max-width:980px){
+    .stage { height:auto; min-height:0; display:flex; flex-direction:column; } .cv { position:relative; height:62vh; inset:auto; }
+    .col, .col.l, .col.r { position:relative; width:auto; left:auto; right:auto; top:auto; margin:10px 12px 0; }
+    .bar-ctl { position:relative; left:auto; bottom:auto; transform:none; width:auto; margin:10px 12px 12px; } .more { grid-template-columns:1fr; }
+  }
+</style>
+<script type="importmap">
+{ "imports": { "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+</script>
+</head>
+<body>
+<header><h1>ASTRA<span>-FIT</span> · ANATOMÍA</h1><p>Monitoreo neuromuscular y por sistemas · NASA Space Apps Challenge 2026 · datos simulados</p></header>
+
+<section class="stage" id="stage">
+  <div class="cv"><canvas id="gl"></canvas></div>
+
+  <div class="col l">
+    <div class="panel">
+      <h2>Vectores de fuerza <i id="grfMode">—</i></h2><div class="chev"><i></i><i></i><i></i><i></i></div>
+      <div class="kv"><div><small>Pico pierna izq.</small><b id="pkL">—</b></div><div><small>Pico pierna der.</small><b id="pkR">—</b></div></div>
+      <canvas class="c" id="grf" height="84"></canvas>
+      <p class="note">Fuerza de reacción del suelo simulada (múltiplos del peso corporal).</p>
+    </div>
+    <div class="panel">
+      <h2 id="musTitle">Músculo</h2><div class="kv" id="metrics"></div>
+      <h2 style="margin-top:8px">EMG simulada <i id="emgLbl">—</i></h2><canvas class="c" id="emg" height="70"></canvas>
+    </div>
+  </div>
+
+  <div class="col r">
+    <div class="panel">
+      <h2>Datos de velocidad <i id="astroLbl">—</i></h2>
+      <div class="big"><span id="spd">0.0</span><small>m/s</small></div>
+      <div class="kv"><div><small>Cadencia</small><b id="cad">0</b></div><div><small>Fuerza media</small><b id="avgS">100%</b></div></div>
+      <p class="prof" id="prof"></p>
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-top:8px"><span class="badge g" id="badge">VERDE</span><span class="note" style="margin:0" id="rec"></span></div>
+    </div>
+    <div class="panel">
+      <h2>Sistemas <i>clic para resaltar</i></h2><div id="systems"></div>
+      <p class="note">Indicadores simulados a partir de los riesgos de la NASA (músculo, hueso, corazón, coordinación, ojos).</p>
+    </div>
+  </div>
+
+  <div class="bar-ctl">
+    <div class="grp" id="astros"><span class="lbl">Astronauta</span>
+      <button class="chip on" data-a="0">001 hombre · estable</button><button class="chip" data-a="1">002 hombre · pierde fuerza</button><button class="chip" data-a="2">003 mujer · asimetría</button></div>
+    <div class="grp"><button class="chip" id="play">▶ Avanzar misión</button><input type="range" id="day" min="0" max="180" value="0"><b class="day" id="dayLbl">Día 0</b><button class="chip" id="train">Intervención</button></div>
+    <div class="grp" id="modes"><span class="lbl">Actividad</span>
+      <button class="chip" data-mode="idle">Reposo</button><button class="chip" data-mode="walk">Caminar</button><button class="chip on" data-mode="run">Correr en cinta</button><button class="chip" data-mode="float">Microgravedad</button></div>
+    <div class="grp" id="layers"><span class="lbl">Capas</span>
+      <button class="chip" data-layer="skin">Silueta</button><button class="chip on" data-layer="muscles">Músculos</button><button class="chip" data-layer="skeleton">Esqueleto</button>
+      <button class="chip" data-layer="organs">Órganos</button><button class="chip" data-layer="vessels">Vasos</button><button class="chip" data-layer="nerves">Nervios</button></div>
+    <div class="grp" id="cams"><span class="lbl">Cámara</span>
+      <button class="chip" data-cam="side">Lateral</button><button class="chip on" data-cam="three">3/4</button><button class="chip" data-cam="front">Frente</button><button class="chip" data-cam="back">Espalda</button><button class="chip" id="spin">Girar</button></div>
+  </div>
+  <div id="tip"></div>
+  <div id="load"><div id="loadTxt">Cargando modelos 3D…</div><div class="barw"><span id="loadBar"></span></div></div>
+</section>
+
+<section class="more">
+  <div class="box"><h2>Evolución de la fuerza (clic para cambiar de día)</h2><canvas class="c" id="chart" height="170"></canvas><p class="note" id="chartLbl"></p></div>
+  <div class="box"><h2>Cómo leerlo</h2>
+    <p class="rec">Los <b>músculos monitoreados</b> (cuádriceps, pantorrilla, glúteo y espalda) cambian de color según su estado y se contraen al ritmo de la zancada. Activa las <b>capas</b> para ver esqueleto, órganos, vasos y nervios, o pulsa un <b>sistema</b> del panel derecho para resaltarlo con su estado.</p>
+    <p class="rec">Un astronauta que pierde fuerza <b>corre más lento</b>. La intervención adaptativa reduce el deterioro de todos los sistemas, no solo del muscular.</p>
+    <p class="note">Prototipo con datos simulados. Los umbrales son ilustrativos y las alertas son indicadores de seguimiento, no diagnósticos médicos. La anatomía se mueve pegada a un esqueleto animado: cada pieza sigue a su hueso como un bloque rígido, así que en articulaciones como la rodilla puede verse algún corte.</p>
+  </div>
+</section>
+<footer>
+  <b>Créditos.</b> Anatomía: BodyParts3D © The Database Center for Life Science (CC BY 4.0), adaptada por <a href="https://github.com/MervinR07/open-anatomy-3d" target="_blank" rel="noopener">open-anatomy-3d</a> (CC BY 4.0); modelo femenino con órganos de HuBMAP (CC BY 4.0).
+  Cambios en esta página: se pegó cada estructura al esqueleto animado, se recolorearon y se ocultaron la piel y las estructuras reproductivas.
+  Esqueleto animado «Xbot» de los ejemplos de <a href="https://github.com/mrdoob/three.js" target="_blank" rel="noopener">three.js</a> (personaje de Mixamo; revisar sus términos antes de publicar).
+</footer>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+/* =====================================================================
+   1) DATOS SIMULADOS
+   Perfil de cada astronauta (parámetros basales del documento: sexo, edad, peso y talla) y
+   modelo de deterioro por sistema, inspirado en los riesgos de la NASA citados en el documento.
+   ===================================================================== */
+const PROFILES = [
+  { sex:'M', label:'Hombre', age:38, h:1.78, w:76, scale:1.000, vs:1.00 },
+  { sex:'M', label:'Hombre', age:45, h:1.86, w:88, scale:1.045, vs:0.96 },
+  { sex:'F', label:'Mujer',  age:34, h:1.65, w:61, scale:0.927, vs:0.88 }
+];
+const MUSCLES = {
+  quad:   { name:'Cuádriceps',               susc:1.00, base:90 },
+  gastro: { name:'Gastrocnemio y sóleo',     susc:1.15, base:85 },
+  glute:  { name:'Glúteo mayor',             susc:0.80, base:80 },
+  back:   { name:'Erectores y dorsal ancho', susc:0.60, base:72 }
+};
+const SIDE_NAME = { L:'izquierdo', R:'derecho' };
+const RATES = [ { L:0.016, R:0.016 }, { L:0.170, R:0.170 }, { L:0.030, R:0.120 } ];
+const TRAIN_FACTOR = 0.45;
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const stS = s=>s>=90?0:s>=75?1:2, stY = y=>y>=90?0:y>=80?1:2;
+const COLORS = [0x2ecc71,0xf1c40f,0xe74c3c], CSS = ['#2ecc71','#f1c40f','#e74c3c'];
+const strengthOf = (a,key,side,day,tr)=>{ const loss=RATES[a][side]*MUSCLES[key].susc*day*(tr?TRAIN_FACTOR:1);
+  return clamp(100-loss+Math.sin(day*0.35+key.length*1.7+(side==='L'?0:2))*0.6*Math.min(1,day/10),0,100); };
+const metricsOf = (a,key,side,day,tr)=>{ const s=strengthOf(a,key,side,day,tr), so=strengthOf(a,key,side==='L'?'R':'L',day,tr), sym=Math.min(s,so)/Math.max(s,so)*100, f=(100-s)*0.9;
+  return { s, sym, rms:100+f*0.3, mdf:MUSCLES[key].base*(1-f/250), status:Math.max(stS(s),stY(sym)) }; };
+const avgStrength = (a,day,tr)=>{ let t=0,n=0; for(const k in MUSCLES) for(const sd of ['L','R']){ t+=strengthOf(a,k,sd,day,tr); n++; } return t/n; };
+const muscleStatus = (a,day,tr)=>{ let w=0; for(const k in MUSCLES) for(const sd of ['L','R']) w=Math.max(w,metricsOf(a,k,sd,day,tr).status); return w; };
+
+// % de la capacidad basal perdido por día de misión, por astronauta [001,002,003]; la intervención lo reduce
+const SYSTEMS = {
+  muscular: { name:'Muscular',                th:[90,75], rec:'Ajustar la carga de resistencia y recuperar.' },
+  oseo:     { name:'Óseo',                    th:[95,90], rate:[0.015,0.040,0.025], tf:0.60, rec:'Más carga mecánica; revisar calcio y vitamina D.' },
+  cardio:   { name:'Cardiovascular',          th:[90,80], rate:[0.020,0.090,0.050], tf:0.50, rec:'Aumentar el ejercicio aeróbico.' },
+  nervioso: { name:'Nervioso y coordinación', th:[90,80], rate:[0.010,0.050,0.140], tf:0.60, rec:'Ejercicios de coordinación y equilibrio.' },
+  ocular:   { name:'Neuro-ocular',            th:[95,90], rate:[0.020,0.040,0.030], tf:0.85, rec:'Control oftalmológico periódico.' }
+};
+const sysValue = (id,a,day,tr)=> id==='muscular' ? avgStrength(a,day,tr) : clamp(100 - SYSTEMS[id].rate[a]*day*(tr?SYSTEMS[id].tf:1) + Math.sin(day*0.2+id.length)*0.4*Math.min(1,day/10),0,100);
+const sysStatus = (id,a,day,tr)=>{ const v=sysValue(id,a,day,tr), th=SYSTEMS[id].th; return id==='muscular' ? Math.max(muscleStatus(a,day,tr), v>=th[0]?0:v>=th[1]?1:2) : (v>=th[0]?0:v>=th[1]?1:2); };
+const overall = (a,day,tr)=>Math.max(...Object.keys(SYSTEMS).map(id=>sysStatus(id,a,day,tr)));
+
+/* =====================================================================
+   2) ESCENA CON RESPLANDOR
+   ===================================================================== */
+const $=id=>document.getElementById(id), stage=$('stage'), canvas=$('gl'), tip=$('tip');
+const renderer=new THREE.WebGLRenderer({ canvas, antialias:false });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.toneMapping=THREE.ACESFilmicToneMapping;
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x04080f); scene.fog=new THREE.FogExp2(0x04080f,0.04);
+const camera=new THREE.PerspectiveCamera(36,1,0.05,200);
+const controls=new OrbitControls(camera,canvas); controls.target.set(0,0.95,0); controls.enableDamping=true; controls.dampingFactor=0.08; controls.minDistance=1.0; controls.maxDistance=9; controls.autoRotateSpeed=1.4;
+const composer=new EffectComposer(renderer,new THREE.WebGLRenderTarget(4,4,{ type:THREE.HalfFloatType, samples:4 }));
+composer.addPass(new RenderPass(scene,camera)); const bloom=new UnrealBloomPass(new THREE.Vector2(4,4),0.35,0.4,0.7); composer.addPass(bloom); composer.addPass(new OutputPass());
+scene.add(new THREE.HemisphereLight(0xbfeaff,0x0a1a28,1.1)); const key=new THREE.DirectionalLight(0xffffff,1.7); key.position.set(3,4,4); scene.add(key);
+const rimL=new THREE.DirectionalLight(0x4fd1ff,1.0); rimL.position.set(-4,2,-4); scene.add(rimL);
+
+const trackTex=(()=>{ const c=document.createElement('canvas'); c.width=256; c.height=512; const x=c.getContext('2d'); x.fillStyle='#08202e'; x.fillRect(0,0,256,512); x.fillStyle='#46d4ff';
+  x.fillRect(6,0,5,512); x.fillRect(245,0,5,512); x.fillRect(126,0,4,512); for(let y=0;y<512;y+=64){ x.globalAlpha=.55; x.fillRect(20,y,216,3); x.globalAlpha=1; }
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(1,4); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=8; return t; })();
+const track=new THREE.Mesh(new THREE.PlaneGeometry(2.4,14),new THREE.MeshStandardMaterial({ map:trackTex, emissiveMap:trackTex, emissive:0x2aa8d0, emissiveIntensity:.5, roughness:.35, metalness:.5 })); track.rotation.x=-Math.PI/2; scene.add(track);
+const earth=new THREE.Group(); earth.add(new THREE.Mesh(new THREE.SphereGeometry(9,64,48),new THREE.MeshStandardMaterial({ color:0x1d4ea8, emissive:0x0a2a66, emissiveIntensity:.7, roughness:.9 })));
+earth.add(new THREE.Mesh(new THREE.SphereGeometry(9.3,64,48),new THREE.MeshBasicMaterial({ color:0x5aa9ff, transparent:true, opacity:.18, side:THREE.BackSide, blending:THREE.AdditiveBlending }))); earth.position.set(-3,-12.2,-9); earth.visible=false; scene.add(earth);
+const stars=(()=>{ const n=800,p=new Float32Array(n*3); for(let i=0;i<n;i++){ const r=25+Math.random()*25,t=Math.random()*6.283,f=Math.acos(2*Math.random()-1); p[i*3]=r*Math.sin(f)*Math.cos(t); p[i*3+1]=r*Math.cos(f); p[i*3+2]=r*Math.sin(f)*Math.sin(t); }
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(p,3)); const s=new THREE.Points(g,new THREE.PointsMaterial({ color:0xffffff,size:0.1,transparent:true,opacity:.8 })); scene.add(s); return s; })();
+const web=new THREE.LineSegments(new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(1.45,2)),new THREE.LineBasicMaterial({ color:0x3fc8ff, transparent:true, opacity:.07, blending:THREE.AdditiveBlending, depthWrite:false })); scene.add(web);
+
+/* Material "anatomía holográfica": translúcido con borde brillante (Fresnel). El desplazamiento uPulse
+   infla el músculo a lo largo de su normal para simular la contracción. */
+const uT={ value:0 };
+function anatMat(color,opacity){
+  const m=new THREE.MeshStandardMaterial({ color, emissive:color, emissiveIntensity:.15, transparent:true, opacity, roughness:.45, metalness:.05, depthWrite:false });
+  const uPulse={ value:0 }; m.userData.uPulse=uPulse;
+  m.onBeforeCompile=sh=>{ sh.uniforms.uPulse=uPulse;
+    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nuniform float uPulse;').replace('#include <begin_vertex>','#include <begin_vertex>\ntransformed += normalize(objectNormal) * uPulse;');
+    sh.fragmentShader=sh.fragmentShader.replace('#include <emissivemap_fragment>',`#include <emissivemap_fragment>
+      float fres = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 2.0);
+      totalEmissiveRadiance += vec3(0.15,0.55,0.75) * fres * 0.55;`); };
+  return m;
+}
+function ghostMat(){   // silueta del cuerpo: casi invisible, solo el contorno
+  const m=new THREE.MeshStandardMaterial({ color:0x58d8ff, emissive:0x58d8ff, emissiveIntensity:.05, transparent:true, opacity:.22, roughness:.5, depthWrite:false, blending:THREE.AdditiveBlending });
+  m.onBeforeCompile=sh=>{ sh.uniforms.uT=uT; sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform float uT;').replace('#include <emissivemap_fragment>',`#include <emissivemap_fragment>
+      float fres = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 2.0);
+      float scan = 0.80 + 0.20*sin(gl_FragCoord.y*0.9 - uT*7.0);
+      totalEmissiveRadiance += vec3(0.2,0.75,1.0) * fres * 0.6;
+      diffuseColor.a = clamp(opacity * (0.3 + 1.6*fres) * scan, 0.0, 1.0);`); };
+  return m;
+}
+
+/* =====================================================================
+   3) CARGA: esqueleto animado + anatomía masculina y femenina pegadas a él
+   ===================================================================== */
+const fig=new THREE.Group(); scene.add(fig);
+let model=null, mixer=null, cur=null, ghost=null; const actions={}, bones={};
+const anatMeshes=[], monitors={}; let helmet=null, pack=null;
+const S={ a:0, day:0, trained:false, mode:'run', sel:{ key:'quad', side:'R' }, playing:false, t:0, spin:false, focus:null,
+          layers:{ skin:false, muscles:true, skeleton:false, organs:false, vessels:false, nerves:false } };
+
+const glowTex=(()=>{ const c=document.createElement('canvas'); c.width=c.height=128; const x=c.getContext('2d'), g=x.createRadialGradient(64,64,2,64,64,62);
+  g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(.3,'rgba(255,255,255,.7)'); g.addColorStop(1,'rgba(255,255,255,0)'); x.fillStyle=g; x.fillRect(0,0,128,128); return new THREE.CanvasTexture(c); })();
+
+const SYS_GROUPS=['skin','skeleton','muscles','organs','vessels','nerves'];
+const sysOf=o=>{ for(let n=o;n;n=n.parent) if(SYS_GROUPS.includes(n.name)) return n.name; return ''; };
+const HIDE=/^skin$|reproductive|prostate|uterus|ovary|fallopian|vagina|breast/;          // se ocultan piel y estructuras reproductivas
+const healthSys=(m,sys)=> sys==='muscles'?'muscular' : sys==='skeleton'?'oseo' : (sys==='vessels'||/heart|aorta|coronary|pulmonary|lung|vena_cava/.test(m))?'cardio' :
+                          (sys==='nerves'||/brain|cerebellum|brainstem|pituitary/.test(m))?'nervioso' : /^eye_/.test(m)?'ocular' : null;
+const ORGAN_COLOR=[[/heart|aorta|coronary/,0xff6a5a],[/lung|bronchi|trachea|larynx|pharynx/,0x6cc8ff],[/liver|spleen|pancreas|gallbladder/,0xd98b5a],[/kidney|adrenal|ureter|bladder/,0xc4757a],[/brain|cerebellum|brainstem|pituitary|eye/,0xe8a0d8],[/stomach|colon|intestine|esophagus|appendix/,0xe0a878]];
+const colorFor=(name,sys)=>{ if(sys==='muscles') return 0x5fb8d8; if(sys==='skeleton') return 0xe9ecdf; if(sys==='nerves') return 0xffe066;
+  if(sys==='vessels') return /arter|aorta|carotid|coronary/.test(name)?0xff5a4a:0x4a7bff; for(const [re,c] of ORGAN_COLOR) if(re.test(name)) return c; return 0xff9a86; };
+
+const MON={ quadriceps:'quad', gluteal:'glute', calf:'gastro', back_muscles:'back' };
+const BONE_RULES=[ // [regex, hueso] — los nombres con _l/_r reciben Left/Right
+  [/^(gluteal|pelvis$|pelvic_floor|bladder|arteries_pelvis|veins_pelvis)/,'Hips'], [/^(quadriceps|hamstrings|adductors|iliopsoas|femur)/,'UpLeg'],
+  [/^(calf|shin_muscles|lower_leg|patella)/,'Leg'], [/^(foot)/,'Foot'], [/^(hand)/,'Hand'], [/^(forearm)/,'ForeArm'], [/^(upper_arm|deltoid|shoulder_muscles|rotator_cuff|humerus)/,'Arm'],
+  [/^(abdominal_muscles)/,'Spine'], [/^(back_muscles)/,'Spine1'], [/^(chest_muscles|trapezius|scapula|clavicle|sternum|ribs|intercostals)/,'Spine2'],
+  [/^(neck_muscles|spine_cervical|larynx|pharynx|trachea)/,'Neck'], [/^(skull|mandible|teeth|brain|cerebellum|brainstem|pituitary|eye|tongue|salivary|cranial|arteries_head|carotid)/,'Head'] ];
+const MAIN=['Hips','Spine','Spine1','Spine2','Neck','Head','LeftArm','LeftForeArm','LeftHand','RightArm','RightForeArm','RightHand','LeftUpLeg','LeftLeg','LeftFoot','RightUpLeg','RightLeg','RightFoot'];
+const SEG_END={ Hips:'Spine', Spine:'Spine1', Spine1:'Spine2', Spine2:'Neck', Neck:'Head', Head:'HeadTop_End', LeftArm:'LeftForeArm', LeftForeArm:'LeftHand', LeftHand:'LeftHandMiddle2', RightArm:'RightForeArm', RightForeArm:'RightHand', RightHand:'RightHandMiddle2',
+                LeftUpLeg:'LeftLeg', LeftLeg:'LeftFoot', LeftFoot:'LeftToeBase', RightUpLeg:'RightLeg', RightLeg:'RightFoot', RightFoot:'RightToeBase' };
+const segDist=(p,a,b)=>{ const ab=b.clone().sub(a), t=clamp(p.clone().sub(a).dot(ab)/Math.max(ab.lengthSq(),1e-9),0,1); return p.distanceTo(a.clone().add(ab.multiplyScalar(t))); };
+function boneFor(name,center){
+  const side = /_l$/.test(name)?'Left' : /_r$/.test(name)?'Right' : '';
+  for(const [re,b] of BONE_RULES) if(re.test(name)){ const full=(['Hips','Spine','Spine1','Spine2','Neck','Head'].includes(b)?b:side+b); if(bones[full]) return full; }
+  let best=null,bd=1e9;                                  // si no hay regla: el hueso (segmento) más cercano
+  MAIN.forEach(n=>{ if(side && /^(Left|Right)/.test(n) && !n.startsWith(side)) return; const a=new THREE.Vector3(), b=new THREE.Vector3(); bones[n].getWorldPosition(a); bones[SEG_END[n]].getWorldPosition(b);
+    const d=segDist(center,a,b); if(d<bd){ bd=d; best=n; } }); return best;
+}
+function bindAnatomy(gltf,sex,align){
+  const root=gltf.scene; scene.add(root); root.updateMatrixWorld(true);
+  let bb=new THREE.Box3().setFromObject(root); const s=(align.top-align.floor)/(bb.max.y-bb.min.y); root.scale.setScalar(s); root.updateMatrixWorld(true);
+  bb=new THREE.Box3().setFromObject(root); root.position.set(-(bb.min.x+bb.max.x)/2, align.floor-bb.min.y, align.z); root.updateMatrixWorld(true);
+  const list=[]; root.traverse(o=>{ if(o.isMesh) list.push(o); });
+  list.forEach(o=>{
+    const name=o.name.replace(/_\d+$/,''), sys=sysOf(o); if(!sys||sys==='skin'||HIDE.test(name)){ o.visible=false; o.userData={ dead:true }; return; }
+    if(!o.geometry.attributes.normal) o.geometry.computeVertexNormals();
+    const center=new THREE.Box3().setFromObject(o).getCenter(new THREE.Vector3()), bn=boneFor(name,center);
+    const mk=Object.keys(MON).find(k=>name.startsWith(k)), side=/_l$/.test(name)?'L':/_r$/.test(name)?'R':null;
+    const base=colorFor(name,sys), baseOp=sys==='muscles'?0.55:sys==='skeleton'?0.8:0.7;
+    o.material=anatMat(base,baseOp); o.renderOrder=3; o.frustumCulled=false;
+    o.userData={ sex, sys, name, hsys:healthSys(name,sys), base:new THREE.Color(base), baseOp, cur:new THREE.Color(base), op:baseOp, mon:mk&&side?{ key:MON[mk], side }:null, act:0, bone:bn };
+    if(o.userData.mon){ const k=sex+o.userData.mon.key+o.userData.mon.side; (monitors[k]=monitors[k]||{}).local=center.clone(); monitors[k].bone=bn; monitors[k].sex=sex; }   // clave: sexo+músculo+lado
+    bones[bn].attach(o); anatMeshes.push(o);
+  });
+  root.removeFromParent();
+}
+
+const prog={ x:0, m:0, f:0 }; const upd=()=>{ $('loadBar').style.width=((prog.x+prog.m+prog.f)/3*100).toFixed(0)+'%'; };
+const ld=(url,k)=>new Promise((res,rej)=>{ const l=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder); l.load(url,res,e=>{ if(e.total){ prog[k]=e.loaded/e.total; upd(); } },rej); });
+Promise.all([ ld('assets/Xbot.glb','x'), ld('assets/anatomy-male.glb','m'), ld('assets/anatomy-female.glb','f') ]).then(([gx,gm,gf])=>{
+  model=gx.scene; fig.add(model);
+  model.traverse(o=>{ if(o.isBone) bones[o.name.replace(/^mixamorig:?/,'')]=o; });
+  ghost=[]; model.traverse(o=>{ if(o.isMesh){ o.material=ghostMat(); o.frustumCulled=false; o.renderOrder=1; ghost.push(o); } });
+  mixer=new THREE.AnimationMixer(model); gx.animations.forEach(c=>actions[c.name]=mixer.clipAction(c));
+  // postura base (reposo, t=0): brazos a los lados, igual que la anatomía; ahí se "pega" cada estructura a su hueso
+  actions.idle.play(); mixer.update(0); model.updateMatrixWorld(true);
+  const hd=new THREE.Vector3(), ft=new THREE.Vector3(); bones.HeadTop_End.getWorldPosition(hd); bones.LeftFoot.getWorldPosition(ft);
+  model.scale.setScalar(1.75/Math.max(0.5,(hd.y-ft.y)+0.08)); model.updateMatrixWorld(true);
+  const tl=new THREE.Vector3(), tr=new THREE.Vector3(); bones.LeftToeBase.getWorldPosition(tl); bones.RightToeBase.getWorldPosition(tr);
+  model.position.y-=Math.min(tl.y,tr.y)-0.03; model.updateMatrixWorld(true); bones.HeadTop_End.getWorldPosition(hd);
+  const align={ top:hd.y+0.02, floor:0, z:0.0 }; console.info('[ASTRA-FIT] alineación', JSON.stringify({ top:+align.top.toFixed(3), msc:+model.scale.x.toFixed(4) }));
+  bindAnatomy(gm,'M',align); bindAnatomy(gf,'F',align);
+  Object.keys(monitors).forEach(k=>{ const sp=new THREE.Sprite(new THREE.SpriteMaterial({ map:glowTex, color:0x2ecc71, transparent:true, depthTest:false, depthWrite:false, blending:THREE.AdditiveBlending, opacity:.9 })); sp.scale.setScalar(.2); sp.renderOrder=20; scene.add(sp); monitors[k].sprite=sp; sp.userData={ k, key:k.slice(1,-1), side:k.slice(-1) }; });
+  helmet=new THREE.Mesh(new THREE.SphereGeometry(.17,32,24),new THREE.MeshBasicMaterial({ color:0x8fe6ff, transparent:true, opacity:.045, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.FrontSide })); scene.add(helmet);
+  pack=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(.32,.46,.15)),new THREE.LineBasicMaterial({ color:0x7fe9ff, transparent:true, opacity:.5, blending:THREE.AdditiveBlending, depthWrite:false })); scene.add(pack);
+  setMode(S.mode,true); applyUrl(); applyVisibility(); $('load').style.display='none'; refresh(); resize();
+}).catch(e=>{ $('loadTxt').innerHTML=location.protocol==='file:'?'El navegador no deja cargar los modelos con doble clic.<br>Abre <code>iniciar-servidor.bat</code> (o ejecuta <code>node server.js</code>) y entra a <code>http://localhost:8080/astrafit-real.html</code>':'No se pudieron cargar los modelos: '+(e&&e.message||e); $('loadBar').parentNode.style.display='none'; });
+
+/* =====================================================================
+   4) ESTADO, CAPAS, ACTIVIDADES Y CÁMARA
+   ===================================================================== */
+const BASE={ idle:{ clip:'idle', v:0 }, walk:{ clip:'walk', v:1.3 }, run:{ clip:'run', v:3.0 }, float:{ clip:'idle', v:0 } };
+const CAMS={ side:[[4.6,1.25,0.3],[0,0.95,0]], three:[[3.3,1.5,3.6],[0,0.95,0]], front:[[0.4,1.25,5.2],[0,0.95,0]], back:[[-0.4,1.25,-5.2],[0,0.95,0]] };
+const ct={ on:false, t:0, p0:new THREE.Vector3(), p1:new THREE.Vector3(), a0:new THREE.Vector3(), a1:new THREE.Vector3() };
+function goCam(n){ const [p,t]=CAMS[n]; ct.p0.copy(camera.position); ct.a0.copy(controls.target); ct.p1.set(...p); ct.a1.set(...t); ct.t=0; ct.on=true; S.spin=false; chips(); }
+camera.position.set(...CAMS.three[0]);
+function setMode(m,instant){ S.mode=m; const nxt=actions[BASE[m].clip]; if(!nxt) return; nxt.reset().play(); nxt.enabled=true; if(cur&&cur!==nxt) cur.crossFadeTo(nxt,instant?0:0.4,false); cur=nxt; chips(); }
+
+// visibilidad: sexo del astronauta + capas activas (o el sistema resaltado)
+function applyVisibility(){
+  const sex=PROFILES[S.a].sex;
+  anatMeshes.forEach(m=>{ const u=m.userData; if(u.dead){ m.visible=false; return; } m.visible = !!(u.sex===sex && (S.layers[u.sys] || (S.focus && u.hsys===S.focus))); });   // !!: three.js solo oculta con false exacto, no con null
+  if(ghost) ghost.forEach(g=>g.visible=S.layers.skin);
+}
+function chips(){
+  document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===S.mode));
+  document.querySelectorAll('#astros [data-a]').forEach(b=>b.classList.toggle('on',+b.dataset.a===S.a));
+  document.querySelectorAll('[data-layer]').forEach(b=>b.classList.toggle('on',!!S.layers[b.dataset.layer]));
+  $('spin').classList.toggle('on',S.spin); controls.autoRotate=S.spin; $('train').classList.toggle('on',S.trained);
+}
+document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+document.querySelectorAll('#astros [data-a]').forEach(b=>b.addEventListener('click',()=>{ S.a=+b.dataset.a; chips(); applyVisibility(); refresh(); }));
+document.querySelectorAll('[data-layer]').forEach(b=>b.addEventListener('click',()=>{ S.layers[b.dataset.layer]=!S.layers[b.dataset.layer]; chips(); applyVisibility(); }));
+document.querySelectorAll('[data-cam]').forEach(b=>b.addEventListener('click',()=>goCam(b.dataset.cam)));
+$('spin').addEventListener('click',()=>{ S.spin=!S.spin; chips(); });
+$('train').addEventListener('click',()=>{ S.trained=!S.trained; chips(); refresh(); });
+$('day').addEventListener('input',e=>{ S.playing=false; $('play').textContent='▶ Avanzar misión'; setDay(+e.target.value); });
+$('play').addEventListener('click',()=>{ S.playing=!S.playing; if(S.playing&&S.day>=180) setDay(0); $('play').textContent=S.playing?'❚❚ Pausar':'▶ Avanzar misión'; });
+const setDay=d=>{ S.day=d; refresh(); };
+function applyUrl(){
+  const q=new URLSearchParams(location.search);
+  if(q.has('a')) S.a=clamp(+q.get('a')|0,0,2); if(q.has('day')) S.day=clamp(+q.get('day')|0,0,180); if(q.has('train')) S.trained=q.get('train')==='1';
+  if(q.has('sel')){ const [k,s]=q.get('sel').split('-'); if(MUSCLES[k]) S.sel={ key:k, side:s==='L'?'L':'R' }; }
+  if(q.has('layers')){ Object.keys(S.layers).forEach(k=>S.layers[k]=false); q.get('layers').split(',').forEach(k=>{ if(k in S.layers) S.layers[k]=true; }); }
+  if(SYSTEMS[q.get('focus')]) S.focus=q.get('focus'); if(BASE[q.get('mode')]) setMode(q.get('mode'),true);
+  if(CAMS[q.get('cam')]){ const [p,t]=CAMS[q.get('cam')]; camera.position.set(...p); controls.target.set(...t); } chips();
+}
+
+/* =====================================================================
+   5) SELECCIÓN DE SENSORES (raycast sobre las luces)
+   ===================================================================== */
+const ray=new THREE.Raycaster(), mouse=new THREE.Vector2(); let down=null, lastH=0;
+const sensorList=()=>Object.values(monitors).filter(m=>m.sprite&&m.sprite.visible).map(m=>m.sprite);
+function hit(e){ const r=canvas.getBoundingClientRect(); mouse.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1); ray.setFromCamera(mouse,camera); const h=ray.intersectObjects(sensorList(),false); return h.length?h[0].object:null; }
+canvas.addEventListener('pointerdown',e=>{ down={ x:e.clientX, y:e.clientY }; if(S.spin){ S.spin=false; chips(); } });
+canvas.addEventListener('pointerup',e=>{ if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)<5){ const s=hit(e); if(s){ S.sel={ key:s.userData.key, side:s.userData.side }; refresh(); } } down=null; });
+canvas.addEventListener('pointermove',e=>{ if(down||performance.now()-lastH<60) return; lastH=performance.now(); const s=hit(e), r=stage.getBoundingClientRect();
+  if(!s){ tip.style.display='none'; canvas.style.cursor=''; return; } tip.textContent=MUSCLES[s.userData.key].name+' '+SIDE_NAME[s.userData.side]; tip.style.left=(e.clientX-r.left+14)+'px'; tip.style.top=(e.clientY-r.top+14)+'px'; tip.style.display='block'; canvas.style.cursor='pointer'; });
+
+/* =====================================================================
+   6) PANELES
+   ===================================================================== */
+const emgC=$('emg'), grfC=$('grf'), chartC=$('chart');
+function fit(c){ const r=c.getBoundingClientRect(), d=Math.min(devicePixelRatio,2); c.width=r.width*d; c.height=(c.getAttribute('height')|0)*d; c.getContext('2d').setTransform(d,0,0,d,0,0); c._w=r.width; c._h=c.height/d; }
+function refresh(){
+  const {key:k,side:sd}=S.sel, m=metricsOf(S.a,k,sd,S.day,S.trained), fr=m.mdf/MUSCLES[k].base, P=PROFILES[S.a];
+  $('musTitle').textContent=MUSCLES[k].name+' · '+SIDE_NAME[sd];
+  const it=[['Fuerza',m.s.toFixed(0)+'%',m.s,stS(m.s)],['Simetría',m.sym.toFixed(0)+'%',m.sym,stY(m.sym)],['RMS',m.rms.toFixed(0)+'%',clamp(m.rms-50,0,100),0],['Frec. mediana',m.mdf.toFixed(0)+' Hz',clamp(fr*100,0,100),fr>=.93?0:fr>=.85?1:2]];
+  $('metrics').innerHTML=it.map(([n,v,w,st])=>`<div><small>${n}</small><b>${v}</b><div class="bar"><span style="width:${w}%;background:${CSS[st]}"></span></div></div>`).join('');
+  $('systems').innerHTML=Object.keys(SYSTEMS).map(id=>{ const v=sysValue(id,S.a,S.day,S.trained), st=sysStatus(id,S.a,S.day,S.trained);
+    return `<div class="sys${S.focus===id?' on':''}" data-s="${id}"><span class="d" style="background:${CSS[st]}"></span><b>${SYSTEMS[id].name}</b><span class="v">${v.toFixed(0)}%</span><div class="bar"><span style="width:${v}%;background:${CSS[st]}"></span></div></div>`; }).join('');
+  document.querySelectorAll('.sys').forEach(el=>el.addEventListener('click',()=>{ S.focus=S.focus===el.dataset.s?null:el.dataset.s; applyVisibility(); refresh(); }));
+  const o=overall(S.a,S.day,S.trained), b=$('badge'); b.className='badge '+'gyr'[o]; b.textContent=['VERDE','AMARILLO','ROJO'][o];
+  const bad=Object.keys(SYSTEMS).filter(id=>sysStatus(id,S.a,S.day,S.trained)>0); $('rec').textContent=bad.length?bad.slice(0,2).map(id=>SYSTEMS[id].name+': '+SYSTEMS[id].rec).join(' '):'Mantener el entrenamiento habitual.';
+  $('astroLbl').textContent='Astronauta 00'+(S.a+1); $('emgLbl').textContent=MUSCLES[k].name.split(' ')[0]+' '+sd; $('dayLbl').textContent='Día '+S.day; $('day').value=S.day;
+  $('avgS').textContent=avgStrength(S.a,S.day,S.trained).toFixed(0)+'%'; $('prof').innerHTML=`<b>${P.label}</b> · ${P.age} años · ${P.h.toFixed(2)} m · ${P.w} kg <span style="color:var(--mut)">(simulado)</span>`;
+  drawChart();
+}
+const emgBuf=new Array(400).fill(0);
+function pushEmg(act){ const m=metricsOf(S.a,S.sel.key,S.sel.side,S.day,S.trained), amp=(0.05+act)*(m.rms/100), f=m.mdf/12; for(let i=0;i<4;i++){ const n=Math.random()+Math.random()+Math.random()-1.5; emgBuf.push(amp*n*(0.7+0.5*Math.sin(S.t*f*8+i))); emgBuf.shift(); } }
+function drawEmg(){ const c=emgC,x=c.getContext('2d'),w=c._w,h=c._h; if(!w) return; x.clearRect(0,0,w,h); x.strokeStyle='rgba(90,225,255,.15)'; x.beginPath(); x.moveTo(0,h/2); x.lineTo(w,h/2); x.stroke();
+  x.strokeStyle='#5ae1ff'; x.lineWidth=1.2; x.beginPath(); emgBuf.forEach((v,i)=>{ const px=i/(emgBuf.length-1)*w, py=h/2-clamp(v,-1,1)*h*0.46; i?x.lineTo(px,py):x.moveTo(px,py); }); x.stroke(); }
+const humpRun=u=>{ u=((u%1)+1)%1; return u<0.38?Math.pow(Math.sin(Math.PI*u/0.38),1.4):0; };
+const humpWalk=u=>{ u=((u%1)+1)%1; if(u>=0.6) return 0; const v=u/0.6; return Math.pow(Math.sin(Math.PI*v),0.5)*(0.85-0.25*Math.cos(2*Math.PI*(v-0.5))); };
+const grfAt=(p,off,sc)=>S.mode==='run'?humpRun(p-off)*2.5*sc:S.mode==='walk'?humpWalk(p-off)*1.2*sc:S.mode==='idle'?0.5*sc:0;
+const avgSide=s=>{ let t=0,n=0; for(const k in MUSCLES){ t+=strengthOf(S.a,k,s,S.day,S.trained); n++; } return t/n; };
+let phase=0;
+function drawGrf(){ const c=grfC,x=c.getContext('2d'),w=c._w,h=c._h; if(!w) return; x.clearRect(0,0,w,h); const moving=S.mode==='run'||S.mode==='walk', sL=avgSide('L')/100, sR=avgSide('R')/100;
+  x.strokeStyle='rgba(90,225,255,.12)'; for(let i=1;i<4;i++){ x.beginPath(); x.moveTo(0,h*i/4); x.lineTo(w,h*i/4); x.stroke(); }
+  [['#5ae1ff',0,sL],['#c084fc',.5,sR]].forEach(([col,off,sc])=>{ x.strokeStyle=col; x.lineWidth=1.8; x.beginPath(); for(let i=0;i<=120;i++){ const p=i/120, py=h-4-(grfAt(p,off,sc)/3)*(h-10); i?x.lineTo(p*w,py):x.moveTo(p*w,py); } x.stroke(); });
+  if(moving){ const px=(((phase%1)+1)%1)*w; x.strokeStyle='#fff'; x.lineWidth=1; x.beginPath(); x.moveTo(px,0); x.lineTo(px,h); x.stroke(); }
+  const peak={ run:2.5, walk:1.2, idle:0.5, float:0 }[S.mode]; $('pkL').textContent=(peak*sL).toFixed(1)+' PC'; $('pkR').textContent=(peak*sR).toFixed(1)+' PC'; $('grfMode').textContent={ idle:'reposo', walk:'caminata', run:'carrera', float:'sin peso' }[S.mode]; }
+const ACOL=['#5ae1ff','#60a5fa','#c084fc'];
+function drawChart(){ const c=chartC,x=c.getContext('2d'),w=c._w,h=c._h,L=32,B=18,T=8,R=8; if(!w) return; x.clearRect(0,0,w,h); x.font='11px system-ui'; x.fillStyle='#7fa6b8'; x.strokeStyle='#12293a'; x.lineWidth=1;
+  const X=d=>L+d/180*(w-L-R), Y=v=>T+(100-v)/60*(h-T-B); [100,90,75,60,40].forEach(v=>{ x.beginPath(); x.moveTo(L,Y(v)); x.lineTo(w-R,Y(v)); x.stroke(); x.fillText(v,4,Y(v)+4); });
+  x.setLineDash([4,4]); x.strokeStyle=CSS[1]; x.beginPath(); x.moveTo(L,Y(90)); x.lineTo(w-R,Y(90)); x.stroke(); x.strokeStyle=CSS[2]; x.beginPath(); x.moveTo(L,Y(75)); x.lineTo(w-R,Y(75)); x.stroke(); x.setLineDash([]);
+  [0,60,120,180].forEach(d=>x.fillText('d'+d,X(d)-8,h-4));
+  for(let a=0;a<3;a++){ x.strokeStyle=ACOL[a]; x.lineWidth=a===S.a?2.6:1.3; x.globalAlpha=a===S.a?1:.5; x.beginPath(); for(let d=0;d<=180;d+=3){ const v=strengthOf(a,S.sel.key,S.sel.side,d,S.trained); d?x.lineTo(X(d),Y(v)):x.moveTo(X(d),Y(v)); } x.stroke(); }
+  x.globalAlpha=1; x.strokeStyle='#dff6ff'; x.lineWidth=1; x.beginPath(); x.moveTo(X(S.day),T); x.lineTo(X(S.day),h-B); x.stroke(); const v=strengthOf(S.a,S.sel.key,S.sel.side,S.day,S.trained); x.fillStyle=ACOL[S.a]; x.beginPath(); x.arc(X(S.day),Y(v),4.5,0,7); x.fill();
+  $('chartLbl').innerHTML=MUSCLES[S.sel.key].name+' '+SIDE_NAME[S.sel.side]+' · '+['001 hombre','002 hombre','003 mujer'].map((n,i)=>`<span style="color:${ACOL[i]}">● ${n}</span>`).join(' &nbsp;'); }
+chartC.addEventListener('pointerdown',e=>{ const r=chartC.getBoundingClientRect(); setDay(Math.round(clamp((e.clientX-r.left-32)/(r.width-40),0,1)*180)); });
+
+/* =====================================================================
+   7) BUCLE DE ANIMACIÓN
+   ===================================================================== */
+function resize(){ const r=stage.querySelector('.cv').getBoundingClientRect(); if(!r.width) return; renderer.setSize(r.width,r.height,false); composer.setSize(r.width,r.height); bloom.setSize(r.width,r.height); camera.aspect=r.width/r.height; camera.updateProjectionMatrix(); fit(emgC); fit(grfC); fit(chartC); drawChart(); }
+addEventListener('resize',resize); new ResizeObserver(resize).observe(stage);
+function activation(key,side,p){ const amp={ run:1, walk:.55, idle:.1, float:.05 }[S.mode], off=side==='L'?0:.5, hump=x=>Math.max(0,Math.sin(2*Math.PI*x));
+  const pat={ quad:.3+.7*hump(p-off), gastro:.3+.7*hump(p-off+.25), glute:.3+.7*hump(p-off+.1), back:.55+.15*Math.sin(4*Math.PI*p) }[key]; return clamp(amp*pat+(S.mode==='run'||S.mode==='walk'?0:.04),0,1); }
+
+const tmp=new THREE.Color(), v1=new THREE.Vector3(), v2=new THREE.Vector3(), bq=new THREE.Quaternion(); let last=performance.now(), dayAcc=0, hudT=0, ty=0.95, speedFactor=1, figS=1;
+function frame(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now; S.t+=dt; uT.value=S.t;
+  if(S.playing){ dayAcc+=dt*14; if(dayAcc>=1){ const n=Math.floor(dayAcc); dayAcc-=n; setDay(Math.min(180,S.day+n)); if(S.day>=180){ S.playing=false; $('play').textContent='▶ Avanzar misión'; } } }
+  const P=PROFILES[S.a]; speedFactor+=((0.55+0.45*avgStrength(S.a,S.day,S.trained)/100)-speedFactor)*(1-Math.exp(-4*dt));
+  const fl=S.mode==='float', moving=S.mode==='run'||S.mode==='walk', vmax=BASE[S.mode].v*P.vs;
+  if(cur) cur.setEffectiveTimeScale(fl?0.35:(moving?speedFactor:1)); if(mixer){ mixer.update(dt); }
+  phase=cur?(cur.time/cur.getClip().duration):S.t*0.4;
+  trackTex.offset.y-=(moving?vmax*speedFactor:0)*dt/(14/4); track.visible=!fl; earth.visible=fl; scene.fog.density=fl?0:0.04; scene.background.setHex(fl?0x02040a:0x04080f);
+  const k=1-Math.exp(-3*dt), t=S.t; figS+=(P.scale-figS)*k; fig.scale.setScalar(figS);       // estatura de cada astronauta
+  fig.position.y+=((fl?0.5+0.06*Math.sin(t*0.8):0)-fig.position.y)*k; fig.rotation.x+=((fl?0.14*Math.sin(t*0.37):0)-fig.rotation.x)*k; fig.rotation.z+=((fl?0.18*Math.sin(t*0.45):0)-fig.rotation.z)*k; fig.rotation.y+=((fl?0.8*Math.sin(t*0.25):0)-fig.rotation.y)*k;
+  const dTy=((fl?1.25:0.95)-ty)*k; ty+=dTy; controls.target.y+=dTy; camera.position.y+=dTy; web.position.set(0,fig.position.y+0.95,0); web.rotation.y+=dt*0.1; stars.rotation.y+=dt*0.006;
+  if(ct.on){ ct.t=Math.min(1,ct.t+dt/0.9); const e=1-Math.pow(1-ct.t,3); camera.position.lerpVectors(ct.p0,ct.p1,e); controls.target.lerpVectors(ct.a0,ct.a1,e); if(ct.t>=1) ct.on=false; }
+  controls.update();
+
+  if(model){
+    fig.updateMatrixWorld(true); fig.getWorldQuaternion(bq); const sex=P.sex, acts={};
+    Object.keys(monitors).forEach(k=>{ const mo=monitors[k], sp=mo.sprite; if(!sp) return; sp.visible = mo.sex===sex && (S.layers.muscles||S.focus==='muscular');
+      bones[mo.bone].localToWorld(v1.copy(mo.local)); sp.position.copy(v1); const key=k.slice(1,-1), side=k.slice(-1), a=activation(key,side,phase); mo.act=(mo.act||0)+(a-(mo.act||0))*(1-Math.exp(-10*dt)); acts[k]=mo.act;
+      const st=metricsOf(S.a,key,side,S.day,S.trained).status; sp.material.color.setHex(COLORS[st]); const sel=key===S.sel.key&&side===S.sel.side; sp.scale.setScalar((sel?0.17:0.1)*(0.7+0.8*mo.act)); sp.material.opacity=0.4+0.5*mo.act; });
+    const sysSt={}, cs=1-Math.exp(-5*dt); Object.keys(SYSTEMS).forEach(id=>{ sysSt[id]=sysStatus(id,S.a,S.day,S.trained); });
+    anatMeshes.forEach(m=>{ if(!m.visible) return; const u=m.userData; let col=u.base, op=u.baseOp, em=.15, pulse=0;
+      if(u.mon){ const st=metricsOf(S.a,u.mon.key,u.mon.side,S.day,S.trained).status, a=acts[u.mon.key+u.mon.side]||0, sel=u.mon.key===S.sel.key&&u.mon.side===S.sel.side;
+        tmp.setHex(COLORS[st]); col=tmp; op=0.8; em=.3+.7*a+(st===2?.12*Math.sin(S.t*6):0)+(sel?.3+.1*Math.sin(S.t*5):0); pulse=.02*a+(sel?.004:0); }
+      if(S.focus){ if(u.hsys===S.focus){ tmp.setHex(COLORS[sysSt[S.focus]]); col=tmp; op=Math.max(op,.75); em=.45+.2*Math.sin(S.t*4); } else op*=.15; }
+      u.cur.lerp(col,cs); u.op+=(op-u.op)*cs; m.material.color.copy(u.cur).multiplyScalar(0.8); m.material.emissive.copy(u.cur); m.material.emissiveIntensity=em; m.material.opacity=u.op; m.material.userData.uPulse.value=pulse; });
+    bones.Head.getWorldPosition(v1); bones.HeadTop_End.getWorldPosition(v2); helmet.position.copy(v1.lerp(v2,.55)); helmet.scale.setScalar(figS);
+    bones.Spine2.getWorldPosition(v1); pack.position.copy(v1.add(v2.set(0,-0.05,-0.17*figS).applyQuaternion(bq))); pack.quaternion.copy(bq); pack.scale.setScalar(figS);
+  }
+  hudT+=dt; if(hudT>0.12){ hudT=0; $('spd').textContent=(moving?vmax*speedFactor:0).toFixed(1); $('cad').textContent=(moving&&cur?Math.round((2/cur.getClip().duration)*60*speedFactor):0)+' ppm'; }
+  const selM=monitors[P.sex+S.sel.key+S.sel.side]; pushEmg(selM&&selM.act?selM.act:0); drawEmg(); drawGrf();
+  composer.render(); requestAnimationFrame(frame);
+}
+resize(); requestAnimationFrame(frame);
+</script>
+</body>
+</html>

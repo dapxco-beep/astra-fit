@@ -1,0 +1,157 @@
+<!-- SeccionAcceso.html — Pantalla de entrada: logo, elegir astronauta o registrar uno nuevo.
+     Fondo: blanco.  Lee y escribe la pestaña Astronautas por medio de API.
+     Al elegir un astronauta guarda Sesion.astronauta y avisa con el evento "astronauta-elegido". -->
+<section class="acceso" aria-labelledby="acceso-titulo">
+  <div class="contenedor">
+    <?!= include('Logo'); ?>
+    <h1 class="hero-titulo" id="acceso-titulo">Elige un astronauta.</h1>
+    <p class="subtitulo">ASTRA-FIT sigue la fuerza, la activación muscular y el movimiento de cada miembro de la tripulación frente a su evaluación basal.</p>
+
+    <div class="perfiles" id="perfiles" aria-live="polite">
+      <p class="texto-2" style="grid-column: 1 / -1">Cargando tripulación…</p>
+    </div>
+
+    <form class="tarjeta hoja formulario" id="form-astronauta" novalidate hidden>
+      <div class="hoja-cabecera">
+        <h2 class="titulo-tarjeta">Registrar nuevo astronauta</h2>
+        <button type="button" class="enlace enlace--simple" id="btn-cancelar-astronauta" style="font-size:var(--t-pequeno)">Cancelar</button>
+      </div>
+      <div class="formulario-filas">
+        <div class="campo" data-campo="nombre"><label for="a-nombre">Nombre</label><input id="a-nombre" name="nombre" type="text" autocomplete="off"><span class="error" hidden></span></div>
+        <div class="campo" data-campo="rol"><label for="a-rol">Rol en la misión</label><input id="a-rol" name="rol" type="text" placeholder="Especialista de misión"><span class="error" hidden></span></div>
+        <div class="campo" data-campo="fecha_inicio_mision"><label for="a-fecha">Inicio de la misión</label><input id="a-fecha" name="fecha_inicio_mision" type="date"><span class="error" hidden></span></div>
+        <div class="campo" data-campo="sexo"><label for="a-sexo">Sexo</label><select id="a-sexo" name="sexo"><option value="">Elegir</option><option value="F">F</option><option value="M">M</option></select><span class="error" hidden></span></div>
+        <div class="campo" data-campo="edad"><label for="a-edad">Edad <span class="texto-2">(años)</span></label><input id="a-edad" name="edad" type="number" inputmode="numeric" min="21" max="70"><span class="error" hidden></span></div>
+        <div class="campo" data-campo="peso_kg"><label for="a-peso">Peso <span class="texto-2">(kg)</span></label><input id="a-peso" name="peso_kg" type="number" inputmode="decimal" step="0.1" min="40" max="150"><span class="error" hidden></span></div>
+        <div class="campo" data-campo="talla_cm"><label for="a-talla">Talla <span class="texto-2">(cm)</span></label><input id="a-talla" name="talla_cm" type="number" inputmode="numeric" min="140" max="210"><span class="error" hidden></span></div>
+        <div class="campo" data-campo="mano_dominante"><label for="a-mano">Mano dominante</label><select id="a-mano" name="mano_dominante"><option value="derecha">Derecha</option><option value="izquierda">Izquierda</option></select></div>
+      </div>
+      <div><button class="boton" type="submit" id="btn-guardar-astronauta">Guardar astronauta</button></div>
+    </form>
+  </div>
+</section>
+
+<script>
+const Sesion = { datos: null, astronauta: null };
+
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const form = $('form-astronauta');
+
+  const iniciales = (nombre) => String(nombre).trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+  const numero = (id) => parseInt(String(id).replace(/\D/g, ''), 10) || 0;
+  function diaDeMision(fechaInicio) {
+    const dias = Math.floor((Date.now() - Date.parse(fechaInicio)) / 864e5);
+    return isNaN(dias) ? '' : dias < 0 ? `Inicia en ${-dias} días` : `Día ${dias} de misión`;
+  }
+
+  /* ---------------- Tarjetas de la tripulación ---------------- */
+  function dibujarPerfiles() {
+    const activos = Sesion.datos.Astronautas.filter((a) => a.activo !== 'NO');
+    $('perfiles').innerHTML = activos.map((a) => `
+      <button type="button" class="perfil" data-id="${UI.esc(a.id_astronauta)}">
+        <span class="avatar avatar--${numero(a.id_astronauta) % 3}" aria-hidden="true">${UI.esc(iniciales(a.nombre))}</span>
+        <span class="titulo-tarjeta">${UI.esc(a.nombre)}</span>
+        <span class="texto-2">${UI.esc(a.rol || 'Tripulante')}</span>
+        <span class="nota">${UI.esc(a.id_astronauta)}, ${UI.esc(diaDeMision(a.fecha_inicio_mision))}</span>
+        <span class="enlace">Abrir panel</span>
+      </button>`).join('') + `
+      <button type="button" class="perfil perfil-nuevo" id="btn-nuevo-astronauta">
+        <span class="avatar" aria-hidden="true">+</span>
+        <span class="titulo-tarjeta">Registrar nuevo astronauta</span>
+        <span class="texto-2">Agrega un tripulante y su información básica</span>
+      </button>`;
+  }
+
+  $('perfiles').addEventListener('click', (e) => {
+    if (e.target.closest('#btn-nuevo-astronauta')) return abrirFormulario();
+    const tarjeta = e.target.closest('.perfil[data-id]');
+    if (tarjeta) elegir(tarjeta.dataset.id);
+  });
+
+  function elegir(id) {
+    Sesion.astronauta = Sesion.datos.Astronautas.find((a) => a.id_astronauta === id);
+    $('vista-acceso').hidden = true;
+    $('vista-panel').hidden = false;
+    window.scrollTo(0, 0);
+    document.dispatchEvent(new CustomEvent('astronauta-elegido', { detail: Sesion.astronauta }));
+  }
+
+  /* Volver a la pantalla de entrada (lo usa el botón "Cambiar" de la barra superior) */
+  Sesion.salir = () => {
+    Sesion.astronauta = null;
+    $('vista-panel').hidden = true;
+    $('vista-acceso').hidden = false;
+    window.scrollTo(0, 0);
+  };
+
+  /* ---------------- Registro de astronauta ---------------- */
+  function abrirFormulario() {
+    form.hidden = false;
+    form.elements.nombre.focus();
+    form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  $('btn-cancelar-astronauta').addEventListener('click', () => { form.reset(); limpiarErrores(); form.hidden = true; });
+
+  function limpiarErrores() {
+    form.querySelectorAll('.campo[data-error]').forEach((c) => { c.removeAttribute('data-error'); c.querySelector('.error').hidden = true; });
+  }
+  function marcarError(campo, texto) {
+    const c = form.querySelector(`[data-campo="${campo}"]`);
+    c.setAttribute('data-error', '');
+    const er = c.querySelector('.error');
+    er.textContent = texto;
+    er.hidden = false;
+  }
+  form.addEventListener('input', (e) => {
+    const c = e.target.closest('.campo[data-error]');
+    if (c) { c.removeAttribute('data-error'); c.querySelector('.error').hidden = true; }
+  });
+
+  const RANGOS = { edad: [21, 70], peso_kg: [40, 150], talla_cm: [140, 210] };
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    limpiarErrores();
+    const v = (n) => form.elements[n].value.trim();
+    let valido = true;
+    if (!v('nombre')) { marcarError('nombre', 'Escribe el nombre.'); valido = false; }
+    if (!v('fecha_inicio_mision')) { marcarError('fecha_inicio_mision', 'Elige la fecha de inicio.'); valido = false; }
+    if (!v('sexo')) { marcarError('sexo', 'Elige una opción.'); valido = false; }
+    const nuevo = {
+      nombre: v('nombre'), rol: v('rol') || 'Tripulante', fecha_inicio_mision: v('fecha_inicio_mision'),
+      sexo: v('sexo'), mano_dominante: v('mano_dominante'), escenario: '', activo: 'SI'
+    };
+    Object.entries(RANGOS).forEach(([campo, [min, max]]) => {
+      const t = v(campo);
+      if (t === '') { marcarError(campo, 'Escribe un valor.'); valido = false; return; }
+      const n = Number(t.replace(',', '.'));
+      if (isNaN(n) || n < min || n > max) { marcarError(campo, `Debe estar entre ${min} y ${max}.`); valido = false; return; }
+      nuevo[campo] = n;
+    });
+    if (!valido) { UI.aviso('Revisa los campos marcados.', 'advertencia'); return; }
+
+    const boton = $('btn-guardar-astronauta');
+    boton.disabled = true;
+    boton.textContent = 'Guardando…';
+    API.guardarAstronauta(nuevo)
+      .then((res) => {
+        Sesion.datos.Astronautas.push(res.astronauta);
+        dibujarPerfiles();
+        form.reset();
+        form.hidden = true;
+        UI.aviso(`${res.astronauta.nombre} ya está en la tripulación como ${res.astronauta.id_astronauta}.`, 'completado');
+      })
+      .catch((err) => UI.aviso('No se pudo guardar: ' + err.message, 'error'))
+      .finally(() => { boton.disabled = false; boton.textContent = 'Guardar astronauta'; });
+  });
+
+  /* ---------------- Carga inicial ---------------- */
+  API.obtenerDatos()
+    .then((datos) => { Sesion.datos = datos; dibujarPerfiles(); })
+    .catch((err) => {
+      $('perfiles').innerHTML = `<p class="texto-2" style="grid-column:1/-1">No se pudo cargar la tripulación. ${UI.esc(err.message)}</p>`;
+      UI.aviso('No se pudo conectar con la base de datos.', 'error');
+    });
+})();
+</script>

@@ -1,0 +1,170 @@
+<!-- FormPerfil.html — Ventana para registrar o editar un astronauta (con emoji de perfil e IMC en vivo).
+     Uso:  Perfil.abrir('crear')   o   Perfil.abrir('editar', astronauta)
+     Avisa con eventos:  "astronauta-guardado" (nuevo)  y  "astronauta-actualizado" (editado), detail = astronauta -->
+<dialog class="dialogo" id="dialogo-perfil" aria-labelledby="perfil-titulo">
+  <form class="formulario" id="form-perfil" novalidate>
+    <div class="hoja-cabecera">
+      <h2 class="titulo-tarjeta" id="perfil-titulo">Registrar nuevo astronauta</h2>
+      <button type="button" class="enlace enlace--simple" data-cerrar style="font-size:var(--t-pequeno)">Cancelar</button>
+    </div>
+
+    <fieldset class="selector-emoji">
+      <legend class="campo-leyenda">Avatar de perfil</legend>
+      <div class="emojis" id="perfil-emojis"></div>
+    </fieldset>
+
+    <div class="formulario-filas">
+      <div class="campo" data-campo="nombre"><label for="p-nombre">Nombre</label><input id="p-nombre" name="nombre" type="text" autocomplete="off"><span class="error" hidden></span></div>
+      <div class="campo" data-campo="rol"><label for="p-rol">Rol en la misión</label><input id="p-rol" name="rol" type="text" placeholder="Especialista de misión"></div>
+      <div class="campo" data-campo="entorno"><label for="p-entorno">Dónde está</label><select id="p-entorno" name="entorno"></select></div>
+      <div class="campo" data-campo="fecha_inicio_mision"><label for="p-fecha">Fecha de despegue</label><input id="p-fecha" name="fecha_inicio_mision" type="date"><span class="error" hidden></span></div>
+      <div class="campo" data-campo="sexo"><label for="p-sexo">Sexo</label><select id="p-sexo" name="sexo"><option value="">Elegir</option><option value="F">Femenino</option><option value="M">Masculino</option></select><span class="error" hidden></span></div>
+      <div class="campo" data-campo="edad"><label for="p-edad">Edad <span class="texto-2">(años)</span></label><input id="p-edad" name="edad" type="number" inputmode="numeric" min="21" max="70"><span class="error" hidden></span></div>
+      <div class="campo" data-campo="peso_kg"><label for="p-peso">Peso <span class="texto-2">(kg)</span></label><input id="p-peso" name="peso_kg" type="number" inputmode="decimal" step="0.1" min="40" max="150"><span class="error" hidden></span></div>
+      <div class="campo" data-campo="talla_cm"><label for="p-talla">Talla <span class="texto-2">(cm)</span></label><input id="p-talla" name="talla_cm" type="number" inputmode="numeric" min="140" max="210"><span class="error" hidden></span></div>
+      <div class="campo" data-campo="mano_dominante"><label for="p-mano">Mano dominante</label><select id="p-mano" name="mano_dominante"><option value="derecha">Derecha</option><option value="izquierda">Izquierda</option></select></div>
+    </div>
+
+    <div class="imc-vivo" id="perfil-imc" aria-live="polite"><span class="texto-2 pequeno">Escribe peso y talla para calcular el IMC.</span></div>
+
+    <div><button class="boton" type="submit" id="perfil-guardar">Guardar astronauta</button></div>
+  </form>
+</dialog>
+
+<script>
+const Perfil = (() => {
+  const dialogo = document.getElementById('dialogo-perfil');
+  const form = document.getElementById('form-perfil');
+  const $ = (id) => document.getElementById(id);
+  const RANGOS = { edad: [21, 70], peso_kg: [40, 150], talla_cm: [140, 210] };
+  const CAMPOS = ['nombre', 'rol', 'entorno', 'fecha_inicio_mision', 'sexo', 'edad', 'peso_kg', 'talla_cm', 'mano_dominante'];
+  let modo = 'crear', editando = null;
+
+  /* ---------- Selector de emoji (radio buttons nativos: accesibles con teclado) ---------- */
+  // Avatares serios (JsAvatares.html): busto de astronauta con casco, con el acento de color a elegir
+  $('perfil-emojis').innerHTML = Avatares.LISTA.map((e, i) => `
+    <label class="emoji-opcion" title="${UI.esc(e.etiqueta)}">
+      <input type="radio" name="avatar" value="${UI.esc(e.valor)}" ${i === 0 ? 'checked' : ''} aria-label="${UI.esc(e.etiqueta)}">
+      <span class="avatar avatar--serio" aria-hidden="true">${Avatares.svg(e.valor, '')}</span>
+    </label>`).join('');
+
+  function opcionesEntorno() {
+    const lista = (Sesion.datos && Sesion.datos.Catalogos || []).filter((c) => c.lista === 'entorno');
+    const opciones = lista.length ? lista.map((c) => [c.valor, c.etiqueta]) : Object.entries(Calc.ENTORNOS).map(([k, v]) => [k, v.nombre]);
+    form.elements.entorno.innerHTML = opciones.map(([v, t]) => `<option value="${UI.esc(v)}">${UI.esc(t)}</option>`).join('');
+  }
+
+  /* ---------- IMC en vivo ---------- */
+  function mostrarImc() {
+    const v = Calc.imc(form.elements.peso_kg.value, form.elements.talla_cm.value);
+    const c = Calc.categoriaImc(v);
+    $('perfil-imc').innerHTML = c
+      ? `<span class="pequeno texto-2">IMC</span> <strong class="titulo-tarjeta">${Calc.decimal(v)}</strong> <span class="estado estado--${c.nivel}">${c.nombre}</span>`
+      : '<span class="texto-2 pequeno">Escribe peso y talla para calcular el IMC.</span>';
+  }
+  form.addEventListener('input', (e) => {
+    const c = e.target.closest('.campo[data-error]');
+    if (c) { c.removeAttribute('data-error'); c.querySelector('.error').hidden = true; }
+    if (e.target.name === 'peso_kg' || e.target.name === 'talla_cm') mostrarImc();
+  });
+  function marcarAvatar(valor) {
+    const radio = [...form.querySelectorAll('input[name="avatar"]')].find((r) => r.value === valor);
+    if (radio) radio.checked = true;
+  }
+
+  /* ---------- Abrir y cerrar ---------- */
+  function abrir(nuevoModo, astronauta) {
+    modo = nuevoModo;
+    editando = astronauta || null;
+    form.reset();
+    limpiarErrores();
+    opcionesEntorno();
+    $('perfil-titulo').textContent = modo === 'editar' ? 'Editar perfil' : 'Registrar nuevo astronauta';
+    $('perfil-guardar').textContent = modo === 'editar' ? 'Guardar cambios' : 'Guardar astronauta';
+    if (modo === 'editar' && editando) {
+      CAMPOS.forEach((k) => { if (editando[k] != null) form.elements[k].value = editando[k]; });
+      marcarAvatar(Avatares.claveDe(editando));
+    } else {
+      form.elements.entorno.value = 'orbita';
+      marcarAvatar(Avatares.LISTA[0].valor);
+    }
+    mostrarImc();
+    dialogo.showModal();
+    form.elements.nombre.focus();
+  }
+  const cerrar = () => dialogo.close();
+  dialogo.addEventListener('click', (e) => { if (e.target === dialogo || e.target.closest('[data-cerrar]')) cerrar(); });
+
+  /* ---------- Validar y guardar ---------- */
+  function limpiarErrores() {
+    form.querySelectorAll('.campo[data-error]').forEach((c) => { c.removeAttribute('data-error'); c.querySelector('.error').hidden = true; });
+  }
+  function marcarError(campo, texto) {
+    const c = form.querySelector(`[data-campo="${campo}"]`);
+    c.setAttribute('data-error', '');
+    const er = c.querySelector('.error');
+    er.textContent = texto;
+    er.hidden = false;
+  }
+  function leerFormulario() {
+    const v = (n) => form.elements[n].value.trim();
+    let valido = true;
+    if (!v('nombre')) { marcarError('nombre', 'Escribe el nombre.'); valido = false; }
+    if (!v('fecha_inicio_mision')) { marcarError('fecha_inicio_mision', 'Elige la fecha de despegue.'); valido = false; }
+    if (!v('sexo')) { marcarError('sexo', 'Elige una opción.'); valido = false; }
+    const datos = {
+      nombre: v('nombre'), rol: v('rol') || 'Tripulante', entorno: v('entorno'), fecha_inicio_mision: v('fecha_inicio_mision'),
+      sexo: v('sexo'), mano_dominante: v('mano_dominante'),
+      avatar: (form.querySelector('input[name="avatar"]:checked') || {}).value || ''
+    };
+    Object.entries(RANGOS).forEach(([campo, [min, max]]) => {
+      const t = v(campo);
+      if (t === '') { marcarError(campo, 'Escribe un valor.'); valido = false; return; }
+      const n = Number(t.replace(',', '.'));
+      if (isNaN(n) || n < min || n > max) { marcarError(campo, `Debe estar entre ${min} y ${max}.`); valido = false; return; }
+      datos[campo] = n;
+    });
+    return valido ? datos : null;
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    limpiarErrores();
+    const datos = leerFormulario();
+    if (!datos) { UI.aviso('Revisa los campos marcados.', 'advertencia'); return; }
+
+    const boton = $('perfil-guardar');
+    const textoBoton = boton.textContent;
+    boton.disabled = true;
+    boton.textContent = 'Guardando…';
+
+    let promesa;
+    if (modo === 'editar') {
+      const cambios = {};
+      Object.keys(datos).forEach((k) => { if (String(datos[k]) !== String(editando[k] ?? '')) cambios[k] = datos[k]; });
+      if (!Object.keys(cambios).length) {
+        boton.disabled = false; boton.textContent = textoBoton; cerrar();
+        UI.aviso('No había cambios para guardar.', 'estado');
+        return;
+      }
+      promesa = API.actualizarAstronauta(editando.id_astronauta, cambios).then((res) => {
+        Object.assign(editando, res.astronauta);
+        document.dispatchEvent(new CustomEvent('astronauta-actualizado', { detail: editando }));
+        UI.aviso(`Perfil de ${editando.nombre} actualizado.`, 'completado');
+      });
+    } else {
+      promesa = API.guardarAstronauta(datos).then((res) => {
+        Sesion.datos.Astronautas.push(res.astronauta);
+        document.dispatchEvent(new CustomEvent('astronauta-guardado', { detail: res.astronauta }));
+        UI.aviso(`${res.astronauta.nombre} ya está en la tripulación como ${res.astronauta.id_astronauta}.`, 'completado');
+      });
+    }
+    promesa
+      .then(cerrar)
+      .catch((err) => UI.aviso('No se pudo guardar: ' + err.message, 'error'))
+      .finally(() => { boton.disabled = false; boton.textContent = textoBoton; });
+  });
+
+  return { abrir };
+})();
+</script>

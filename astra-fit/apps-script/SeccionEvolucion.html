@@ -1,0 +1,197 @@
+<!-- SeccionEvolucion.html — Evolución semana a semana.  Fondo: gris.  Responsable: Dashboard
+     Una gráfica por indicador de la pestaña Umbrales: cambio frente a la basal (o valor absoluto), con las franjas de precaución
+     y alerta, las intervenciones registradas y, si se quiere, la tripulación completa para comparar.
+     Se vuelve a dibujar con "astronauta-elegido", "datos-actualizados" y "astronauta-actualizado". -->
+<section class="seccion seccion--gris" id="evolucion">
+  <div class="contenedor">
+    <div class="seccion-cabecera">
+      <h2 class="titulo">Semana a semana, frente a su basal.</h2>
+      <p class="subtitulo">Cambio en cada evaluación estandarizada, con los umbrales de precaución y alerta.</p>
+    </div>
+
+    <div class="evo-rejilla">
+      <article class="tarjeta pila">
+        <div class="evo-controles">
+          <div class="campo"><label for="evo-ind">Indicador</label><select id="evo-ind"></select></div>
+          <div class="campo" id="evo-sub-campo"><label for="evo-sub" id="evo-sub-etiqueta">Ejercicio</label><select id="evo-sub"></select></div>
+          <label class="evo-comparar"><input type="checkbox" id="evo-comparar"> <span class="pequeno">Comparar con la tripulación</span></label>
+        </div>
+        <div class="evo-lienzo"><canvas id="evo-grafica" role="img" aria-label="Evolución semanal del indicador elegido frente a la basal"></canvas><div class="evo-tip" id="evo-tip" hidden></div></div>
+        <ul class="evo-leyenda" id="evo-leyenda"></ul>
+      </article>
+
+      <article class="tarjeta pila" id="evo-resumen" aria-live="polite"></article>
+    </div>
+  </div>
+</section>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const ORDEN_TABLA = ['Sesiones', 'EMG', 'Seguimiento'];
+  const TITULO_TABLA = { Sesiones: 'Ejercicio', EMG: 'Electromiografía', Seguimiento: 'Seguimiento diario' };
+  const GRUPOS = ['cuadriceps', 'gluteo_mayor', 'gastrocnemio_soleo', 'erectores_espinales', 'dorsal_ancho'];
+  const TEXTO_NIVEL = { verde: 'Estable', amarillo: 'Precaución', rojo: 'Alerta' };
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const num = (n, d = 1) => Number(n).toLocaleString('es', { maximumFractionDigits: d, minimumFractionDigits: d });
+  const signo = (v, d = 1) => `${v < 0 ? '−' : v > 0 ? '+' : ''}${num(Math.abs(v), d)}`;
+  const media = (l) => l.length ? l.reduce((t, x) => t + x, 0) / l.length : null;
+  const etiqueta = (lista, valor) => { const c = Sesion.datos.Catalogos.find((x) => x.lista === lista && x.valor === valor); return c ? c.etiqueta : valor; };
+  const reglas = () => (Sesion.datos && Sesion.datos.Umbrales) || [];
+  const regla = () => reglas().find((u) => u.indicador === $('evo-ind').value);
+  let puntosVisibles = [];
+
+  /* ============================================================
+     DATOS: una serie por astronauta para el indicador elegido
+     ============================================================ */
+  function filas(id, r, sub) {
+    const D = Sesion.datos, k = r.indicador, ses = D.Sesiones.filter((s) => s.id_astronauta === id);
+    if (r.tabla === 'Sesiones') return ses.filter((s) => s.ejercicio === sub && s[k] != null).map((s) => ({ sem: Number(s.semana_mision), v: Number(s[k]), fase: s.fase, fecha: s.fecha }));
+    if (r.tabla === 'EMG') {
+      const porId = new Map(ses.map((s) => [s.id_sesion, s])), por = new Map();
+      D.EMG.filter((e) => e.id_astronauta === id && e.grupo_muscular === sub && porId.has(e.id_sesion) && e[k] != null).forEach((e) => { (por.get(e.id_sesion) || por.set(e.id_sesion, []).get(e.id_sesion)).push(Number(e[k])); });
+      return [...por].map(([sid, l]) => { const s = porId.get(sid); return { sem: Number(s.semana_mision), v: media(l), fase: s.fase, fecha: s.fecha }; });
+    }
+    // Seguimiento diario: se promedia por semana para que la línea sea legible
+    const dias = D.Seguimiento.filter((s) => s.id_astronauta === id && s[k] != null && s.dia_mision != null);
+    const basal = dias.filter((s) => s.fase === 'basal').map((s) => ({ sem: 0, v: Number(s[k]), fase: 'basal', fecha: s.fecha }));
+    const por = new Map();
+    dias.filter((s) => s.fase !== 'basal').forEach((s) => { const w = Math.max(0, Math.round(Number(s.dia_mision) / 7)); (por.get(w) || por.set(w, []).get(w)).push(s); });
+    const semanal = [...por].sort((a, b) => a[0] - b[0]).map(([w, l]) => ({ sem: w, v: media(l.map((s) => Number(s[k]))), fase: l[l.length - 1].fase, fecha: l[l.length - 1].fecha }));
+    return basal.length ? [{ sem: 0, v: media(basal.map((b) => b.v)), fase: 'basal', fecha: basal[0].fecha }, ...semanal.filter((p) => p.sem > 0)] : semanal;
+  }
+
+  /** Serie lista para dibujar: en modo pct_vs_basal, cambio en % frente a la media basal; si no, el valor tal cual. */
+  function serie(id, r, sub) {
+    const f = filas(id, r, sub).sort((a, b) => a.sem - b.sem), basales = f.filter((p) => p.fase === 'basal').map((p) => p.v), basal = media(basales);
+    const pct = r.modo === 'pct_vs_basal';
+    if (pct && !basal) return { pts: [], basal: null };
+    return { basal, pts: f.map((p) => ({ ...p, y: pct ? (p.v / basal - 1) * 100 : p.v })) };
+  }
+
+  /* ============================================================
+     CONTROLES
+     ============================================================ */
+  function llenarIndicadores() {
+    const sel = $('evo-ind'), actual = sel.value;
+    sel.innerHTML = ORDEN_TABLA.map((t) => {
+      const l = reglas().filter((u) => u.tabla === t); if (!l.length) return '';
+      return `<optgroup label="${UI.esc(TITULO_TABLA[t])}">${l.map((u) => `<option value="${UI.esc(u.indicador)}">${UI.esc(u.nombre_visible)}</option>`).join('')}</optgroup>`;
+    }).join('');
+    if ([...sel.options].some((o) => o.value === actual)) sel.value = actual;
+    llenarSub();
+  }
+  function llenarSub() {
+    const r = regla(), campo = $('evo-sub-campo'), sel = $('evo-sub'), previo = sel.value;
+    if (!r || r.tabla === 'Seguimiento') { campo.hidden = true; sel.innerHTML = ''; return; }
+    campo.hidden = false;
+    const items = r.tabla === 'Sesiones' ? Sesion.datos.Catalogos.filter((c) => c.lista === 'ejercicio').map((c) => [c.valor, c.etiqueta]) : GRUPOS.map((g) => [g, etiqueta('grupo_muscular', g)]);
+    $('evo-sub-etiqueta').textContent = r.tabla === 'Sesiones' ? 'Ejercicio' : 'Grupo muscular';
+    sel.innerHTML = items.map(([v, t]) => `<option value="${UI.esc(v)}">${UI.esc(t)}</option>`).join('');
+    if ([...sel.options].some((o) => o.value === previo)) sel.value = previo;
+  }
+
+  /* ============================================================
+     GRÁFICA
+     ============================================================ */
+  function preparar(c) {
+    const r = c.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2);
+    if (c.width !== Math.round(r.width * d) || c.height !== Math.round(r.height * d)) { c.width = Math.round(r.width * d); c.height = Math.round(r.height * d); }
+    const x = c.getContext('2d'); x.setTransform(d, 0, 0, d, 0, 0); return { x, w: r.width, h: r.height };
+  }
+  const ticks = (lo, hi) => { const rg = hi - lo, e = Math.pow(10, Math.floor(Math.log10(rg / 4))), n = rg / 4 / e, paso = (n <= 1.5 ? 1 : n <= 3 ? 2 : n <= 7 ? 5 : 10) * e; const t = []; for (let v = Math.ceil(lo / paso) * paso; v <= hi + 1e-9; v += paso) t.push(v); return t; };
+
+  function dibujar() {
+    if (!Sesion.astronauta || !Sesion.datos) return;      // el observador de tamaño dispara esto antes de que lleguen los datos
+    const a = Sesion.astronauta, r = regla(); if (!r) return;
+    const sub = $('evo-sub').value, pct = r.modo === 'pct_vs_basal', sube = r.malo_si === 'sube', am = Number(r.amarillo), ro = Number(r.rojo);
+    const mia = serie(a.id_astronauta, r, sub);
+    const otros = $('evo-comparar').checked ? Sesion.datos.Astronautas.filter((x) => x.id_astronauta !== a.id_astronauta && x.activo !== 'NO').map((x) => ({ a: x, s: serie(x.id_astronauta, r, sub) })) : [];
+    const todos = [mia.pts, ...otros.map((o) => o.s.pts)].flat();
+    const { x, w, h } = preparar($('evo-grafica')); x.clearRect(0, 0, w, h);
+    const ml = 48, mr = 14, mt = 12, mb = 40, pw = w - ml - mr, ph = h - mt - mb;
+    if (!todos.length) { x.fillStyle = css('--tinta-3'); x.font = '14px ' + css('--fuente'); x.textAlign = 'center'; x.fillText('Todavía no hay registros de este indicador.', w / 2, h / 2); puntosVisibles = []; return; }
+
+    const maxSem = Math.max(12, ...todos.map((p) => p.sem));
+    let lo = Math.min(...todos.map((p) => p.y), am, ro, pct ? 0 : Infinity), hi = Math.max(...todos.map((p) => p.y), am, ro, pct ? 0 : -Infinity);
+    const pad = (hi - lo) * .12 || 1; lo -= pad; hi += pad;
+    const X = (s) => ml + s / maxSem * pw, Y = (v) => mt + ph - (v - lo) / (hi - lo) * ph;
+
+    // Franjas de semáforo: de la línea de precaución a la de alerta, y más allá de la de alerta
+    const franja = (desde, hasta, color) => { const y1 = Y(Math.min(hasta, hi)), y2 = Y(Math.max(desde, lo)); if (y2 > y1) { x.fillStyle = color; x.fillRect(ml, Math.min(y1, y2), pw, Math.abs(y2 - y1)); } };
+    if (sube) { franja(am, ro, css('--amarillo-fondo')); franja(ro, hi, css('--rojo-fondo')); } else { franja(ro, am, css('--amarillo-fondo')); franja(lo, ro, css('--rojo-fondo')); }
+
+    // Ejes
+    x.font = '11px ' + css('--fuente'); x.fillStyle = css('--tinta-3'); x.strokeStyle = css('--linea-suave'); x.lineWidth = 1; x.textAlign = 'right'; x.textBaseline = 'middle';
+    ticks(lo, hi).forEach((v) => { const yy = Y(v); x.beginPath(); x.moveTo(ml, yy); x.lineTo(w - mr, yy); x.stroke(); x.fillText(pct ? (v > 0 ? '+' : v < 0 ? '−' : '') + num(Math.abs(v), 0) + ' %' : num(v, Math.abs(v) < 10 ? 1 : 0), ml - 6, yy); });
+    x.textAlign = 'center'; x.textBaseline = 'top';
+    for (let s = 0; s <= maxSem; s += maxSem > 16 ? 4 : 2) x.fillText(String(s), X(s), h - mb + 8);
+    x.fillText('Semana de misión', ml + pw / 2, h - 15);
+    // Línea de la basal y de los umbrales
+    const linea = (v, color, trazo, texto) => { const yy = Y(v); x.save(); x.strokeStyle = color; x.lineWidth = 1.4; x.setLineDash(trazo); x.beginPath(); x.moveTo(ml, yy); x.lineTo(w - mr, yy); x.stroke(); x.restore(); if (texto) { x.fillStyle = color; x.textAlign = 'left'; x.textBaseline = 'bottom'; x.fillText(texto, ml + 6, yy - 2); } };
+    if (pct) linea(0, css('--tinta-3'), [], 'Basal');
+    linea(am, css('--amarillo'), [5, 4], 'Precaución'); linea(ro, css('--rojo'), [5, 4], 'Alerta');
+
+    // Intervenciones del astronauta (línea vertical)
+    (Sesion.datos.Intervenciones || []).filter((i) => i.id_astronauta === a.id_astronauta).forEach((i) => {
+      const sem = (Date.parse(i.fecha) - Date.parse(a.fecha_inicio_mision)) / 864e5 / 7; if (!(sem >= 0 && sem <= maxSem)) return;
+      x.save(); x.strokeStyle = css('--marca-morado'); x.setLineDash([2, 3]); x.lineWidth = 1.4; x.beginPath(); x.moveTo(X(sem), mt); x.lineTo(X(sem), mt + ph); x.stroke(); x.restore();
+      x.fillStyle = css('--marca-morado'); x.textAlign = 'center'; x.textBaseline = 'top'; x.fillText('Intervención', X(sem), mt + 2);
+    });
+
+    const trazar = (pts, color, ancho, puntos) => {
+      if (!pts.length) return; x.strokeStyle = color; x.lineWidth = ancho; x.lineJoin = 'round'; x.beginPath(); pts.forEach((p, i) => { const px = X(p.sem), py = Y(p.y); i ? x.lineTo(px, py) : x.moveTo(px, py); }); x.stroke();
+      if (puntos) pts.forEach((p) => { x.beginPath(); x.arc(X(p.sem), Y(p.y), 3.6, 0, 6.283); x.fillStyle = p.fase === 'post_entrenamiento' ? css('--blanco') : color; x.fill(); x.lineWidth = 2; x.strokeStyle = color; x.stroke(); });
+    };
+    otros.forEach((o) => trazar(o.s.pts, css('--tinta-3') + '99', 1.4, false));
+    trazar(mia.pts, css('--marca-azul'), 2.4, true);
+    puntosVisibles = mia.pts.map((p) => ({ ...p, px: X(p.sem), py: Y(p.y) }));
+
+    // Leyenda
+    $('evo-leyenda').innerHTML = `<li><i style="background:${css('--marca-azul')}"></i>${UI.esc(a.nombre)}</li>` + otros.map((o) => `<li><i style="background:${css('--tinta-3')}"></i>${UI.esc(o.a.nombre)}</li>`).join('') +
+      `<li><i class="evo-hueco"></i>Después del entrenamiento</li>` + (otros.length ? '' : '');
+    resumen(a, r, mia, sub, pct);
+  }
+
+  function resumen(a, r, mia, sub, pct) {
+    const caja = $('evo-resumen'), ultimo = mia.pts[mia.pts.length - 1];
+    const contexto = r.tabla === 'Sesiones' ? etiqueta('ejercicio', sub) : r.tabla === 'EMG' ? etiqueta('grupo_muscular', sub) : 'Seguimiento diario';
+    if (!ultimo || !(typeof Alertas !== 'undefined')) { caja.innerHTML = `<h3 class="titulo-tarjeta">${UI.esc(r.nombre_visible)}</h3><p class="pequeno texto-2">${UI.esc(r.explicacion)}</p><p class="pequeno texto-2">Todavía no hay registros para ${UI.esc(contexto.toLowerCase())}.</p>`; return; }
+    const nivel = Alertas.nivelDe(r, ultimo.v, mia.basal), recomendacion = nivel === 'rojo' ? r.recomendacion_rojo : nivel === 'amarillo' ? r.recomendacion_amarillo : 'Dentro de lo esperado: mantener el entrenamiento habitual.';
+    const peor = mia.pts.reduce((p, q) => (r.malo_si === 'sube' ? q.y > p.y : q.y < p.y) ? q : p, mia.pts[0]);
+    const cifra = pct ? `${signo(ultimo.y)}<small>%</small>` : `${num(ultimo.y, Math.abs(ultimo.y) < 10 ? 1 : 0)}<small>${UI.esc(r.unidad)}</small>`;
+    caja.innerHTML = `
+      <div class="tarjeta-cabecera"><h3 class="titulo-tarjeta">${UI.esc(r.nombre_visible)}</h3><span class="estado estado--${nivel}">${TEXTO_NIVEL[nivel]}</span></div>
+      <p class="nota">${UI.esc(contexto)} · semana ${ultimo.sem}, ${UI.esc(String(ultimo.fecha))}</p>
+      <span class="cifra">${cifra}</span>
+      <p class="nota">${pct ? 'frente a su basal de ' + num(mia.basal, Math.abs(mia.basal) < 10 ? 2 : 0) + ' ' + UI.esc(r.unidad) : 'valor más reciente'}</p>
+      <p class="pequeno texto-2">${UI.esc(r.explicacion)}</p>
+      <div class="evo-reco"><p class="nota">Qué hacer</p><p class="pequeno">${UI.esc(recomendacion)}</p></div>
+      <p class="nota">Punto más bajo: ${pct ? signo(peor.y) + ' %' : num(peor.y, 1) + ' ' + UI.esc(r.unidad)} en la semana ${peor.sem}. Umbrales por validar.</p>`;
+  }
+
+  /* Valor al pasar el ratón */
+  const lienzo = $('evo-grafica'), tip = $('evo-tip');
+  lienzo.addEventListener('pointermove', (e) => {
+    const b = lienzo.getBoundingClientRect(), mx = e.clientX - b.left, my = e.clientY - b.top;
+    let mejor = null, md = 18; puntosVisibles.forEach((p) => { const d = Math.hypot(p.px - mx, p.py - my); if (d < md) { md = d; mejor = p; } });
+    if (!mejor) { tip.hidden = true; return; }
+    const r = regla(), pct = r.modo === 'pct_vs_basal';
+    tip.innerHTML = `<b>Semana ${mejor.sem}</b><br>${pct ? signo(mejor.y) + ' %' : num(mejor.y, 1) + ' ' + UI.esc(r.unidad)}<br><span class="nota">${UI.esc(String(mejor.fecha))}</span>`;
+    tip.hidden = false; tip.style.left = Math.min(mejor.px + 12, b.width - 130) + 'px'; tip.style.top = Math.max(mejor.py - 56, 4) + 'px';
+  });
+  lienzo.addEventListener('pointerleave', () => { tip.hidden = true; });
+
+  /* ============================================================
+     EVENTOS
+     ============================================================ */
+  $('evo-ind').addEventListener('change', () => { llenarSub(); dibujar(); });
+  $('evo-sub').addEventListener('change', dibujar);
+  $('evo-comparar').addEventListener('change', dibujar);
+  new ResizeObserver(() => dibujar()).observe(lienzo);
+  const todo = () => { if (!Sesion.astronauta) return; if (!$('evo-ind').options.length) llenarIndicadores(); dibujar(); };
+  document.addEventListener('astronauta-elegido', () => { llenarIndicadores(); dibujar(); });
+  document.addEventListener('datos-actualizados', todo);
+  document.addEventListener('astronauta-actualizado', todo);
+})();
+</script>

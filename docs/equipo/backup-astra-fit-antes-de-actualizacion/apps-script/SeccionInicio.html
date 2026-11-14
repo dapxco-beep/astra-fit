@@ -1,0 +1,27 @@
+<!-- SeccionInicio.html — Hero del panel: quién es el astronauta y su resumen.  Fondo: blanco.  Responsable: (por definir)
+     Escucha el evento "astronauta-elegido" (lo dispara SeccionAcceso.html). El astronauta activo está en Sesion.astronauta -->
+<header class="hero" id="inicio">
+  <div class="contenedor">
+    <p class="texto-2" id="inicio-astronauta"></p>
+    <h1 class="hero-titulo" id="inicio-titulo">Cada músculo, en tiempo de misión.</h1>
+    <p class="subtitulo">Seguimiento de la fuerza, la activación muscular y el movimiento frente a la evaluación basal.</p>
+    <div class="acciones">
+      <a class="boton" href="#cuerpo">Ver estado</a>
+      <a class="enlace" href="#registro">Registrar una evaluación</a>
+    </div>
+  </div>
+  <div class="contenedor" style="margin-top: var(--e-12)">
+    <div class="reservado">
+      <strong>Resumen del astronauta</strong>
+      <span class="pequeno">Veredicto del día y cifras clave frente a la basal</span>
+      <code>SeccionInicio.html</code>
+    </div>
+  </div>
+</header>
+
+<script>
+  document.addEventListener('astronauta-elegido', (e) => {
+    const a = e.detail;
+    document.getElementById('inicio-astronauta').textContent = `${a.nombre}, ${String(a.rol || 'tripulante').toLowerCase()}, ${a.id_astronauta}`;
+  });
+</script>

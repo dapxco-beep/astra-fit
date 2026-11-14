@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ASTRA-FIT</title>
+  <link rel="icon" href="data:,">
+  <?!= include('Estilos'); ?>
+  <!-- Scripts compartidos: van primero porque las secciones los usan -->
+  <?!= include('JsUi'); ?>
+  <?!= include('JsApi'); ?>
+  <?!= include('JsAlertas'); ?>
+</head>
+<body>
+
+  <!-- ===================== VISTA 1: pantalla de entrada ===================== -->
+  <div class="vista" id="vista-acceso">
+    <?!= include('SeccionAcceso'); ?>
+  </div>
+
+  <!-- ===================== VISTA 2: panel del astronauta elegido ===================== -->
+  <div class="vista" id="vista-panel" hidden>
+    <nav class="nav" aria-label="Secciones">
+      <div class="contenedor">
+        <a class="nav-marca" href="#inicio">ASTRA-FIT</a>
+        <a class="nav-enlace" href="#cuerpo">Cuerpo</a>
+        <a class="nav-enlace" href="#evolucion">Evolución</a>
+        <a class="nav-enlace" href="#alertas">Alertas</a>
+        <a class="nav-enlace" href="#registro">Registro</a>
+        <span class="nav-astronauta"><span class="avatar" id="nav-avatar" aria-hidden="true"></span><span id="nav-nombre"></span></span>
+        <button type="button" class="enlace" style="font-size:var(--t-nota)" onclick="Sesion.salir()">Cambiar</button>
+      </div>
+    </nav>
+
+    <main>
+      <?!= include('SeccionInicio'); ?>
+      <?!= include('SeccionCuerpo'); ?>
+      <?!= include('SeccionEvolucion'); ?>
+      <?!= include('SeccionAlertas'); ?>
+      <?!= include('SeccionRegistro'); ?>
+    </main>
+
+    <footer class="pie">
+      <div class="contenedor">
+        Prototipo de Sinergia Cósmica para NASA Space Apps Challenge 2026, con datos simulados. Las alertas son indicadores de seguimiento, no diagnósticos médicos.
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    /* Barra superior: muestra quién está activo */
+    document.addEventListener('astronauta-elegido', (e) => {
+      const a = e.detail;
+      const n = parseInt(String(a.id_astronauta).replace(/\D/g, ''), 10) || 0;
+      const avatar = document.getElementById('nav-avatar');
+      avatar.className = `avatar avatar--${n % 3}`;
+      avatar.textContent = String(a.nombre).trim().slice(0, 1).toUpperCase();
+      document.getElementById('nav-nombre').textContent = a.nombre;
+    });
+  </script>
+</body>
+</html>

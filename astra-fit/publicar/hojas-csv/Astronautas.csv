@@ -1,0 +1,4 @@
+﻿id_astronauta,nombre,sexo,edad,peso_kg,talla_cm,mano_dominante,rol,fecha_inicio_mision,escenario,activo
+AST-001,Julia,F,41,63.5,168,derecha,Comandante,2026-08-17,estable,SI
+AST-002,Rogelio,M,45,79,178,derecha,Ingeniero de vuelo,2026-08-17,perdida_fuerza,SI
+AST-003,Amara,F,38,58,164,izquierda,Especialista de misión,2026-08-17,asimetria,SI

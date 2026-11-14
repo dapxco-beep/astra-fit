@@ -1,0 +1,78 @@
+<!-- SeccionAcceso.html — Pantalla de entrada: logo, elegir astronauta o registrar uno nuevo.
+     Fondo: blanco.  Lee la pestaña Astronautas por medio de API.  El registro y la edición viven en FormPerfil.html.
+     Al elegir un astronauta guarda Sesion.astronauta y avisa con el evento "astronauta-elegido". -->
+<section class="acceso" aria-labelledby="acceso-titulo">
+  <div class="contenedor">
+    <?!= include('Logo'); ?>
+    <h1 class="hero-titulo" id="acceso-titulo">Elige un astronauta.</h1>
+    <p class="subtitulo">ASTRA-FIT sigue la fuerza, la activación muscular y el movimiento de cada miembro de la tripulación frente a su evaluación basal.</p>
+
+    <div class="perfiles" id="perfiles" aria-live="polite">
+      <p class="texto-2" style="grid-column: 1 / -1">Cargando tripulación…</p>
+    </div>
+  </div>
+</section>
+
+<script>
+const Sesion = { datos: null, astronauta: null };
+
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  function textoDia(a) {
+    const d = Calc.diasDesde(a.fecha_inicio_mision);
+    if (d === null) return a.id_astronauta;
+    return d < 0 ? `${a.id_astronauta}, despega en ${-d} días` : `${a.id_astronauta}, día ${d} de misión`;
+  }
+
+  /* ---------------- Tarjetas de la tripulación ---------------- */
+  function dibujarPerfiles() {
+    const activos = Sesion.datos.Astronautas.filter((a) => a.activo !== 'NO');
+    $('perfiles').innerHTML = activos.map((a) => `
+      <button type="button" class="perfil" data-id="${UI.esc(a.id_astronauta)}">
+        ${UI.avatar(a)}
+        <span class="titulo-tarjeta">${UI.esc(a.nombre)}</span>
+        <span class="texto-2">${UI.esc(a.rol || 'Tripulante')}</span>
+        <span class="nota">${UI.esc(textoDia(a))}</span>
+        <span class="enlace">Abrir panel</span>
+      </button>`).join('') + `
+      <button type="button" class="perfil perfil-nuevo" id="btn-nuevo-astronauta">
+        <span class="avatar" aria-hidden="true">+</span>
+        <span class="titulo-tarjeta">Registrar nuevo astronauta</span>
+        <span class="texto-2">Agrega un tripulante y su información básica</span>
+      </button>`;
+  }
+
+  $('perfiles').addEventListener('click', (e) => {
+    if (e.target.closest('#btn-nuevo-astronauta')) return Perfil.abrir('crear');
+    const tarjeta = e.target.closest('.perfil[data-id]');
+    if (tarjeta) elegir(tarjeta.dataset.id);
+  });
+  document.addEventListener('astronauta-guardado', dibujarPerfiles);
+  document.addEventListener('astronauta-actualizado', dibujarPerfiles);
+
+  function elegir(id) {
+    Sesion.astronauta = Sesion.datos.Astronautas.find((a) => a.id_astronauta === id);
+    $('vista-acceso').hidden = true;
+    $('vista-panel').hidden = false;
+    window.scrollTo(0, 0);
+    document.dispatchEvent(new CustomEvent('astronauta-elegido', { detail: Sesion.astronauta }));
+  }
+
+  /* Volver a la pantalla de entrada (lo usa el botón "Cambiar" de la barra superior) */
+  Sesion.salir = () => {
+    Sesion.astronauta = null;
+    $('vista-panel').hidden = true;
+    $('vista-acceso').hidden = false;
+    window.scrollTo(0, 0);
+  };
+
+  /* ---------------- Carga inicial ---------------- */
+  API.obtenerDatos()
+    .then((datos) => { Sesion.datos = datos; dibujarPerfiles(); })
+    .catch((err) => {
+      $('perfiles').innerHTML = `<p class="texto-2" style="grid-column:1/-1">No se pudo cargar la tripulación. ${UI.esc(err.message)}</p>`;
+      UI.aviso('No se pudo conectar con la base de datos.', 'error');
+    });
+})();
+</script>

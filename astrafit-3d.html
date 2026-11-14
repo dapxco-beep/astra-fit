@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASTRA-FIT 3D</title>
+<style>
+  :root { --bg:#070b14; --panel:#0e1524; --panel2:#131c30; --line:#202c46; --txt:#e6ecf7; --mut:#8c9ab3; --acc:#4fd1c5; --ok:#2ecc71; --warn:#f1c40f; --bad:#e74c3c; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--txt); font:15px/1.45 system-ui,"Segoe UI",sans-serif; }
+  body { display:flex; flex-direction:column; min-height:100vh; }
+  header { padding:12px 18px; display:flex; align-items:center; gap:14px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  header h1 { margin:0; font-size:1.15rem; letter-spacing:.08em; } header h1 span { color:var(--acc); }
+  header p { margin:0; color:var(--mut); font-size:.85rem; }
+  main { flex:1; display:grid; grid-template-columns:minmax(0,1.5fr) minmax(320px,1fr); gap:14px; padding:14px; }
+  @media (max-width:900px){ main { grid-template-columns:1fr; } }
+
+  .stage { position:relative; background:radial-gradient(ellipse at 50% 30%,#101a33 0%,#070b14 70%); border:1px solid var(--line); border-radius:14px; overflow:hidden; min-height:520px; height:calc(100vh - 90px); position:sticky; top:14px; align-self:start; }
+  @media (max-width:900px){ .stage { position:relative; height:72vh; top:0; } }
+  #gl { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; cursor:grab; }
+  .hud { position:absolute; left:12px; right:12px; display:flex; gap:8px; flex-wrap:wrap; pointer-events:none; align-items:center; }
+  .hud.top { top:12px; } .hud.bot { bottom:12px; }
+  .hud > * { pointer-events:auto; }
+  .grp { display:flex; gap:6px; flex-wrap:wrap; }
+  .chip { background:rgba(14,21,36,.82); border:1px solid var(--line); color:var(--txt); border-radius:999px; padding:6px 12px; font-size:.82rem; cursor:pointer; backdrop-filter:blur(4px); }
+  .chip:hover { border-color:var(--acc); }
+  .chip.on { background:var(--acc); color:#04201d; border-color:var(--acc); font-weight:600; }
+  .lbl { font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; color:var(--mut); margin-right:2px; }
+  #tip { position:absolute; pointer-events:none; background:rgba(14,21,36,.92); border:1px solid var(--line); padding:4px 9px; border-radius:6px; font-size:.8rem; display:none; white-space:nowrap; }
+  .legend { margin-left:auto; display:flex; gap:10px; font-size:.78rem; color:var(--mut); background:rgba(14,21,36,.82); border:1px solid var(--line); border-radius:999px; padding:6px 12px; }
+  .dot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:4px; vertical-align:middle; }
+  #load { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; background:rgba(7,11,20,.92); z-index:5; text-align:center; padding:24px; }
+  #load .barw { width:min(320px,70%); height:6px; background:#1b2540; border-radius:3px; overflow:hidden; }
+  #load .barw span { display:block; height:100%; width:0; background:var(--acc); transition:width .2s; }
+  #load code { background:#131c30; padding:2px 6px; border-radius:4px; }
+
+  aside { display:flex; flex-direction:column; gap:12px; min-width:0; }
+  .box { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; }
+  .box h2 { margin:0 0 8px; font-size:.78rem; letter-spacing:.1em; text-transform:uppercase; color:var(--mut); font-weight:600; }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; }
+  .tab { flex:1; min-width:90px; background:var(--panel2); border:1px solid var(--line); color:var(--txt); padding:8px 6px; border-radius:10px; cursor:pointer; text-align:center; font-size:.82rem; }
+  .tab b { display:block; font-size:.95rem; } .tab small { color:var(--mut); }
+  .tab.on { border-color:var(--acc); box-shadow:0 0 0 1px var(--acc) inset; }
+  .row { display:flex; align-items:center; gap:10px; margin-top:10px; }
+  input[type=range] { flex:1; accent-color:var(--acc); }
+  button.btn { background:var(--panel2); border:1px solid var(--line); color:var(--txt); border-radius:10px; padding:7px 12px; cursor:pointer; font-size:.85rem; }
+  button.btn:hover { border-color:var(--acc); } button.btn.on { background:var(--acc); color:#04201d; border-color:var(--acc); font-weight:600; }
+  .alert { display:flex; gap:12px; align-items:center; }
+  .badge { min-width:92px; text-align:center; padding:8px 10px; border-radius:10px; font-weight:700; color:#061018; }
+  .badge.g { background:var(--ok); } .badge.y { background:var(--warn); } .badge.r { background:var(--bad); color:#fff; animation:pulse 1.2s infinite; }
+  @keyframes pulse { 50% { box-shadow:0 0 0 6px rgba(231,76,60,.25); } }
+  .rec { font-size:.88rem; margin:0; }
+  .metrics { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:8px; }
+  .m { background:var(--panel2); border-radius:10px; padding:8px 10px; }
+  .m small { color:var(--mut); display:block; font-size:.74rem; }
+  .m b { font-size:1.25rem; } .m b i { font-style:normal; font-size:.75rem; color:var(--mut); margin-left:3px; }
+  .bar { height:5px; background:#1b2540; border-radius:3px; margin-top:5px; overflow:hidden; }
+  .bar span { display:block; height:100%; width:0; transition:width .3s, background .3s; }
+  canvas.c { width:100%; display:block; background:#0a1020; border-radius:8px; margin-top:8px; }
+  .muted { color:var(--mut); font-size:.78rem; margin:6px 0 0; }
+  footer { padding:10px 18px 16px; color:var(--mut); font-size:.74rem; border-top:1px solid var(--line); line-height:1.5; }
+  footer a { color:var(--acc); }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<header>
+  <h1>ASTRA<span>-FIT</span> · monitoreo neuromuscular 3D</h1>
+  <p>NASA Space Apps Challenge 2026 · datos simulados</p>
+</header>
+
+<main>
+  <section class="stage" id="stage">
+    <canvas id="gl"></canvas>
+    <div class="hud top">
+      <div class="grp" id="modes">
+        <span class="lbl">Actividad</span>
+        <button class="chip on" data-mode="gravity">Reposo</button>
+        <button class="chip" data-mode="float">Microgravedad</button>
+        <button class="chip" data-mode="squat">Sentadilla</button>
+        <button class="chip" data-mode="calf">Elevación de talones</button>
+      </div>
+    </div>
+    <div class="hud bot">
+      <div class="grp" id="views">
+        <span class="lbl">Vista</span>
+        <button class="chip" data-view="suit">Traje</button>
+        <button class="chip on" data-view="xray">Rayos X</button>
+        <button class="chip" data-view="anat">Anatomía</button>
+        <button class="chip" id="skel">Esqueleto</button>
+      </div>
+      <div class="grp" id="cams">
+        <button class="chip" data-cam="front">Frente</button>
+        <button class="chip" data-cam="back">Espalda</button>
+        <button class="chip" data-cam="legs">Piernas</button>
+        <button class="chip" id="spin">Girar</button>
+      </div>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--ok)"></i>Estable</span>
+        <span><i class="dot" style="background:var(--warn)"></i>Vigilancia</span>
+        <span><i class="dot" style="background:var(--bad)"></i>Evaluar</span>
+      </div>
+    </div>
+    <div id="tip"></div>
+    <div id="load"><div id="loadTxt">Cargando modelos 3D…</div><div class="barw"><span id="loadBar"></span></div></div>
+  </section>
+
+  <aside>
+    <div class="box">
+      <h2>Astronauta simulado</h2>
+      <div class="tabs" id="astros">
+        <div class="tab on" data-a="0"><b>001</b><small>Rendimiento estable</small></div>
+        <div class="tab" data-a="1"><b>002</b><small>Pérdida progresiva de fuerza</small></div>
+        <div class="tab" data-a="2"><b>003</b><small>Asimetría y coordinación</small></div>
+      </div>
+      <div class="row">
+        <button class="btn" id="play">▶ Avanzar misión</button>
+        <input type="range" id="day" min="0" max="180" value="0">
+        <b id="dayLbl" style="min-width:64px;text-align:right">Día 0</b>
+      </div>
+      <div class="row">
+        <button class="btn" id="train">Aplicar intervención adaptativa</button>
+        <span class="muted" id="trainLbl" style="margin:0">desactivada</span>
+      </div>
+    </div>
+    <div class="box">
+      <h2>Estado de seguimiento</h2>
+      <div class="alert"><div class="badge g" id="badge">VERDE</div><p class="rec" id="rec"></p></div>
+    </div>
+    <div class="box">
+      <h2 id="musTitle">Músculo</h2>
+      <div class="metrics" id="metrics"></div>
+      <canvas class="c" id="emg" height="90"></canvas>
+      <p class="muted">Señal EMG simulada. Haz clic en un músculo del cuerpo (los puntos son los sensores) para cambiarlo.</p>
+    </div>
+    <div class="box">
+      <h2>Evolución de la fuerza (clic para cambiar de día)</h2>
+      <canvas class="c" id="chart" height="150"></canvas>
+      <p class="muted" id="chartLbl"></p>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  Prototipo con datos simulados. Los umbrales (90 % y 75 %) son ilustrativos. Las alertas son indicadores de seguimiento, no diagnósticos médicos; ASTRA-FIT no es un dispositivo médico validado.
+  Las actividades animan la activación de los músculos; los modelos no tienen esqueleto articulado, por eso el cuerpo no cambia de postura.<br>
+  <b>Créditos.</b> Astronauta: modelo de <a href="https://github.com/nasa/NASA-3D-Resources" target="_blank" rel="noopener">NASA 3D Resources</a>.
+  Anatomía: BodyParts3D © The Database Center for Life Science (CC BY 4.0), adaptada por
+  <a href="https://github.com/MervinR07/open-anatomy-3d" target="_blank" rel="noopener">open-anatomy-3d</a> (CC BY 4.0).
+  Cambios en esta página: se ocultaron estructuras, se escaló el modelo y se colorearon los músculos.
+</footer>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* =====================================================================
+   1) DATOS SIMULADOS (igual que la versión básica)
+   El modelo anatómico agrupa algunos músculos, así que trabajamos con 4 grupos:
+   - gastro: la malla "calf" (pantorrilla: gastrocnemio y sóleo)
+   - back:   la malla "back_muscles" junta erectores espinales y dorsal ancho
+   ===================================================================== */
+const MUSCLES = {
+  quad:   { name:'Cuádriceps',                         susc:1.00, base:90 },
+  gastro: { name:'Gastrocnemio y sóleo (pantorrilla)', susc:1.15, base:85 },
+  glute:  { name:'Glúteo mayor',                       susc:0.80, base:80 },
+  back:   { name:'Erectores y dorsal ancho (espalda)', susc:0.60, base:72 }
+};
+const SIDE_NAME = { L:'izquierdo', R:'derecho' };
+const RATES = [ { L:0.016, R:0.016 }, { L:0.170, R:0.170 }, { L:0.030, R:0.120 } ]; // % de fuerza perdida por día
+const TRAIN_FACTOR = 0.45;
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const statusOfStrength = s => s>=90?0:s>=75?1:2;
+const statusOfSym = y => y>=90?0:y>=80?1:2;
+const COLORS = [0x2ecc71,0xf1c40f,0xe74c3c], CSS = ['#2ecc71','#f1c40f','#e74c3c'];
+
+function strengthOf(a,key,side,day,trained){
+  const loss = RATES[a][side]*MUSCLES[key].susc*day*(trained?TRAIN_FACTOR:1);
+  const jitter = Math.sin(day*0.35 + key.length*1.7 + (side==='L'?0:2))*0.6*Math.min(1,day/10);
+  return clamp(100-loss+jitter,0,100);
+}
+function metricsOf(a,key,side,day,trained){
+  const s = strengthOf(a,key,side,day,trained), so = strengthOf(a,key,side==='L'?'R':'L',day,trained);
+  const sym = Math.min(s,so)/Math.max(s,so)*100, fatigue = (100-s)*0.9;
+  return { s, sym, rms:100+fatigue*0.3, mdf:MUSCLES[key].base*(1-fatigue/250), status:Math.max(statusOfStrength(s),statusOfSym(sym)) };
+}
+function overall(a,day,trained){
+  let w=0; for (const k in MUSCLES) for (const sd of ['L','R']) w=Math.max(w,metricsOf(a,k,sd,day,trained).status); return w;
+}
+const RECS = [
+  'Mantener el entrenamiento habitual. Los indicadores están dentro de lo esperado.',
+  'Cambio relevante: repetir mediciones y considerar ajustar intensidad y recuperación.',
+  'Cambio importante: solicitar valoración del personal médico y repetir la evaluación.'
+];
+
+/* =====================================================================
+   2) ESCENA, LUCES Y CARGA DE LOS MODELOS REALES
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const stage = $('stage'), canvas = $('gl'), tip = $('tip');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;   // reflejos realistas para el traje
+const camera = new THREE.PerspectiveCamera(35, 1, 0.05, 200);
+camera.position.set(0.6,1.3,5.6);
+const controls = new OrbitControls(camera, canvas);
+controls.target.set(0,0.95,0); controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 1.0; controls.maxDistance = 9; controls.autoRotateSpeed = 1.2;
+
+scene.add(new THREE.HemisphereLight(0xcfe3ff,0x1a2036,0.5));
+const sun = new THREE.DirectionalLight(0xffffff,2.2); sun.position.set(3,4,5); scene.add(sun);
+const rim = new THREE.DirectionalLight(0x4fd1c5,1.4); rim.position.set(-4,2,-4); scene.add(rim);
+
+// estrellas
+{ const n=900, p=new Float32Array(n*3);
+  for(let i=0;i<n;i++){ const r=25+Math.random()*25,t=Math.random()*6.283,f=Math.acos(2*Math.random()-1);
+    p[i*3]=r*Math.sin(f)*Math.cos(t); p[i*3+1]=r*Math.cos(f); p[i*3+2]=r*Math.sin(f)*Math.sin(t); }
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(p,3));
+  var stars = new THREE.Points(g,new THREE.PointsMaterial({color:0xffffff,size:0.12,transparent:true,opacity:.85,sizeAttenuation:true}));
+  scene.add(stars); }
+
+// Tierra de fondo (solo en microgravedad)
+const earth = new THREE.Group();
+earth.add(new THREE.Mesh(new THREE.SphereGeometry(9,64,48), new THREE.MeshStandardMaterial({ color:0x1d4ea8, emissive:0x0a2a66, emissiveIntensity:.6, roughness:.9 })));
+earth.add(new THREE.Mesh(new THREE.SphereGeometry(9.25,64,48), new THREE.MeshBasicMaterial({ color:0x5aa9ff, transparent:true, opacity:.16, side:THREE.BackSide })));
+earth.position.set(-4,-12.5,-10); earth.visible=false; scene.add(earth);
+
+// plataforma (solo con gravedad)
+const platform = new THREE.Group();
+const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.85,0.85,0.03,64), new THREE.MeshStandardMaterial({ color:0x1a2540, metalness:.4, roughness:.5 }));
+disc.position.y = -0.015; platform.add(disc);
+const ringM = new THREE.Mesh(new THREE.TorusGeometry(0.85,0.01,8,96), new THREE.MeshBasicMaterial({ color:0x4fd1c5 }));
+ringM.rotation.x = Math.PI/2; ringM.position.y = 0.0; platform.add(ringM); scene.add(platform);
+
+const fig = new THREE.Group(); scene.add(fig);        // todo el cuerpo (flota en microgravedad)
+let astro = null, anat = null;
+const astroMats = [], muscleMeshes = [], skeletonMeshes = [], sensors = [];
+
+const draco = new DRACOLoader().setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+const loader = new GLTFLoader().setDRACOLoader(draco).setMeshoptDecoder(MeshoptDecoder);
+const progress = { a:0, b:0 };
+const setProgress = () => { $('loadBar').style.width = ((progress.a+progress.b)/2*100).toFixed(0)+'%'; };
+const load = (url,key) => new Promise((res,rej)=>loader.load(url, res, e=>{ if(e.total){ progress[key]=e.loaded/e.total; setProgress(); } }, rej));
+
+// Material con "pulso": desplaza los vértices a lo largo de su normal para que el músculo parezca contraerse
+function pulseMaterial(opts){
+  const m = new THREE.MeshStandardMaterial(Object.assign({ roughness:.5, metalness:.05 }, opts));
+  const uPulse = { value:0 }; m.userData.uPulse = uPulse;
+  m.onBeforeCompile = sh => {
+    sh.uniforms.uPulse = uPulse;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>','#include <common>\nuniform float uPulse;')
+      .replace('#include <begin_vertex>','#include <begin_vertex>\ntransformed += normalize(objectNormal) * uPulse;');
+  };
+  return m;
+}
+const TARGETS = { quadriceps_l:['quad','L'], quadriceps_r:['quad','R'], gluteal_l:['glute','L'], gluteal_r:['glute','R'],
+                  calf_l:['gastro','L'], calf_r:['gastro','R'], back_muscles_l:['back','L'], back_muscles_r:['back','R'] };
+const HIDE_ARMS = /deltoid|shoulder|arm|hand/;   // la T-pose del astronauta no coincide con los brazos de la anatomía
+const SYSTEMS = ['skin','skeleton','muscles','organs','vessels','nerves'];
+const sysOf = o => { for (let n=o; n; n=n.parent) if (SYSTEMS.includes(n.name)) return n.name; return ''; };
+
+function sensorTexture(){
+  const c=document.createElement('canvas'); c.width=c.height=64; const x=c.getContext('2d');
+  const g=x.createRadialGradient(32,32,2,32,32,30); g.addColorStop(0,'#fff'); g.addColorStop(.35,'rgba(255,255,255,.9)'); g.addColorStop(1,'rgba(255,255,255,0)');
+  x.fillStyle=g; x.fillRect(0,0,64,64); return new THREE.CanvasTexture(c);
+}
+
+const startupErr = e => {
+  const file = location.protocol==='file:';
+  $('loadTxt').innerHTML = file
+    ? 'El navegador no deja cargar los modelos 3D con doble clic.<br>Abre <code>iniciar-servidor.bat</code> (o ejecuta <code>node server.js</code>) y entra a <code>http://localhost:8080/astrafit-3d.html</code>'
+    : 'No se pudieron cargar los modelos: ' + (e && e.message || e);
+  $('loadBar').parentNode.style.display='none';
+};
+
+Promise.all([ load('assets/astronaut.glb','a'), load('assets/anatomy-male.glb','b') ]).then(([ga,gb])=>{
+  /* ---- astronauta NASA: se escala a ~1.95 m y se apoya en el piso ---- */
+  astro = ga.scene;
+  let bb = new THREE.Box3().setFromObject(astro), sz = bb.getSize(new THREE.Vector3());
+  const k = 1.95/sz.y; astro.scale.setScalar(k);
+  bb = new THREE.Box3().setFromObject(astro); const c = bb.getCenter(new THREE.Vector3());
+  astro.position.set(-c.x, -bb.min.y, -c.z);
+  astro.traverse(o=>{ if(o.isMesh){ [].concat(o.material).forEach(m=>{ if(!astroMats.includes(m)){ m.envMapIntensity = .9; astroMats.push(m);} }); } });
+  fig.add(astro);
+
+  /* ---- anatomía: solo músculos (y esqueleto opcional); lo demás se oculta ---- */
+  anat = gb.scene;
+  const AN = { s:1.04, x:0, y:0.10, z:0.0 };   // ajustado a ojo para que la anatomía quede dentro del traje
+  anat.scale.setScalar(AN.s); anat.position.set(AN.x, AN.y, AN.z); fig.add(anat);
+  const tex = sensorTexture(); let id = 0;
+  anat.traverse(o=>{
+    if(!o.isMesh) return;
+    const sys = sysOf(o);
+    if(!o.geometry.attributes.normal) o.geometry.computeVertexNormals();
+    if(sys==='skeleton'){ o.material = pulseMaterial({ color:0xd8d2c2, roughness:.6 }); o.visible=false; skeletonMeshes.push(o); return; }
+    if(sys!=='muscles'){ o.visible=false; return; }
+    if(TARGETS[o.name]){
+      const [key,side] = TARGETS[o.name];
+      o.material = pulseMaterial({ color:0x2ecc71, emissive:0x2ecc71, emissiveIntensity:.3, toneMapped:false });   // sin tone mapping para que verde/amarillo/rojo se lean fieles
+      id++; o.layers.enable(1);
+      o.userData = { key, side, cur:new THREE.Color(0x2ecc71), act:0,
+                     idMat:new THREE.MeshBasicMaterial({ color:new THREE.Color().setRGB(id*32/255,0,0,THREE.LinearSRGBColorSpace), toneMapped:false }) };
+      muscleMeshes.push(o);
+    } else if(HIDE_ARMS.test(o.name)){ o.visible=false; }
+    else { o.material = pulseMaterial({ color:0x7c8bb0, transparent:true, opacity:.5 }); }   // músculos de contexto
+  });
+  fig.updateMatrixWorld(true);
+  muscleMeshes.forEach(m=>{                              // un punto "sensor EMG" en el centro de cada músculo monitoreado
+    const ctr = new THREE.Box3().setFromObject(m).getCenter(new THREE.Vector3());
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex, color:0x2ecc71, transparent:true, depthTest:false, depthWrite:false, opacity:.95 }));
+    sp.position.copy(anat.worldToLocal(ctr)); sp.renderOrder = 20; sp.userData.mesh = m; anat.add(sp); sensors.push(sp);
+  });
+  $('load').style.display = 'none';
+  applyUrlParams(); refreshPanel(); resize();
+}).catch(startupErr);
+
+/* =====================================================================
+   3) ESTADO, VISTAS Y ACTIVIDADES
+   ===================================================================== */
+const S = { a:0, day:0, trained:false, mode:'gravity', view:'xray', skel:false, spin:false,
+            sel:{ key:'quad', side:'R' }, playing:false, t:0, suitA:0.17 };
+const VIEW_ALPHA = { suit:1, xray:0.17, anat:0 };
+let load_ = 0;                                           // carga de la actividad (0 a 1)
+
+function activation(key){
+  const L = load_;
+  if (S.mode==='squat') return { quad:.3+.7*L, glute:.3+.7*L, back:.45, gastro:.25 }[key];
+  if (S.mode==='calf')  return { gastro:.2+.8*L, quad:.12, glute:.1, back:.2 }[key];
+  if (S.mode==='float') return 0.06;
+  return { back:.22, gastro:.2, quad:.1, glute:.1 }[key];
+}
+function applySuit(a){
+  astroMats.forEach(m=>{
+    const t = a<0.995; if (m.transparent!==t){ m.transparent=t; m.needsUpdate=true; }
+    m.opacity = a; m.depthWrite = !t; m.emissive.setRGB(0.02,0.2,0.26).multiplyScalar(1-a);   // brillo tipo holograma
+  });
+  if (astro) astro.visible = a>0.01;
+}
+function applyViews(){
+  if (!anat) return;
+  anat.visible = S.view!=='suit';
+  skeletonMeshes.forEach(m=>m.visible = S.skel && S.view!=='suit');
+}
+
+// transiciones de cámara suaves
+const camTween = { on:false, t:0, p0:new THREE.Vector3(), p1:new THREE.Vector3(), t0:new THREE.Vector3(), t1:new THREE.Vector3() };
+const CAMS = { front:[[0.6,1.3,5.6],[0,0.95,0]], back:[[-0.6,1.3,-5.6],[0,0.95,0]], legs:[[1.9,0.6,2.6],[0,0.6,0]] };
+function goCam(name){
+  const [p,t] = CAMS[name]; camTween.p0.copy(camera.position); camTween.t0.copy(controls.target);
+  camTween.p1.set(...p); camTween.t1.set(...t); camTween.t=0; camTween.on=true; S.spin=false; syncChips();
+}
+
+/* =====================================================================
+   4) SELECCIÓN POR PIXEL (picking en GPU)
+   Por qué no Raycaster: los músculos tienen ~1 millón de triángulos; un raycast sería lento.
+   Pintamos cada músculo con un color-id en un render de 1 pixel y leemos qué color salió.
+   ===================================================================== */
+const pickRT = new THREE.WebGLRenderTarget(1,1), pbuf = new Uint8Array(4);
+function pickAt(cx,cy){
+  if (!muscleMeshes.length || !anat || !anat.visible) return null;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  camera.setViewOffset(w,h,Math.floor(cx),Math.floor(cy),1,1);
+  const saved = muscleMeshes.map(m=>m.material); muscleMeshes.forEach(m=>m.material = m.userData.idMat);
+  const bg = scene.background; scene.background = null; camera.layers.set(1);
+  renderer.setRenderTarget(pickRT); renderer.render(scene,camera); renderer.readRenderTargetPixels(pickRT,0,0,1,1,pbuf);
+  renderer.setRenderTarget(null); camera.layers.set(0); camera.clearViewOffset(); scene.background = bg;
+  muscleMeshes.forEach((m,i)=>m.material = saved[i]);
+  const i = Math.round(pbuf[0]/32)-1; return i>=0 ? muscleMeshes[i] : null;
+}
+const rel = e => { const r = canvas.getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top, r]; };
+let down = null, lastHover = 0;
+canvas.addEventListener('pointerdown', e=>{ down = { x:e.clientX, y:e.clientY }; S.spin && (S.spin=false, syncChips()); });
+canvas.addEventListener('pointerup', e=>{
+  if (down && Math.hypot(e.clientX-down.x, e.clientY-down.y) < 5){
+    const [x,y] = rel(e), m = pickAt(x,y); if (m){ S.sel = { key:m.userData.key, side:m.userData.side }; refreshPanel(); }
+  }
+  down = null;
+});
+canvas.addEventListener('pointermove', e=>{
+  if (down || performance.now()-lastHover<70) return; lastHover = performance.now();
+  const [x,y,r] = rel(e), m = pickAt(x,y);
+  if (!m){ tip.style.display='none'; canvas.style.cursor=''; return; }
+  tip.textContent = MUSCLES[m.userData.key].name+' '+SIDE_NAME[m.userData.side];
+  tip.style.left=(x+14)+'px'; tip.style.top=(y+14)+'px'; tip.style.display='block'; canvas.style.cursor='pointer';
+});
+canvas.addEventListener('pointerleave', ()=>{ tip.style.display='none'; });
+
+/* =====================================================================
+   5) PANEL, EMG Y GRÁFICA
+   ===================================================================== */
+const emgC = $('emg'), chartC = $('chart');
+function fitCanvas(c){ const r=c.getBoundingClientRect(), d=Math.min(devicePixelRatio,2); c.width=r.width*d; c.height=(c.getAttribute('height')|0)*d; c.getContext('2d').setTransform(d,0,0,d,0,0); c._w=r.width; c._h=c.height/d; }
+function refreshPanel(){
+  const { key:k, side:sd } = S.sel, m = metricsOf(S.a,k,sd,S.day,S.trained);
+  $('musTitle').textContent = MUSCLES[k].name+' · lado '+SIDE_NAME[sd];
+  const fr = m.mdf/MUSCLES[k].base;
+  const items = [
+    ['Fuerza',m.s.toFixed(0),'%',m.s,statusOfStrength(m.s)], ['Simetría L/R',m.sym.toFixed(0),'%',m.sym,statusOfSym(m.sym)],
+    ['Activación RMS',m.rms.toFixed(0),'% base',clamp(m.rms-50,0,100),0], ['Frecuencia mediana',m.mdf.toFixed(0),'Hz',clamp(fr*100,0,100),fr>=.93?0:fr>=.85?1:2]
+  ];
+  $('metrics').innerHTML = items.map(([n,v,u,w,st])=>`<div class="m"><small>${n}</small><b>${v}<i>${u}</i></b><div class="bar"><span style="width:${w}%;background:${CSS[st]}"></span></div></div>`).join('');
+  const o = overall(S.a,S.day,S.trained), b = $('badge'); b.className='badge '+'gyr'[o]; b.textContent=['VERDE','AMARILLO','ROJO'][o];
+  let rec = RECS[o];
+  if (S.a===2 && o>0) rec += ' Prioriza trabajo unilateral para corregir la asimetría.';
+  if (S.a===1 && o>0) rec += ' Considera aumentar la carga de resistencia y revisar proteína, calcio y vitamina D.';
+  $('rec').textContent = rec; $('dayLbl').textContent = 'Día '+S.day; $('day').value = S.day;
+  $('trainLbl').textContent = S.trained ? 'activa: deterioro reducido' : 'desactivada'; $('train').classList.toggle('on',S.trained);
+  drawChart();
+}
+const emgBuf = new Array(420).fill(0);
+function pushEmg(){
+  const { key:k, side:sd } = S.sel, m = metricsOf(S.a,k,sd,S.day,S.trained), amp = (0.06+activation(k))*(m.rms/100), f = m.mdf/12;
+  for (let i=0;i<4;i++){ const n=Math.random()+Math.random()+Math.random()-1.5; emgBuf.push(amp*n*(0.7+0.5*Math.sin(S.t*f*8+i))); emgBuf.shift(); }
+}
+function drawEmg(){
+  const c=emgC, x=c.getContext('2d'), w=c._w, h=c._h; if(!w) return;
+  x.clearRect(0,0,w,h); x.strokeStyle='#1b2540'; x.beginPath(); x.moveTo(0,h/2); x.lineTo(w,h/2); x.stroke();
+  x.strokeStyle='#4fd1c5'; x.lineWidth=1.2; x.beginPath();
+  emgBuf.forEach((v,i)=>{ const px=i/(emgBuf.length-1)*w, py=h/2-clamp(v,-1,1)*h*0.46; i?x.lineTo(px,py):x.moveTo(px,py); }); x.stroke();
+}
+const ACOL = ['#4fd1c5','#60a5fa','#c084fc'];
+function drawChart(){
+  const c=chartC, x=c.getContext('2d'), w=c._w, h=c._h, L=30,B=18,T=6,R=6; if(!w) return;
+  x.clearRect(0,0,w,h); x.font='11px system-ui'; x.fillStyle='#8c9ab3'; x.strokeStyle='#1b2540'; x.lineWidth=1;
+  const X=d=>L+d/180*(w-L-R), Y=v=>T+(100-v)/60*(h-T-B);
+  [100,90,75,60,40].forEach(v=>{ x.beginPath(); x.moveTo(L,Y(v)); x.lineTo(w-R,Y(v)); x.stroke(); x.fillText(v,4,Y(v)+4); });
+  x.setLineDash([4,4]); x.strokeStyle=CSS[1]; x.beginPath(); x.moveTo(L,Y(90)); x.lineTo(w-R,Y(90)); x.stroke();
+  x.strokeStyle=CSS[2]; x.beginPath(); x.moveTo(L,Y(75)); x.lineTo(w-R,Y(75)); x.stroke(); x.setLineDash([]);
+  [0,60,120,180].forEach(d=>x.fillText('d'+d,X(d)-8,h-4));
+  for (let a=0;a<3;a++){ x.strokeStyle=ACOL[a]; x.lineWidth=a===S.a?2.6:1.3; x.globalAlpha=a===S.a?1:.55; x.beginPath();
+    for (let d=0;d<=180;d+=3){ const v=strengthOf(a,S.sel.key,S.sel.side,d,S.trained); d?x.lineTo(X(d),Y(v)):x.moveTo(X(d),Y(v)); } x.stroke(); }
+  x.globalAlpha=1; x.strokeStyle='#e6ecf7'; x.lineWidth=1; x.beginPath(); x.moveTo(X(S.day),T); x.lineTo(X(S.day),h-B); x.stroke();
+  const v=strengthOf(S.a,S.sel.key,S.sel.side,S.day,S.trained); x.fillStyle=ACOL[S.a]; x.beginPath(); x.arc(X(S.day),Y(v),4.5,0,7); x.fill();
+  $('chartLbl').innerHTML = MUSCLES[S.sel.key].name+' '+SIDE_NAME[S.sel.side]+' · '+['001','002','003'].map((n,i)=>`<span style="color:${ACOL[i]}">● ${n}</span>`).join(' &nbsp;');
+}
+chartC.addEventListener('pointerdown', e=>{ const r=chartC.getBoundingClientRect(); setDay(Math.round(clamp((e.clientX-r.left-30)/(r.width-36),0,1)*180)); });
+
+/* =====================================================================
+   6) CONTROLES
+   ===================================================================== */
+function setDay(d){ S.day=d; refreshPanel(); }
+function syncChips(){
+  document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===S.mode));
+  document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===S.view));
+  $('skel').classList.toggle('on',S.skel); $('spin').classList.toggle('on',S.spin); controls.autoRotate = S.spin;
+}
+$('day').addEventListener('input', e=>{ S.playing=false; $('play').textContent='▶ Avanzar misión'; setDay(+e.target.value); });
+$('play').addEventListener('click', ()=>{ S.playing=!S.playing; if(S.playing&&S.day>=180) setDay(0); $('play').textContent=S.playing?'❚❚ Pausar':'▶ Avanzar misión'; });
+$('train').addEventListener('click', ()=>{ S.trained=!S.trained; refreshPanel(); });
+document.querySelectorAll('#astros .tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('#astros .tab').forEach(x=>x.classList.remove('on')); t.classList.add('on'); S.a=+t.dataset.a; refreshPanel(); }));
+document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{ S.mode=b.dataset.mode; S.t=0; syncChips(); }));
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{ S.view=b.dataset.view; syncChips(); applyViews(); }));
+$('skel').addEventListener('click',()=>{ S.skel=!S.skel; syncChips(); applyViews(); });
+$('spin').addEventListener('click',()=>{ S.spin=!S.spin; syncChips(); });
+document.querySelectorAll('[data-cam]').forEach(b=>b.addEventListener('click',()=>goCam(b.dataset.cam)));
+
+// parámetros en la URL (?a=1&day=150&view=anat&mode=squat&sel=quad-R&skel=1&cam=back) para compartir o probar una vista
+function applyUrlParams(){
+  const q = new URLSearchParams(location.search);
+  if (q.has('a')) { S.a = clamp(+q.get('a')|0,0,2); document.querySelectorAll('#astros .tab').forEach((t,i)=>t.classList.toggle('on',i===S.a)); }
+  if (q.has('day')) S.day = clamp(+q.get('day')|0,0,180);
+  if (q.has('train')) S.trained = q.get('train')==='1';
+  if (['suit','xray','anat'].includes(q.get('view'))) S.view = q.get('view');
+  if (['gravity','float','squat','calf'].includes(q.get('mode'))) S.mode = q.get('mode');
+  if (q.has('skel')) S.skel = q.get('skel')==='1';
+  if (q.has('sel')) { const [k,s] = q.get('sel').split('-'); if (MUSCLES[k]) S.sel = { key:k, side:s==='L'?'L':'R' }; }
+  S.suitA = VIEW_ALPHA[S.view]; applySuit(S.suitA); applyViews(); syncChips();
+  if (CAMS[q.get('cam')]) { const [p,t]=CAMS[q.get('cam')]; camera.position.set(...p); controls.target.set(...t); }
+}
+
+/* =====================================================================
+   7) BUCLE DE ANIMACIÓN
+   ===================================================================== */
+function resize(){
+  const r = stage.getBoundingClientRect(); if(!r.width) return;
+  renderer.setSize(r.width,r.height,false); camera.aspect = r.width/r.height; camera.updateProjectionMatrix();
+  fitCanvas(emgC); fitCanvas(chartC); drawChart();
+}
+addEventListener('resize', resize);
+new ResizeObserver(resize).observe(stage);
+
+const tmp = new THREE.Color(); let last = performance.now(), dayAcc = 0, ty = 0.95;
+function frame(now){
+  const dt = Math.min(0.05,(now-last)/1000); last = now; S.t += dt;
+  if (S.playing){ dayAcc += dt*14; if (dayAcc>=1){ const n=Math.floor(dayAcc); dayAcc-=n; setDay(Math.min(180,S.day+n)); if (S.day>=180){ S.playing=false; $('play').textContent='▶ Avanzar misión'; } } }
+
+  // carga de la actividad: sube y baja como repeticiones
+  const L = S.mode==='squat' ? 0.5-0.5*Math.cos(S.t*1.5) : S.mode==='calf' ? 0.5-0.5*Math.cos(S.t*2.2) : 0;
+  load_ += (L-load_)*(1-Math.exp(-8*dt));
+
+  // microgravedad: el cuerpo flota y se mece; con gravedad vuelve al piso
+  const fl = S.mode==='float', k = 1-Math.exp(-3*dt), t = S.t;
+  fig.position.y += ((fl ? 0.55+0.06*Math.sin(t*0.8) : 0) - fig.position.y)*k;
+  fig.rotation.x += ((fl ? 0.12*Math.sin(t*0.37) : 0) - fig.rotation.x)*k;
+  fig.rotation.z += ((fl ? 0.16*Math.sin(t*0.45) : 0) - fig.rotation.z)*k;
+  fig.rotation.y += ((fl ? 0.7*Math.sin(t*0.25) : 0) - fig.rotation.y)*k;
+  platform.visible = !fl; earth.visible = fl;
+  const dTy = ((fl ? 1.25 : 0.95) - ty)*k; ty += dTy; controls.target.y += dTy; camera.position.y += dTy;   // la cámara acompaña al cuerpo
+
+  S.suitA += (VIEW_ALPHA[S.view]-S.suitA)*(1-Math.exp(-6*dt)); applySuit(S.suitA);
+
+  if (camTween.on){ camTween.t = Math.min(1,camTween.t+dt/0.9); const e = 1-Math.pow(1-camTween.t,3);
+    camera.position.lerpVectors(camTween.p0,camTween.p1,e); controls.target.lerpVectors(camTween.t0,camTween.t1,e); if (camTween.t>=1) camTween.on=false; }
+  controls.update(); stars.rotation.y += dt*0.008;
+
+  muscleMeshes.forEach(m=>{
+    const u = m.userData, st = metricsOf(S.a,u.key,u.side,S.day,S.trained).status;
+    tmp.setHex(COLORS[st]); u.cur.lerp(tmp,1-Math.exp(-5*dt)); m.material.color.copy(u.cur).multiplyScalar(0.55); m.material.emissive.copy(u.cur);
+    u.act += (activation(u.key)-u.act)*(1-Math.exp(-8*dt));
+    const sel = u.key===S.sel.key && u.side===S.sel.side;
+    m.material.emissiveIntensity = 0.32 + 0.7*u.act + (st===2 ? 0.12*Math.sin(S.t*6) : 0) + (sel ? 0.3+0.12*Math.sin(S.t*5) : 0);
+    m.material.userData.uPulse.value = 0.02*u.act + (sel ? 0.004 : 0);       // "contracción" visible del músculo
+  });
+  sensors.forEach(sp=>{
+    const u = sp.userData.mesh.userData, sel = u.key===S.sel.key && u.side===S.sel.side;
+    sp.material.color.copy(u.cur); sp.scale.setScalar((sel?0.085:0.055)*(1+0.25*u.act+0.12*Math.sin(S.t*4+u.key.length)));
+  });
+  pushEmg(); drawEmg();
+  renderer.render(scene,camera);
+  requestAnimationFrame(frame);
+}
+resize(); requestAnimationFrame(frame);
+</script>
+</body>
+</html>

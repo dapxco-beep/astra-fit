@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASTRA-FIT · Escenarios</title>
+<style>
+  :root { --bg:#070b14; --panel:#0e1524; --panel2:#131c30; --line:#202c46; --txt:#e6ecf7; --mut:#8c9ab3; --acc:#4fd1c5; --ok:#2ecc71; --warn:#f1c40f; --bad:#e74c3c; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--txt); font:15px/1.45 system-ui,"Segoe UI",sans-serif; }
+  body { display:flex; flex-direction:column; min-height:100vh; }
+  header { padding:12px 18px; display:flex; align-items:center; gap:14px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  header h1 { margin:0; font-size:1.15rem; letter-spacing:.08em; } header h1 span { color:var(--acc); }
+  header p { margin:0; color:var(--mut); font-size:.85rem; }
+  main { flex:1; display:grid; grid-template-columns:minmax(0,1.5fr) minmax(330px,1fr); gap:14px; padding:14px; }
+  @media (max-width:900px){ main { grid-template-columns:1fr; } }
+
+  .stage { position:relative; background:#000; border:1px solid var(--line); border-radius:14px; overflow:hidden; min-height:520px; height:calc(100vh - 90px); position:sticky; top:14px; align-self:start; }
+  @media (max-width:900px){ .stage { position:relative; height:72vh; top:0; } }
+  #gl { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; cursor:grab; }
+  .hud { position:absolute; left:12px; right:12px; display:flex; gap:8px; flex-wrap:wrap; pointer-events:none; align-items:center; }
+  .hud.top { top:12px; } .hud.bot { bottom:12px; }
+  .hud > * { pointer-events:auto; }
+  .grp { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .chip { background:rgba(14,21,36,.82); border:1px solid var(--line); color:var(--txt); border-radius:999px; padding:6px 12px; font-size:.82rem; cursor:pointer; backdrop-filter:blur(4px); }
+  .chip:hover { border-color:var(--acc); }
+  .chip.on { background:var(--acc); color:#04201d; border-color:var(--acc); font-weight:600; }
+  .chip[disabled] { opacity:.35; cursor:not-allowed; }
+  .lbl { font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; color:var(--mut); margin-right:2px; }
+  .place { position:absolute; left:14px; top:58px; pointer-events:none; text-shadow:0 1px 6px #000; }
+  .place b { display:block; font-size:1.3rem; letter-spacing:.04em; }
+  .place span { font-size:.82rem; color:#cfd8ea; }
+  #sceneLoad { position:absolute; right:14px; top:58px; font-size:.8rem; color:var(--mut); background:rgba(14,21,36,.85); border:1px solid var(--line); padding:4px 10px; border-radius:999px; display:none; }
+  #load { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; background:rgba(7,11,20,.94); z-index:5; text-align:center; padding:24px; }
+  #load .barw { width:min(320px,70%); height:6px; background:#1b2540; border-radius:3px; overflow:hidden; }
+  #load .barw span { display:block; height:100%; width:30%; background:var(--acc); }
+  #load code { background:#131c30; padding:2px 6px; border-radius:4px; }
+
+  aside { display:flex; flex-direction:column; gap:12px; min-width:0; }
+  .box { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; }
+  .box h2 { margin:0 0 8px; font-size:.78rem; letter-spacing:.1em; text-transform:uppercase; color:var(--mut); font-weight:600; }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; }
+  .tab { flex:1; min-width:90px; background:var(--panel2); border:1px solid var(--line); color:var(--txt); padding:8px 6px; border-radius:10px; cursor:pointer; text-align:center; font-size:.82rem; }
+  .tab b { display:block; font-size:.95rem; } .tab small { color:var(--mut); }
+  .tab.on { border-color:var(--acc); box-shadow:0 0 0 1px var(--acc) inset; }
+  .row { display:flex; align-items:center; gap:10px; margin-top:10px; }
+  input[type=range] { flex:1; accent-color:var(--acc); }
+  button.btn { background:var(--panel2); border:1px solid var(--line); color:var(--txt); border-radius:10px; padding:7px 12px; cursor:pointer; font-size:.85rem; }
+  button.btn:hover { border-color:var(--acc); } button.btn.on { background:var(--acc); color:#04201d; border-color:var(--acc); font-weight:600; }
+  .alert { display:flex; gap:12px; align-items:center; }
+  .badge { min-width:92px; text-align:center; padding:8px 10px; border-radius:10px; font-weight:700; color:#061018; }
+  .badge.g { background:var(--ok); } .badge.y { background:var(--warn); } .badge.r { background:var(--bad); color:#fff; animation:pulse 1.2s infinite; }
+  @keyframes pulse { 50% { box-shadow:0 0 0 6px rgba(231,76,60,.25); } }
+  .rec { font-size:.88rem; margin:0; }
+  .facts { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .m { background:var(--panel2); border-radius:10px; padding:8px 10px; }
+  .m small { color:var(--mut); display:block; font-size:.72rem; }
+  .m b { font-size:1.05rem; }
+  .guide h3 { margin:12px 0 4px; font-size:.82rem; color:var(--acc); letter-spacing:.04em; }
+  .guide h3:first-of-type { margin-top:4px; }
+  .guide ul { margin:0; padding-left:18px; font-size:.86rem; } .guide li { margin:2px 0; }
+  .mus { display:grid; grid-template-columns:1fr 46px; gap:2px 10px; align-items:center; font-size:.85rem; margin-top:6px; }
+  .mus .bar { grid-column:1 / span 2; height:5px; background:#1b2540; border-radius:3px; overflow:hidden; margin-bottom:4px; }
+  .mus .bar span { display:block; height:100%; transition:width .3s, background .3s; }
+  .mus b { text-align:right; }
+  canvas.c { width:100%; display:block; background:#0a1020; border-radius:8px; margin-top:8px; }
+  .muted { color:var(--mut); font-size:.78rem; margin:6px 0 0; }
+  footer { padding:10px 18px 16px; color:var(--mut); font-size:.74rem; border-top:1px solid var(--line); line-height:1.5; }
+  footer a { color:var(--acc); }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<header>
+  <h1>ASTRA<span>-FIT</span> · escenarios de misión</h1>
+  <p>NASA Space Apps Challenge 2026 · datos simulados</p>
+</header>
+
+<main>
+  <section class="stage" id="stage">
+    <canvas id="gl"></canvas>
+    <div class="hud top">
+      <div class="grp" id="scens"><span class="lbl">Ubicación</span></div>
+    </div>
+    <div class="place"><b id="placeName"></b><span id="placeSub"></span></div>
+    <div id="sceneLoad">Cargando escenario…</div>
+    <div class="hud bot">
+      <div class="grp" id="cams">
+        <span class="lbl">Cámara</span>
+        <button class="chip on" data-cam="front">Astronauta</button>
+        <button class="chip" data-cam="back">Espalda</button>
+        <button class="chip" data-cam="wide">Escenario completo</button>
+        <button class="chip" id="spin">Girar</button>
+        <button class="chip" id="jump">Saltar</button>
+      </div>
+    </div>
+    <div id="load"><div id="loadTxt">Cargando astronauta…</div><div class="barw"><span></span></div></div>
+  </section>
+
+  <aside>
+    <div class="box">
+      <h2>Dónde está el astronauta</h2>
+      <div class="facts" id="facts"></div>
+    </div>
+    <div class="box guide" id="guide"></div>
+    <div class="box">
+      <h2>Astronauta simulado</h2>
+      <div class="tabs" id="astros">
+        <div class="tab on" data-a="0"><b>001</b><small>Rendimiento estable</small></div>
+        <div class="tab" data-a="1"><b>002</b><small>Pérdida progresiva</small></div>
+        <div class="tab" data-a="2"><b>003</b><small>Asimetría</small></div>
+      </div>
+      <div class="row">
+        <button class="btn" id="play">▶ Avanzar misión</button>
+        <input type="range" id="day" min="0" max="180" value="0">
+        <b id="dayLbl" style="min-width:64px;text-align:right">Día 0</b>
+      </div>
+      <div class="row">
+        <button class="btn" id="train">Aplicar intervención adaptativa</button>
+        <span class="muted" id="trainLbl" style="margin:0"></span>
+      </div>
+    </div>
+    <div class="box">
+      <h2>Estado de seguimiento en este lugar</h2>
+      <div class="alert"><div class="badge g" id="badge">VERDE</div><p class="rec" id="rec"></p></div>
+      <div class="mus" id="mus"></div>
+      <p class="muted">Se muestra el lado más afectado de cada grupo muscular.</p>
+    </div>
+    <div class="box">
+      <h2>Mismo astronauta, distinto lugar</h2>
+      <div class="tabs" id="muscles" style="margin-bottom:2px"></div>
+      <canvas class="c" id="chart" height="170"></canvas>
+      <p class="muted" id="chartLbl"></p>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  Prototipo con datos simulados. Los factores de deterioro y de contramedida por ubicación son <b>supuestos ilustrativos</b> (no salen de datos de misiones reales)
+  y deben calibrarse con datos longitudinales. Las gravedades de la Luna (1,62 m/s²) y Marte (3,71 m/s²) sí son las reales.
+  Las alertas son indicadores de seguimiento, no diagnósticos médicos.<br>
+  <b>Créditos.</b> Astronauta, ISS, Gateway, módulo lunar, rover, hábitat y cápsula: modelos de
+  <a href="https://github.com/nasa/NASA-3D-Resources" target="_blank" rel="noopener">NASA 3D Resources</a>.
+  Cambios: se escalaron y se colocaron en la escena; el terreno de la Luna y de Marte es generado por código.
+</footer>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* =====================================================================
+   1) DATOS: UBICACIONES
+   Idea clave: una sola "regla" cambia por lugar:
+     loss  = cuánto se multiplica el deterioro diario (más gravedad => menos pérdida)
+     train = cuánto del deterioro queda cuando se aplica la intervención
+             (depende del equipo de ejercicio que cabe en ese lugar)
+   Estos dos números son SUPUESTOS ilustrativos. La gravedad (g) sí es real.
+   ===================================================================== */
+const SCEN = {
+  iss: {
+    name:'Estación Espacial Internacional', short:'ISS', sub:'Órbita terrestre baja · ~400 km',
+    g:0, gtxt:'≈ 0 g', loss:1.00, train:0.45, float:true, dur:'6 meses típicos',
+    bg:0x02040a, fog:null, stars:true,
+    cam:{ front:[[0.7,1.5,5.6],[0,1.2,0]], back:[[-0.7,1.5,-5.6],[0,1.2,0]], wide:[[14,6,30],[6,3,-25]] },
+    train_txt:'equipo completo (ARED, cinta, bicicleta)',
+    guide:{
+      'Entrenamiento':['Unas 2 h al día de ejercicio: resistencia con ARED (sentadilla, peso muerto), cinta T2 con arnés y bicicleta CEVIS.','Es el lugar con más equipo, por eso la intervención adaptativa es la más efectiva.'],
+      'Qué medir':['Fuerza y EMG cada semana en cuádriceps, pantorrilla y espalda.','Comparar siempre contra la línea base individual de antes del vuelo.'],
+      'Ojo con':['Pantorrilla y espalda son las que más se deterioran en microgravedad.','Revisar proteína, calcio y vitamina D. Planear la rehabilitación para el regreso a la Tierra.']
+    }
+  },
+  gateway: {
+    name:'Gateway', short:'Gateway', sub:'Estación en órbita lunar',
+    g:0, gtxt:'≈ 0 g', loss:1.10, train:0.60, float:true, dur:'semanas a meses',
+    bg:0x02040a, fog:null, stars:true,
+    cam:{ front:[[0.7,1.5,5.6],[0,1.2,0]], back:[[-0.7,1.5,-5.6],[0,1.2,0]], wide:[[12,6,28],[5,3,-22]] },
+    train_txt:'equipo compacto',
+    guide:{
+      'Entrenamiento':['Equipo compacto (volante de inercia, bandas): menos carga que en la ISS.','Compensar con más series de resistencia en cada sesión.'],
+      'Qué medir':['Autoevaluaciones cortas de fuerza y EMG con el sensor portátil.','La comunicación con la Tierra tiene retraso: el sistema debe alertar de forma autónoma.'],
+      'Ojo con':['Menos espacio y tripulación reducida.','Está fuera de la protección del campo magnético terrestre: más radiación.']
+    }
+  },
+  transit: {
+    name:'Cápsula en tránsito', short:'Tránsito', sub:'Viaje entre la Tierra, la Luna o Marte',
+    g:0, gtxt:'≈ 0 g', loss:1.15, train:0.75, float:true, dur:'días (Luna) a meses (Marte)',
+    bg:0x010206, fog:null, stars:true,
+    cam:{ front:[[0.7,1.5,5.6],[0,1.2,0]], back:[[-0.7,1.5,-5.6],[0,1.2,0]], wide:[[10,5,26],[4,2,-18]] },
+    train_txt:'equipo mínimo',
+    guide:{
+      'Entrenamiento':['Espacio mínimo: bandas elásticas y volante de inercia en sesiones cortas y frecuentes.','Con tan poco equipo la intervención reduce menos el deterioro.'],
+      'Qué medir':['Chequeos breves y automáticos: no hay espacio para pruebas largas.','Vigilar la pantorrilla y la espalda, que se deterioran primero.'],
+      'Ojo con':['Poca carga posible = más deterioro acumulado antes de llegar.','Al llegar a la Luna o Marte, empezar con carga progresiva.']
+    }
+  },
+  moon: {
+    name:'Superficie lunar', short:'Luna', sub:'Gravedad parcial',
+    g:1.62, gtxt:'0,16 g · 1,62 m/s²', loss:0.50, train:0.60, float:false, dur:'días a semanas',
+    bg:0x000000, fog:null, stars:true,
+    cam:{ front:[[1.0,1.7,6.8],[0,1.1,0]], back:[[-1.0,1.7,-6.8],[0,1.1,0]], wide:[[9,5,20],[0,2,-8]] },
+    train_txt:'equipo en hábitat',
+    guide:{
+      'Entrenamiento':['Caminar y trabajar con el traje presurizado da carga, pero 1/6 g no basta por sí solo.','Mantener sesiones de resistencia dentro del hábitat.'],
+      'Qué medir':['Normalizar la fuerza por la gravedad local antes de compararla con la de la ISS.','Medir antes y después de cada salida al exterior (EVA).'],
+      'Ojo con':['Caídas con el traje, polvo lunar y fatiga tras la actividad exterior.','Si llegan desde microgravedad, el cuerpo parte ya deteriorado.']
+    }
+  },
+  mars: {
+    name:'Superficie de Marte', short:'Marte', sub:'Gravedad parcial',
+    g:3.71, gtxt:'0,38 g · 3,71 m/s²', loss:0.60, train:0.60, float:false, dur:'cientos de días',
+    bg:0xcf936b, fog:[0xcf936b,35,170], stars:false,
+    cam:{ front:[[1.0,1.7,6.8],[0,1.1,0]], back:[[-1.0,1.7,-6.8],[0,1.1,0]], wide:[[10,5,22],[0,2.5,-10]] },
+    train_txt:'equipo en hábitat',
+    guide:{
+      'Entrenamiento':['Llegan tras unos 6 meses de tránsito: empezar con carga progresiva los primeros días.','0,38 g da más carga natural que la Luna, pero sigue siendo insuficiente: mantener resistencia diaria.'],
+      'Qué medir':['Fuerza y EMG con normalización por gravedad; comparar contra la línea base y contra el final del tránsito.','Medir tras cada salida al exterior.'],
+      'Ojo con':['Misión larga y sin evacuación rápida: el monitoreo debe decidir a bordo.','Las comunicaciones con la Tierra tardan varios minutos en cada sentido.']
+    }
+  }
+};
+const SC_ORDER = ['iss','gateway','transit','moon','mars'];
+const SC_COL = { iss:'#60a5fa', gateway:'#c084fc', transit:'#f472b6', moon:'#cbd5e1', mars:'#fb923c' };
+
+/* =====================================================================
+   2) DATOS SIMULADOS DEL ASTRONAUTA (mismos que astrafit-3d.html)
+   ===================================================================== */
+const MUSCLES = {
+  quad:   { name:'Cuádriceps',   susc:1.00 },
+  gastro: { name:'Pantorrilla',  susc:1.15 },
+  glute:  { name:'Glúteo mayor', susc:0.80 },
+  back:   { name:'Espalda',      susc:0.60 }
+};
+const RATES = [ { L:0.016, R:0.016 }, { L:0.170, R:0.170 }, { L:0.030, R:0.120 } ];   // % de fuerza perdida por día
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const statusOf = s => s>=90?0:s>=75?1:2;
+const CSS = ['#2ecc71','#f1c40f','#e74c3c'];
+
+// La ubicación entra aquí: multiplica el deterioro y define cuánto lo reduce la intervención
+function strengthOf(a,key,side,day,trained,sc){
+  const P = SCEN[sc];
+  const loss = RATES[a][side]*MUSCLES[key].susc*day*P.loss*(trained?P.train:1);
+  const jitter = Math.sin(day*0.35 + key.length*1.7 + (side==='L'?0:2))*0.6*Math.min(1,day/10);
+  return clamp(100-loss+jitter,0,100);
+}
+const worst = (a,key,day,trained,sc) => Math.min(strengthOf(a,key,'L',day,trained,sc), strengthOf(a,key,'R',day,trained,sc));
+function overall(a,day,trained,sc){
+  let w=0; for (const k in MUSCLES) for (const sd of ['L','R']){
+    const s=strengthOf(a,k,sd,day,trained,sc), o=strengthOf(a,k,sd==='L'?'R':'L',day,trained,sc);
+    w=Math.max(w, statusOf(s), (Math.min(s,o)/Math.max(s,o)*100)>=90?0:(Math.min(s,o)/Math.max(s,o)*100)>=80?1:2);
+  } return w;
+}
+const RECS = [
+  'Mantener el entrenamiento habitual. Los indicadores están dentro de lo esperado.',
+  'Cambio relevante: repetir mediciones y considerar ajustar intensidad y recuperación.',
+  'Cambio importante: solicitar valoración del personal médico y repetir la evaluación.'
+];
+
+/* =====================================================================
+   3) ESCENA BASE: luces, estrellas, astronauta
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const stage = $('stage'), canvas = $('gl');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.5;
+const camera = new THREE.PerspectiveCamera(35, 1, 0.05, 600);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.dampingFactor = 0.08; controls.minDistance = 1.2; controls.maxDistance = 45; controls.autoRotateSpeed = 1.2;
+
+const hemi = new THREE.HemisphereLight(0xcfe3ff,0x1a2036,0.35); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffffff,3.0); sun.position.set(6,8,9); sun.castShadow = true;
+sun.shadow.mapSize.set(2048,2048); const sc_ = sun.shadow.camera; sc_.left=-16; sc_.right=16; sc_.top=16; sc_.bottom=-16; sc_.near=1; sc_.far=60; sun.shadow.bias=-0.0005;
+scene.add(sun); scene.add(sun.target);
+const rim = new THREE.DirectionalLight(0x4fd1c5,0.8); rim.position.set(-5,3,-6); scene.add(rim);
+
+const stars = (()=>{ const n=1200, p=new Float32Array(n*3);
+  for(let i=0;i<n;i++){ const r=250+Math.random()*100,t=Math.random()*6.283,f=Math.acos(2*Math.random()-1);
+    p[i*3]=r*Math.sin(f)*Math.cos(t); p[i*3+1]=r*Math.cos(f); p[i*3+2]=r*Math.sin(f)*Math.sin(t); }
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(p,3));
+  const s=new THREE.Points(g,new THREE.PointsMaterial({color:0xffffff,size:1.1,transparent:true,opacity:.9,sizeAttenuation:false})); scene.add(s); return s; })();
+
+const fig = new THREE.Group(); scene.add(fig);       // el astronauta (flota o salta)
+const draco = new DRACOLoader().setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+const gltf = new GLTFLoader().setDRACOLoader(draco).setMeshoptDecoder(MeshoptDecoder);
+const cache = {};
+const loadGLB = url => cache[url] || (cache[url] = new Promise((res,rej)=>gltf.load(url,res,undefined,rej)));
+
+// Ajusta un objeto a un tamaño real (en metros) y lo apoya en y=0 (o lo centra)
+function fit(obj, size, { center=false } = {}){
+  let b = new THREE.Box3().setFromObject(obj), s = b.getSize(new THREE.Vector3());
+  obj.scale.multiplyScalar(size/Math.max(s.x,s.y,s.z));
+  b = new THREE.Box3().setFromObject(obj); const c = b.getCenter(new THREE.Vector3());
+  obj.position.set(obj.position.x-c.x, obj.position.y-(center?c.y:b.min.y), obj.position.z-c.z);
+  return obj;
+}
+const shadowize = o => o.traverse(m=>{ if(m.isMesh){ m.castShadow = true; m.receiveShadow = true; } });
+
+loadGLB('assets/astronaut.glb').then(g=>{
+  const astro = g.scene;
+  const b = new THREE.Box3().setFromObject(astro), sz = b.getSize(new THREE.Vector3());
+  astro.scale.setScalar(1.95/sz.y);
+  const b2 = new THREE.Box3().setFromObject(astro), c = b2.getCenter(new THREE.Vector3());
+  astro.position.set(-c.x, -b2.min.y, -c.z);
+  astro.traverse(o=>{ if(o.isMesh){ o.castShadow = true; [].concat(o.material).forEach(m=>m.envMapIntensity=.9); } });
+  fig.add(astro);
+  $('load').style.display='none';
+  start();
+}).catch(e=>{
+  $('loadTxt').innerHTML = location.protocol==='file:'
+    ? 'El navegador no deja cargar los modelos 3D con doble clic.<br>Abre <code>iniciar-servidor.bat</code> (o ejecuta <code>node server.js</code>) y entra a <code>http://localhost:8080/astrafit-escenarios.html</code>'
+    : 'No se pudo cargar el astronauta: '+(e&&e.message||e);
+  document.querySelector('#load .barw').style.display='none';
+});
+
+/* =====================================================================
+   4) ESCENARIOS (se construyen la primera vez que se visitan)
+   ===================================================================== */
+const groups = {}, built = {};
+SC_ORDER.forEach(id=>{ groups[id]=new THREE.Group(); groups[id].visible=false; scene.add(groups[id]); });
+
+const body = (r,color,pos,emis=0) => { const m=new THREE.Mesh(new THREE.SphereGeometry(r,64,48), new THREE.MeshStandardMaterial({color,emissive:color,emissiveIntensity:emis,roughness:.95})); m.position.set(...pos); return m; };
+function earth(r,pos){
+  const g=new THREE.Group();
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(r,64,48), new THREE.MeshStandardMaterial({color:0x1d4ea8,emissive:0x0a2a66,emissiveIntensity:.55,roughness:.9})));
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(r*1.03,64,48), new THREE.MeshBasicMaterial({color:0x5aa9ff,transparent:true,opacity:.16,side:THREE.BackSide})));
+  g.position.set(...pos); return g;
+}
+
+// Terreno por código: suma de ondas, plano cerca del astronauta (los primeros ~10 m) para que se apoye bien
+const smooth = (a,b,x) => { const t=clamp((x-a)/(b-a),0,1); return t*t*(3-2*t); };
+const heightAt = (x,z,amp) => (Math.sin(x*.07)*Math.cos(z*.05)*2.2 + Math.sin(x*.19+z*.13)*.6 + Math.sin(x*.43)*Math.cos(z*.37)*.15)*amp*smooth(10,40,Math.hypot(x,z));
+function terrain(g, color, amp, rockColor){
+  const geo = new THREE.PlaneGeometry(400,400,220,220); geo.rotateX(-Math.PI/2);
+  const p = geo.attributes.position;
+  for(let i=0;i<p.count;i++) p.setY(i, heightAt(p.getX(i),p.getZ(i),amp));
+  geo.computeVertexNormals();
+  const ground = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color, roughness:1, metalness:0, flatShading:true }));
+  ground.receiveShadow = true; g.add(ground);
+  const n=160, rocks=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0), new THREE.MeshStandardMaterial({color:rockColor,roughness:1,flatShading:true}), n);
+  const d=new THREE.Object3D();
+  for(let i=0;i<n;i++){ const r=5+Math.pow(Math.random(),1.6)*90, t=Math.random()*6.283, x=Math.cos(t)*r, z=Math.sin(t)*r, s=0.12+Math.random()*Math.random()*1.3;
+    d.position.set(x,heightAt(x,z,amp)+s*.25,z); d.rotation.set(Math.random()*3,Math.random()*3,Math.random()*3); d.scale.set(s,s*(.5+Math.random()*.4),s*(.8+Math.random()*.4)); d.updateMatrix(); rocks.setMatrixAt(i,d.matrix); }
+  rocks.castShadow = rocks.receiveShadow = true; g.add(rocks);
+}
+
+const builders = {
+  async iss(g){
+    g.add(earth(30,[-6,-34,-30]));
+    const iss = (await loadGLB('assets/escenarios/iss.glb')).scene.clone();
+    const holder = new THREE.Group(); holder.add(iss); fit(iss,55,{center:true}); holder.position.set(12,5,-34); holder.rotation.set(0.25,-0.55,0.05);
+    shadowize(holder); g.add(holder);
+  },
+  async gateway(g){
+    g.add(body(22,0x9b9b98,[-24,-30,-60]));              // la Luna, abajo a la izquierda
+    g.add(earth(3.2,[42,16,-130]));                       // la Tierra, lejos
+    // El modelo 3D de Gateway pesa 66 MB: usamos su render oficial (PNG con fondo transparente) como "cartel" que siempre mira a la cámara
+    const tex = await new THREE.TextureLoader().loadAsync('assets/escenarios/gateway.png'); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+    const board = new THREE.Mesh(new THREE.PlaneGeometry(26,14.6), new THREE.MeshBasicMaterial({map:tex,transparent:true,toneMapped:false,depthWrite:false}));
+    board.position.set(7,2.5,-20); board.userData.billboard = true; g.add(board);
+  },
+  async transit(g){
+    g.add(earth(2.4,[-34,12,-130]));
+    const cap = (await loadGLB('assets/escenarios/capsula.glb')).scene.clone();
+    const holder = new THREE.Group(); holder.add(cap); fit(cap,7,{center:true}); holder.position.set(9,1.5,-17); holder.rotation.set(0.35,-0.9,0.1);
+    shadowize(holder); g.add(holder);
+  },
+  async moon(g){
+    terrain(g,0x8d8d8a,1.0,0x6f6f6c);
+    g.add(earth(4.5,[-34,26,-110]));
+    const lem = (await loadGLB('assets/escenarios/lem.glb')).scene.clone(); fit(lem,7.5); lem.position.x+=-6.5; lem.position.z+=-9; lem.rotation.y=0.5; shadowize(lem); g.add(lem);
+    loadGLB('assets/escenarios/rover.glb').then(r=>{ const rv=r.scene.clone(); fit(rv,5); rv.position.x+=7; rv.position.z+=-8; rv.rotation.y=-0.6; shadowize(rv); g.add(rv); }).catch(()=>{});   // 22 MB: carga aparte
+  },
+  async mars(g){
+    terrain(g,0xa34c2c,1.6,0x7a3a22);
+    // las dos partes del hábitat se escalan juntas para no desarmarlas
+    const [a,b] = await Promise.all([loadGLB('assets/escenarios/hab1.glb'),loadGLB('assets/escenarios/hab2.glb')]);
+    const hab = new THREE.Group(); hab.add(a.scene.clone(), b.scene.clone()); fit(hab,10); hab.position.x+=-6; hab.position.z+=-11; hab.rotation.y=0.4; shadowize(hab); g.add(hab);
+  }
+};
+
+/* =====================================================================
+   5) ESTADO Y CAMBIO DE UBICACIÓN
+   ===================================================================== */
+const S = { sc:'iss', a:0, day:0, trained:false, playing:false, spin:false, t:0, mus:'quad', jump:null };
+const camTween = { on:false, t:0, p0:new THREE.Vector3(), p1:new THREE.Vector3(), t0:new THREE.Vector3(), t1:new THREE.Vector3() };
+function goCam(name, instant){
+  const [p,t] = SCEN[S.sc].cam[name];
+  if (instant){ camera.position.set(...p); controls.target.set(...t); return; }
+  camTween.p0.copy(camera.position); camTween.t0.copy(controls.target); camTween.p1.set(...p); camTween.t1.set(...t); camTween.t=0; camTween.on=true;
+  S.spin=false; syncChips();
+}
+let camName = 'front';
+
+async function setScenario(id, instant){
+  const P = SCEN[id]; S.sc = id; S.jump = null;
+  SC_ORDER.forEach(k=>groups[k].visible = k===id);
+  scene.background = new THREE.Color(P.bg);
+  scene.fog = P.fog ? new THREE.Fog(P.fog[0],P.fog[1],P.fog[2]) : null;
+  stars.visible = P.stars;
+  // luz: en Marte más cálida y suave; en la Luna dura y blanca; en órbita, sol directo
+  sun.color.set(id==='mars'?0xffe2c4:0xffffff); sun.intensity = id==='mars'?2.4:3.2;
+  hemi.color.set(id==='mars'?0xffcfa8:0xcfe3ff); hemi.intensity = id==='mars'?0.8:0.3;
+  sun.position.set(7,9,10); controls.maxDistance = P.float ? 45 : 30;
+  camName = 'front'; goCam('front', instant); syncChips();
+  $('placeName').textContent = P.name; $('placeSub').textContent = P.sub;
+  renderInfo(); refreshPanel();
+  if (!built[id]){
+    built[id] = true; $('sceneLoad').style.display='block';
+    try { await builders[id](groups[id]); } catch(e){ console.warn('Escenario '+id, e); built[id]=false; }
+    $('sceneLoad').style.display='none';
+  }
+}
+
+function renderInfo(){
+  const P = SCEN[S.sc];
+  $('facts').innerHTML = [['Gravedad',P.gtxt],['Duración típica',P.dur],['Equipo de ejercicio',P.train_txt]]
+    .map(([k,v])=>`<div class="m"><small>${k}</small><b>${v}</b></div>`).join('');
+  $('guide').innerHTML = '<h2>Qué hacer aquí</h2>' + Object.entries(P.guide).map(([h,items])=>`<h3>${h}</h3><ul>${items.map(i=>`<li>${i}</li>`).join('')}</ul>`).join('');
+}
+
+/* =====================================================================
+   6) PANEL Y GRÁFICA
+   ===================================================================== */
+const chartC = $('chart');
+function fitCanvas(c){ const r=c.getBoundingClientRect(), d=Math.min(devicePixelRatio,2); c.width=r.width*d; c.height=(c.getAttribute('height')|0)*d; c.getContext('2d').setTransform(d,0,0,d,0,0); c._w=r.width; c._h=c.height/d; }
+
+function refreshPanel(){
+  const P = SCEN[S.sc];
+  const o = overall(S.a,S.day,S.trained,S.sc), b = $('badge'); b.className='badge '+'gyr'[o]; b.textContent=['VERDE','AMARILLO','ROJO'][o];
+  let rec = RECS[o];
+  if (S.a===2 && o>0) rec += ' Prioriza trabajo unilateral para corregir la asimetría.';
+  if (S.a===1 && o>0) rec += P.float ? ' Considera aumentar la carga de resistencia y revisar proteína, calcio y vitamina D.' : ' Aumenta las sesiones de resistencia en el hábitat: la gravedad parcial no alcanza por sí sola.';
+  $('rec').textContent = rec;
+  $('mus').innerHTML = Object.keys(MUSCLES).map(k=>{ const s=worst(S.a,k,S.day,S.trained,S.sc), st=statusOf(s);
+    return `<span>${MUSCLES[k].name}</span><b style="color:${CSS[st]}">${s.toFixed(0)}%</b><div class="bar"><span style="width:${s}%;background:${CSS[st]}"></span></div>`; }).join('');
+  $('dayLbl').textContent='Día '+S.day; $('day').value=S.day;
+  $('trainLbl').textContent = S.trained ? 'activa ('+P.train_txt+'): deterioro al '+Math.round(P.train*100)+' %' : 'desactivada';
+  $('train').classList.toggle('on',S.trained);
+  drawChart();
+}
+function drawChart(){
+  const c=chartC, x=c.getContext('2d'), w=c._w, h=c._h, L=30,B=18,T=6,R=6; if(!w) return;
+  x.clearRect(0,0,w,h); x.font='11px system-ui'; x.fillStyle='#8c9ab3'; x.strokeStyle='#1b2540'; x.lineWidth=1;
+  const X=d=>L+d/180*(w-L-R), Y=v=>T+(100-v)/60*(h-T-B);
+  [100,90,75,60,40].forEach(v=>{ x.beginPath(); x.moveTo(L,Y(v)); x.lineTo(w-R,Y(v)); x.stroke(); x.fillText(v,4,Y(v)+4); });
+  x.setLineDash([4,4]); x.strokeStyle=CSS[1]; x.beginPath(); x.moveTo(L,Y(90)); x.lineTo(w-R,Y(90)); x.stroke();
+  x.strokeStyle=CSS[2]; x.beginPath(); x.moveTo(L,Y(75)); x.lineTo(w-R,Y(75)); x.stroke(); x.setLineDash([]);
+  [0,60,120,180].forEach(d=>x.fillText('d'+d,X(d)-8,h-4));
+  SC_ORDER.forEach(id=>{ const cur=id===S.sc; x.strokeStyle=SC_COL[id]; x.lineWidth=cur?2.8:1.3; x.globalAlpha=cur?1:.5; x.beginPath();
+    for(let d=0;d<=180;d+=3){ const v=worst(S.a,S.mus,d,S.trained,id); d?x.lineTo(X(d),Y(v)):x.moveTo(X(d),Y(v)); } x.stroke(); });
+  x.globalAlpha=1; x.strokeStyle='#e6ecf7'; x.lineWidth=1; x.beginPath(); x.moveTo(X(S.day),T); x.lineTo(X(S.day),h-B); x.stroke();
+  const v=worst(S.a,S.mus,S.day,S.trained,S.sc); x.fillStyle=SC_COL[S.sc]; x.beginPath(); x.arc(X(S.day),Y(v),4.5,0,7); x.fill();
+  $('chartLbl').innerHTML = SC_ORDER.map(id=>`<span style="color:${SC_COL[id]}">● ${SCEN[id].short}</span>`).join(' &nbsp;') + ' · '+MUSCLES[S.mus].name+' · astronauta '+['001','002','003'][S.a];
+}
+chartC.addEventListener('pointerdown', e=>{ const r=chartC.getBoundingClientRect(); S.playing=false; $('play').textContent='▶ Avanzar misión'; setDay(Math.round(clamp((e.clientX-r.left-30)/(r.width-36),0,1)*180)); });
+
+/* =====================================================================
+   7) CONTROLES
+   ===================================================================== */
+function setDay(d){ S.day=d; refreshPanel(); }
+function syncChips(){
+  document.querySelectorAll('[data-sc]').forEach(b=>b.classList.toggle('on',b.dataset.sc===S.sc));
+  document.querySelectorAll('[data-cam]').forEach(b=>b.classList.toggle('on',b.dataset.cam===camName && !S.spin));
+  document.querySelectorAll('[data-mus]').forEach(b=>b.classList.toggle('on',b.dataset.mus===S.mus));
+  $('spin').classList.toggle('on',S.spin); controls.autoRotate = S.spin;
+  $('jump').disabled = SCEN[S.sc].float;
+}
+SC_ORDER.forEach(id=>{ const b=document.createElement('button'); b.className='chip'; b.dataset.sc=id; b.textContent=SCEN[id].short; b.onclick=()=>setScenario(id); $('scens').appendChild(b); });
+Object.keys(MUSCLES).forEach(k=>{ const t=document.createElement('div'); t.className='tab'; t.dataset.mus=k; t.innerHTML=`<b style="font-size:.82rem">${MUSCLES[k].name}</b>`; t.onclick=()=>{ S.mus=k; syncChips(); drawChart(); }; $('muscles').appendChild(t); });
+
+$('day').addEventListener('input', e=>{ S.playing=false; $('play').textContent='▶ Avanzar misión'; setDay(+e.target.value); });
+$('play').addEventListener('click', ()=>{ S.playing=!S.playing; if(S.playing&&S.day>=180) setDay(0); $('play').textContent=S.playing?'❚❚ Pausar':'▶ Avanzar misión'; });
+$('train').addEventListener('click', ()=>{ S.trained=!S.trained; refreshPanel(); });
+document.querySelectorAll('#astros .tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('#astros .tab').forEach(x=>x.classList.remove('on')); t.classList.add('on'); S.a=+t.dataset.a; refreshPanel(); }));
+document.querySelectorAll('[data-cam]').forEach(b=>b.addEventListener('click',()=>{ camName=b.dataset.cam; goCam(camName); syncChips(); }));
+$('spin').addEventListener('click',()=>{ S.spin=!S.spin; syncChips(); });
+// Salto: misma velocidad de despegue en todos los lugares; la altura sale de la gravedad real (h = v²/2g)
+$('jump').addEventListener('click',()=>{ if(!SCEN[S.sc].float && !S.jump) S.jump={ t:0, v:2.6 }; });
+
+// parámetros en la URL: ?sc=moon&a=1&day=120&train=1&cam=wide&mus=gastro
+function applyUrlParams(){
+  const q = new URLSearchParams(location.search);
+  if (q.has('a')) { S.a = clamp(+q.get('a')|0,0,2); document.querySelectorAll('#astros .tab').forEach((t,i)=>t.classList.toggle('on',i===S.a)); }
+  if (q.has('day')) S.day = clamp(+q.get('day')|0,0,180);
+  if (q.has('train')) S.trained = q.get('train')==='1';
+  if (MUSCLES[q.get('mus')]) S.mus = q.get('mus');
+  return { sc: SCEN[q.get('sc')] ? q.get('sc') : 'iss', cam: ['front','back','wide'].includes(q.get('cam')) ? q.get('cam') : null };
+}
+
+/* =====================================================================
+   8) BUCLE DE ANIMACIÓN
+   ===================================================================== */
+function resize(){
+  const r = stage.getBoundingClientRect(); if(!r.width) return;
+  renderer.setSize(r.width,r.height,false); camera.aspect = r.width/r.height; camera.updateProjectionMatrix();
+  fitCanvas(chartC); drawChart();
+}
+addEventListener('resize', resize); new ResizeObserver(resize).observe(stage);
+
+let last = performance.now(), dayAcc = 0;
+function frame(now){
+  const dt = Math.min(0.05,(now-last)/1000); last = now; S.t += dt;
+  if (S.playing){ dayAcc += dt*14; if (dayAcc>=1){ const n=Math.floor(dayAcc); dayAcc-=n; setDay(Math.min(180,S.day+n)); if (S.day>=180){ S.playing=false; $('play').textContent='▶ Avanzar misión'; } } }
+
+  const P = SCEN[S.sc], k = 1-Math.exp(-3*dt), t = S.t;
+  if (P.float){                                          // microgravedad: flota y se mece
+    fig.position.y += ((1.3+0.08*Math.sin(t*0.8)) - fig.position.y)*k;
+    fig.rotation.x += (0.12*Math.sin(t*0.37) - fig.rotation.x)*k;
+    fig.rotation.z += (0.16*Math.sin(t*0.45) - fig.rotation.z)*k;
+    fig.rotation.y += (0.7*Math.sin(t*0.25) - fig.rotation.y)*k;
+  } else {                                               // gravedad parcial: de pie; si salta, cae según g
+    let y = 0;
+    if (S.jump){ S.jump.t += dt; y = S.jump.v*S.jump.t - 0.5*P.g*S.jump.t*S.jump.t; if (y<=0){ y=0; S.jump=null; } }
+    fig.position.y = y; fig.rotation.x += (0-fig.rotation.x)*k; fig.rotation.z += (0-fig.rotation.z)*k; fig.rotation.y += (0-fig.rotation.y)*k;
+  }
+
+  if (camTween.on){ camTween.t = Math.min(1,camTween.t+dt/0.9); const e = 1-Math.pow(1-camTween.t,3);
+    camera.position.lerpVectors(camTween.p0,camTween.p1,e); controls.target.lerpVectors(camTween.t0,camTween.t1,e); if (camTween.t>=1) camTween.on=false; }
+  controls.update();
+  groups[S.sc].children.forEach(o=>{ if(o.userData.billboard) o.lookAt(camera.position); });   // el render de Gateway siempre mira a la cámara
+  stars.position.copy(camera.position);
+  renderer.render(scene,camera);
+  requestAnimationFrame(frame);
+}
+
+function start(){
+  const u = applyUrlParams();
+  resize();
+  setScenario(u.sc, true).then(()=>{ if (u.cam){ camName=u.cam; goCam(u.cam,true); syncChips(); } });
+  refreshPanel(); syncChips();
+  requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASTRA-FIT · Anatomía de astronautas</title>
+<style>
+  :root { --bg:#eef2f8; --card:#fff; --line:#e1e7f1; --txt:#16233b; --mut:#5f6f89; --pri:#3b6cf6; --pri-d:#2f56cc; --pri-l:#eaf0ff; --ok:#16a34a; --warn:#d98a06; --bad:#dc3545; --ok-l:#e5f6ec; --warn-l:#fdf2de; --bad-l:#fde9eb; --sh:0 8px 28px rgba(35,60,120,.10); --sh2:0 2px 8px rgba(35,60,120,.10); }
+  * { box-sizing:border-box; }
+  html,body { margin:0; background:var(--bg); color:var(--txt); font:14.5px/1.5 "Inter",system-ui,"Segoe UI",Roboto,sans-serif; }
+  button,input { font:inherit; color:inherit; } button { cursor:pointer; }
+  header { height:58px; display:flex; align-items:center; gap:14px; padding:0 20px; background:rgba(255,255,255,.85); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:30; }
+  .logo { display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.03em; font-size:1.1rem; } .logo b { display:grid; place-items:center; width:30px; height:30px; border-radius:9px; background:linear-gradient(135deg,#3b6cf6,#5fb0ff); color:#fff; font-size:.9rem; } .logo span { color:var(--pri); }
+  header p { margin:0; color:var(--mut); font-size:.88rem; flex:1; }
+  .help-btn { border:1px solid var(--line); background:#fff; border-radius:999px; padding:7px 15px; font-weight:700; color:var(--pri); box-shadow:var(--sh2); } .help-btn:hover { background:var(--pri-l); }
+
+  .app { display:grid; grid-template-columns:292px minmax(0,1fr) 352px; gap:16px; padding:16px 18px 10px; max-width:1760px; margin:0 auto; align-items:start; }
+  @media (max-width:1250px){ .app { grid-template-columns:270px minmax(0,1fr); } .col-r { grid-column:1 / -1; display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:14px; } }
+  @media (max-width:860px){ .app { grid-template-columns:1fr; padding:10px; } .viewer { order:-1; } }
+  .col { display:flex; flex-direction:column; gap:14px; min-width:0; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:18px; box-shadow:var(--sh); padding:16px 16px; }
+  .card h2 { margin:0 0 3px; font-size:.98rem; font-weight:800; display:flex; align-items:center; gap:9px; } .card h2 .n { background:var(--pri); color:#fff; width:22px; height:22px; border-radius:50%; display:inline-grid; place-items:center; font-size:.76rem; }
+  .sub { margin:0 0 10px; color:var(--mut); font-size:.82rem; }
+
+  /* visor */
+  .viewer { position:sticky; top:74px; background:var(--card); border:1px solid var(--line); border-radius:22px; box-shadow:var(--sh); overflow:hidden; }
+  @media (max-width:860px){ .viewer { position:relative; top:0; } }
+  .cv { position:relative; height:calc(100vh - 190px); min-height:460px; background:linear-gradient(180deg,#d9e6fb 0%,#f3f7fd 60%,#e6edf7 100%); transition:background .8s; }
+  .cv.space { background:radial-gradient(ellipse at 50% 20%,#1d3a6b 0%,#0a1630 72%); }
+  #gl { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; cursor:grab; }
+  .ovl { position:absolute; z-index:3; display:flex; gap:6px; flex-wrap:wrap; } .ovl.tc { top:12px; left:12px; } .ovl.tr { top:12px; right:12px; justify-content:flex-end; max-width:44%; } .ovl.br { bottom:12px; right:12px; }
+  .seg { display:inline-flex; background:#fff; border:1px solid var(--line); border-radius:999px; padding:4px; box-shadow:var(--sh); }
+  .seg button { border:0; background:transparent; padding:8px 18px; border-radius:999px; font-weight:700; color:var(--mut); } .seg button.on { background:var(--pri); color:#fff; box-shadow:0 3px 10px rgba(59,108,246,.4); }
+  .chip { background:#fff; border:1px solid var(--line); border-radius:999px; padding:6px 12px; font-size:.82rem; font-weight:600; box-shadow:var(--sh2); } .chip:hover { border-color:var(--pri); color:var(--pri); } .chip.on { background:var(--pri-l); border-color:var(--pri); color:var(--pri-d); }
+  .legend { background:rgba(255,255,255,.92); border:1px solid var(--line); border-radius:999px; padding:5px 12px; font-size:.76rem; color:var(--mut); display:flex; gap:10px; box-shadow:var(--sh2); } .legend i { width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:4px; }
+  .pill { position:absolute; left:0; top:0; z-index:2; display:none; align-items:center; gap:6px; background:#fff; border:2px solid var(--line); border-radius:999px; padding:3px 11px 3px 7px; font-size:.78rem; font-weight:700; box-shadow:0 4px 14px rgba(30,60,120,.2); cursor:pointer; white-space:nowrap; }
+  .pill i { width:10px; height:10px; border-radius:50%; } .pill.sel { outline:3px solid rgba(59,108,246,.35); }
+  #tip { position:absolute; pointer-events:none; display:none; background:#16233b; color:#fff; padding:4px 9px; border-radius:7px; font-size:.8rem; z-index:5; }
+  #load { position:absolute; inset:0; z-index:9; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; background:rgba(238,242,248,.97); text-align:center; padding:24px; }
+  #load .barw { width:min(300px,70%); height:6px; background:#d6e0f0; border-radius:3px; overflow:hidden; } #load .barw span { display:block; height:100%; width:0; background:var(--pri); transition:width .2s; } #load code { background:#e3ebf8; padding:2px 6px; border-radius:5px; }
+  .banner { position:absolute; left:50%; bottom:14px; transform:translateX(-50%); z-index:6; background:#fff; border:1px solid var(--pri); border-radius:14px; padding:9px 14px; box-shadow:var(--sh); font-size:.86rem; max-width:min(540px,92%); display:flex; gap:10px; } .banner button { border:0; background:none; font-size:1.2rem; line-height:1; color:var(--mut); }
+  .acts { padding:12px 14px; border-top:1px solid var(--line); display:flex; flex-wrap:wrap; gap:8px; align-items:center; } .acts .lbl { font-weight:800; font-size:.8rem; color:var(--mut); margin-right:4px; }
+  .act { border:1px solid var(--line); background:#fff; border-radius:12px; padding:8px 13px; font-weight:600; } .act:hover { border-color:var(--pri); } .act.on { background:var(--pri); color:#fff; border-color:var(--pri); }
+
+  /* capas */
+  .search { position:relative; } .search input { width:100%; border:1px solid var(--line); background:#f6f9ff; border-radius:12px; padding:9px 12px 9px 34px; outline:none; } .search input:focus { border-color:var(--pri); background:#fff; }
+  .search svg { position:absolute; left:11px; top:11px; width:16px; height:16px; color:var(--mut); }
+  .results { display:none; margin-top:6px; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#fff; max-height:220px; overflow-y:auto; } .results.show { display:block; }
+  .results button { display:flex; width:100%; align-items:center; gap:8px; border:0; background:#fff; padding:8px 12px; text-align:left; border-bottom:1px solid #f0f3f9; } .results button:hover { background:var(--pri-l); } .results i { width:10px; height:10px; border-radius:50%; flex:none; } .results small { color:var(--mut); margin-left:auto; }
+  .layer { display:grid; grid-template-columns:34px 1fr auto auto; gap:2px 8px; align-items:center; padding:8px; border-radius:14px; border:1.5px solid transparent; margin-top:6px; background:#f7f9fd; } .layer.off { opacity:.55; } .layer.solo { border-color:var(--pri); background:var(--pri-l); }
+  .layer .sw { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; } .layer .sw svg { width:19px; height:19px; color:#fff; }
+  .layer b { font-size:.9rem; display:block; line-height:1.2; } .layer small { color:var(--mut); font-size:.75rem; }
+  .ib { border:1px solid var(--line); background:#fff; border-radius:9px; width:32px; height:30px; display:grid; place-items:center; } .ib:hover { border-color:var(--pri); } .ib svg { width:17px; height:17px; } .ib.on { background:var(--pri); color:#fff; border-color:var(--pri); }
+  .ib.txt { width:auto; padding:0 9px; font-size:.74rem; font-weight:700; }
+  .opt { display:flex; align-items:center; gap:10px; margin-top:12px; font-size:.84rem; } .opt input[type=range] { flex:1; accent-color:var(--pri); }
+  .sw2 { display:flex; gap:11px; align-items:center; margin-top:12px; padding:10px 12px; background:#f7f9fd; border:1px solid var(--line); border-radius:12px; width:100%; text-align:left; } .sw2 .tg { width:40px; height:23px; border-radius:999px; background:#cbd5e6; position:relative; flex:none; transition:.2s; } .sw2 .tg::after { content:''; position:absolute; top:3px; left:3px; width:17px; height:17px; border-radius:50%; background:#fff; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.25); }
+  .sw2.on .tg { background:var(--ok); } .sw2.on .tg::after { left:20px; } .sw2 b { display:block; font-size:.88rem; } .sw2 small { color:var(--mut); font-size:.76rem; }
+  .info h3 { margin:0; font-size:1.15rem; } .tag { display:inline-block; padding:2px 10px; border-radius:999px; font-size:.74rem; font-weight:700; color:#fff; margin:4px 0 8px; } .info p { margin:6px 0; font-size:.88rem; } .info .stat { background:#f7f9fd; border-radius:12px; padding:9px 11px; margin-top:8px; font-size:.86rem; } .info .row2 { display:flex; gap:8px; margin-top:10px; }
+  .empty { color:var(--mut); font-size:.86rem; }
+
+  /* misión */
+  .people { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .person { border:2px solid var(--line); background:#fff; border-radius:16px; padding:9px 4px; text-align:center; position:relative; } .person:hover { border-color:#b7cbf7; } .person.on { border-color:var(--pri); background:var(--pri-l); }
+  .person .av { width:42px; height:42px; border-radius:50%; margin:0 auto 4px; display:grid; place-items:center; color:#fff; font-weight:800; } .person b { display:block; font-size:.82rem; } .person small { color:var(--mut); font-size:.72rem; display:block; line-height:1.25; }
+  .person .st { position:absolute; top:7px; right:7px; width:12px; height:12px; border-radius:50%; border:2px solid #fff; }
+  .row { display:flex; align-items:center; gap:12px; margin-top:6px; } input[type=range] { flex:1; accent-color:var(--pri); } .daybig { font-weight:800; font-size:1.05rem; min-width:76px; text-align:right; }
+  .scale { display:flex; justify-content:space-between; color:var(--mut); font-size:.72rem; margin-top:2px; }
+  .btn { border:1px solid var(--line); background:#fff; border-radius:12px; padding:8px 14px; font-weight:700; } .btn:hover { border-color:var(--pri); } .btn.pri { background:var(--pri); color:#fff; border-color:var(--pri); } .btn.pri:hover { background:var(--pri-d); }
+  .status { border-radius:16px; padding:13px 15px; } .status.g { background:var(--ok-l); } .status.y { background:var(--warn-l); } .status.r { background:var(--bad-l); }
+  .status .hd { display:flex; align-items:center; gap:10px; font-weight:800; font-size:1.08rem; } .status .hd i { width:15px; height:15px; border-radius:50%; } .status.g .hd i { background:var(--ok); } .status.y .hd i { background:var(--warn); } .status.r .hd i { background:var(--bad); animation:pulse 1.3s infinite; }
+  @keyframes pulse { 50% { box-shadow:0 0 0 7px rgba(220,53,69,.2); } } .status p { margin:6px 0 0; font-size:.88rem; } .status ul { margin:6px 0 0; padding-left:18px; font-size:.86rem; }
+  .sysrow { display:grid; grid-template-columns:12px 1fr auto; gap:2px 9px; align-items:center; padding:8px 9px; border-radius:12px; border:2px solid transparent; cursor:pointer; } .sysrow:hover { background:#f7f9fd; } .sysrow.on { border-color:var(--pri); background:var(--pri-l); }
+  .sysrow .d { width:11px; height:11px; border-radius:50%; } .sysrow b { font-size:.88rem; } .sysrow .v { font-weight:800; } .sysrow small { grid-column:2/4; color:var(--mut); font-size:.74rem; }
+  .bar { grid-column:2/4; height:5px; background:#e6edf8; border-radius:3px; overflow:hidden; } .bar span { display:block; height:100%; border-radius:3px; transition:width .3s,background .3s; }
+  details.exp summary { cursor:pointer; font-weight:800; list-style:none; display:flex; align-items:center; gap:8px; } details.exp summary::-webkit-details-marker { display:none; } details.exp summary::before { content:'▸'; color:var(--pri); } details.exp[open] summary::before { content:'▾'; }
+  .kv { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin:10px 0; } .kv div { background:#f7f9fd; border-radius:11px; padding:8px 10px; } .kv small { display:block; color:var(--mut); font-size:.72rem; } .kv b { font-size:1.05rem; }
+  .help { display:inline-grid; place-items:center; width:16px; height:16px; border-radius:50%; background:#dde7fa; color:var(--pri-d); font-size:.66rem; font-weight:800; cursor:help; position:relative; margin-left:4px; vertical-align:middle; }
+  .help:hover::after { content:attr(data-tip); position:absolute; left:50%; bottom:130%; transform:translateX(-50%); width:210px; background:#16233b; color:#fff; padding:8px 10px; border-radius:9px; font-size:.77rem; font-weight:500; line-height:1.35; z-index:25; text-align:left; }
+  canvas.c { width:100%; display:block; background:#f7f9fd; border:1px solid var(--line); border-radius:10px; margin-top:6px; } .note { color:var(--mut); font-size:.76rem; margin:6px 0 0; }
+  .modal { position:fixed; inset:0; background:rgba(18,32,58,.45); display:none; align-items:center; justify-content:center; z-index:60; padding:16px; } .modal.show { display:flex; }
+  .modal .box { background:#fff; border-radius:22px; max-width:560px; padding:24px 26px; box-shadow:0 24px 70px rgba(0,0,0,.3); max-height:90vh; overflow:auto; } .modal h3 { margin:0 0 8px; font-size:1.2rem; } .modal li { margin:6px 0; } .modal ol { padding-left:20px; }
+  footer { padding:6px 22px 24px; max-width:1760px; margin:0 auto; color:var(--mut); font-size:.76rem; line-height:1.55; } footer a { color:var(--pri); }
+</style>
+<script type="importmap">
+{ "imports": { "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+</script>
+</head>
+<body>
+<header>
+  <div class="logo"><b>A</b><div>ASTRA<span>-FIT</span></div></div>
+  <p>Mira por dentro el cuerpo de los astronautas y cómo cambia en el espacio.</p>
+  <button class="help-btn" id="helpBtn">¿Cómo funciona?</button>
+</header>
+
+<div class="app">
+  <!-- columna izquierda: capas, buscador, ficha -->
+  <div class="col col-l">
+    <div class="card">
+      <h2>Capas del cuerpo</h2><p class="sub">Enciende lo que quieras ver. «Solo» deja únicamente esa capa.</p>
+      <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" placeholder="Buscar: corazón, fémur, cuádriceps…" autocomplete="off"></div>
+      <div class="results" id="results"></div>
+      <div id="layerList"></div>
+      <div class="opt"><span>Transparencia de la persona</span><input type="range" id="skinA" min="0" max="60" value="14" aria-label="Transparencia de la persona"></div>
+      <button class="sw2 on" id="statusColor" aria-pressed="true"><span class="tg"></span><span><b>Colorear por estado de salud</b><small>Verde, amarillo o rojo en los músculos que vigilamos.</small></span></button>
+    </div>
+    <div class="card info" id="infoCard"><h2>Ficha de la estructura</h2><p class="empty">Toca una parte del cuerpo o búscala arriba para ver qué es y cómo se relaciona con la salud del astronauta.</p></div>
+  </div>
+
+  <!-- centro: visor -->
+  <section class="viewer">
+    <div class="cv" id="cv">
+      <canvas id="gl"></canvas>
+      <div class="ovl tc"><div class="seg" id="view"><button class="on" data-view="person">Persona</button><button data-view="cut">Corte</button><button data-view="anat">Anatomía</button></div></div>
+      <div class="ovl tr"><button class="chip" data-cam="front">Frente</button><button class="chip" data-cam="three">3/4</button><button class="chip" data-cam="side">Lado</button><button class="chip" data-cam="back">Espalda</button><button class="chip" id="spin">Girar</button></div>
+      <div class="ovl br"><div class="legend"><span><i style="background:var(--ok)"></i>Estable</span><span><i style="background:var(--warn)"></i>Vigilar</span><span><i style="background:var(--bad)"></i>Atención</span></div></div>
+      <div id="pills"></div><div id="tip"></div>
+      <div class="banner" id="banner"><div><b>Pruébalo:</b> pulsa <b>«Corte»</b> o <b>«Anatomía»</b> arriba y mueve el día de la misión a la derecha.</div><button id="bannerX" aria-label="Cerrar">×</button></div>
+      <div id="load"><div id="loadTxt">Preparando a los astronautas…</div><div class="barw"><span id="loadBar"></span></div></div>
+    </div>
+    <div class="acts"><span class="lbl">¿Qué hace?</span>
+      <button class="act on" data-mode="run">Corre</button><button class="act" data-mode="walk">Camina</button><button class="act" data-mode="idle">Descansa</button><button class="act" data-mode="squat">Sentadilla</button><button class="act" data-mode="calf">Elevar talones</button><button class="act" data-mode="float">Flota en el espacio</button><button class="act" data-mode="feel">¿Cómo se siente?</button>
+    </div>
+  </section>
+
+  <!-- columna derecha: misión y salud -->
+  <div class="col col-r">
+    <div class="card"><h2><span class="n">1</span>¿A quién miramos?</h2><p class="sub">Tres astronautas de ejemplo (datos inventados).</p><div class="people" id="people"></div>
+      <h2 style="margin-top:16px"><span class="n">2</span>¿En qué momento?</h2>
+      <div class="row"><button class="btn pri" id="play">▶ Reproducir</button><input type="range" id="day" min="0" max="180" value="0" aria-label="Día de la misión"><span class="daybig" id="dayLbl">Día 0</span></div>
+      <div class="scale"><span>Antes del vuelo</span><span>3 meses</span><span>6 meses</span></div>
+      <button class="sw2" id="train" aria-pressed="false"><span class="tg"></span><span><b>Programa de ejercicio personalizado</b><small id="trainLbl">Apagado.</small></span></button></div>
+    <div class="card"><h2><span class="n">3</span>¿Cómo está?</h2><div class="status g" id="status"><div class="hd"><i></i><span id="sTitle">Todo en orden</span></div><p id="sText"></p><ul id="sList"></ul></div></div>
+    <div class="card"><h2>Salud por sistemas</h2><p class="sub">Toca uno para verlo en el cuerpo. <span class="help" data-tip="Comparan el estado actual con el que tenía el astronauta antes del vuelo (100 % = igual que al inicio).">?</span></p><div id="systems"></div></div>
+    <div class="card"><details class="exp"><summary>Detalles para especialistas</summary>
+      <h2 style="margin-top:12px" id="musTitle">Músculo</h2><p class="sub">Toca una etiqueta sobre el cuerpo para cambiar de músculo.</p><div class="kv" id="metrics"></div>
+      <div style="font-weight:700;font-size:.88rem">Actividad eléctrica <span class="help" data-tip="EMG: sensores en la piel miden las señales con las que el cerebro activa el músculo. Aquí es una señal simulada.">?</span></div><canvas class="c" id="emg" height="70"></canvas>
+      <div style="font-weight:700;font-size:.88rem;margin-top:12px">Fuerza contra el suelo <span class="help" data-tip="Fuerza de cada pierna contra el suelo en cada paso, en múltiplos del peso corporal. Simulada.">?</span></div><canvas class="c" id="grf" height="84"></canvas>
+      <div class="kv"><div><small>Velocidad</small><b id="spd">0.0 m/s</b></div><div><small>Pasos por minuto</small><b id="cad">0</b></div></div>
+      <div style="font-weight:700;font-size:.88rem;margin-top:6px">Evolución de la fuerza <span class="help" data-tip="Cada línea es un astronauta. Bajo la línea amarilla (90 %) hay que vigilar; bajo la roja (75 %), evaluar. Toca la gráfica para cambiar de día.">?</span></div><canvas class="c" id="chart" height="150"></canvas><p class="note" id="chartLbl"></p>
+    </details></div>
+  </div>
+</div>
+
+<footer>
+  Prototipo educativo con datos simulados: porcentajes y umbrales son ilustrativos y no son un diagnóstico médico.
+  <b>Créditos.</b> Anatomía: BodyParts3D © The Database Center for Life Science (CC BY 4.0), adaptada por <a href="https://github.com/MervinR07/open-anatomy-3d" target="_blank" rel="noopener">open-anatomy-3d</a> (CC BY 4.0); pegada a los esqueletos animados, recoloreada y sin las estructuras reproductivas.
+  Personajes y animaciones de los ejemplos de <a href="https://github.com/mrdoob/three.js" target="_blank" rel="noopener">three.js</a>: avatar masculino de Ready Player Me, «Michelle» y «Xbot» de Mixamo (revisar licencias antes de publicar).
+</footer>
+
+<div class="modal" id="modal"><div class="box"><h3>¿Cómo funciona ASTRA-FIT?</h3>
+  <p>En el espacio, sin gravedad, los músculos y los huesos se debilitan. ASTRA-FIT muestra cómo cambia el cuerpo de un astronauta y qué hacer para cuidarlo.</p>
+  <ol><li>Elige un <b>astronauta</b> y mueve el <b>día de la misión</b> (columna derecha).</li><li>En el visor elige <b>Persona</b> (cómo se ve), <b>Corte</b> (mitad persona, mitad por dentro) o <b>Anatomía</b> (por capas).</li><li>A la izquierda enciende o apaga <b>capas</b>: músculos, huesos, órganos, vasos y nervios. Con «Solo» ves una sola.</li><li>Busca una parte del cuerpo o tócala para leer su <b>ficha</b>.</li></ol>
+  <p class="note">Es una demostración con datos inventados. No sustituye una evaluación médica.</p><button class="btn pri" id="modalX">Entendido</button></div></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* =====================================================================
+   1) DATOS SIMULADOS (perfil de cada astronauta y modelo de deterioro)
+   ===================================================================== */
+const PROFILES = [
+  { sex:'M', label:'Hombre', age:38, h:1.78, w:76, scale:1.00, vs:1.00, color:'#3b6cf6', top:0x2f6fdd, bottom:0x1f2f55 },
+  { sex:'M', label:'Hombre', age:45, h:1.86, w:88, scale:1.04, vs:0.96, color:'#ea7a2a', top:0xe0782c, bottom:0x3a3f4a },
+  { sex:'F', label:'Mujer',  age:34, h:1.65, w:61, scale:1.00, vs:0.90, color:'#9333ea' }
+];
+const MUSCLES = {
+  quad:   { name:'Cuádriceps (muslo)', short:'Muslo', susc:1.00, base:90 }, gastro:{ name:'Pantorrilla (gastrocnemio y sóleo)', short:'Pantorrilla', susc:1.15, base:85 },
+  glute:  { name:'Glúteo mayor', short:'Glúteo', susc:0.80, base:80 }, back:{ name:'Espalda (erectores y dorsal ancho)', short:'Espalda', susc:0.60, base:72 }
+};
+const SIDE_NAME={ L:'izquierdo', R:'derecho' };
+const RATES=[ { L:0.016, R:0.016 }, { L:0.170, R:0.170 }, { L:0.030, R:0.120 } ], TRAIN_FACTOR=0.45;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), stS=s=>s>=90?0:s>=75?1:2, stY=y=>y>=90?0:y>=80?1:2;
+const COLORS=[0x2ecc71,0xf5b301,0xe5484d], CSS=['#16a34a','#d98a06','#dc3545'];
+const strengthOf=(a,k,sd,day,tr)=>{ const loss=RATES[a][sd]*MUSCLES[k].susc*day*(tr?TRAIN_FACTOR:1); return clamp(100-loss+Math.sin(day*0.35+k.length*1.7+(sd==='L'?0:2))*0.6*Math.min(1,day/10),0,100); };
+const metricsOf=(a,k,sd,day,tr)=>{ const s=strengthOf(a,k,sd,day,tr), so=strengthOf(a,k,sd==='L'?'R':'L',day,tr), sym=Math.min(s,so)/Math.max(s,so)*100, f=(100-s)*0.9; return { s, sym, rms:100+f*0.3, mdf:MUSCLES[k].base*(1-f/250), status:Math.max(stS(s),stY(sym)) }; };
+const avgStrength=(a,day,tr)=>{ let t=0,n=0; for(const k in MUSCLES) for(const sd of ['L','R']){ t+=strengthOf(a,k,sd,day,tr); n++; } return t/n; };
+const muscleStatus=(a,day,tr)=>{ let w=0; for(const k in MUSCLES) for(const sd of ['L','R']) w=Math.max(w,metricsOf(a,k,sd,day,tr).status); return w; };
+const SYSTEMS={
+  muscular:{ name:'Músculos', desc:'Fuerza de piernas, glúteos y espalda.', th:[90,75], tip:'Más ejercicio de resistencia y buen descanso.' },
+  oseo:{ name:'Huesos', desc:'Sin gravedad, los huesos pierden densidad.', th:[95,90], rate:[0.015,0.040,0.025], tf:0.60, tip:'Más ejercicio con carga; cuidar calcio y vitamina D.' },
+  cardio:{ name:'Corazón y vasos', desc:'Cuánto aguanta el corazón en el esfuerzo.', th:[90,80], rate:[0.020,0.090,0.050], tf:0.50, tip:'Añadir ejercicio aeróbico, como correr en cinta.' },
+  nervioso:{ name:'Coordinación', desc:'Equilibrio y control de los movimientos.', th:[90,80], rate:[0.010,0.050,0.140], tf:0.60, tip:'Practicar ejercicios de equilibrio y coordinación.' },
+  ocular:{ name:'Ojos', desc:'La vista y la presión dentro del ojo.', th:[95,90], rate:[0.020,0.040,0.030], tf:0.85, tip:'Controles de la vista con regularidad.' }
+};
+const sysValue=(id,a,day,tr)=>id==='muscular'?avgStrength(a,day,tr):clamp(100-SYSTEMS[id].rate[a]*day*(tr?SYSTEMS[id].tf:1)+Math.sin(day*0.2+id.length)*0.4*Math.min(1,day/10),0,100);
+const sysStatus=(id,a,day,tr)=>{ const v=sysValue(id,a,day,tr), th=SYSTEMS[id].th, s=v>=th[0]?0:v>=th[1]?1:2; return id==='muscular'?Math.max(muscleStatus(a,day,tr),s):s; };
+const overall=(a,day,tr)=>Math.max(...Object.keys(SYSTEMS).map(id=>sysStatus(id,a,day,tr)));
+
+/* Capas del cuerpo: cada una con su color, ícono y estructuras (se llena al cargar la anatomía) */
+const LAYERS={
+  skin:    { name:'Persona', sub:'Piel y ropa', color:'#f0a985', icon:'<circle cx="12" cy="7" r="3.5"/><path d="M5 21c0-4 3-7 7-7s7 3 7 7"/>' },
+  muscles: { name:'Músculos', sub:'', color:'#c0463c', icon:'<path d="M6 17c-2-3-1-9 3-11 3-1 5 1 6 3 2 0 4 2 3 6-1 3-5 4-8 3z"/>' },
+  skeleton:{ name:'Huesos', sub:'', color:'#c9b98a', icon:'<path d="M8 4a2 2 0 1 1 2 3l3 3 3 3a2 2 0 1 1 3 2 2 2 0 1 1-3 2l-3-3-3-3a2 2 0 1 1-2-3z"/>' },
+  organs:  { name:'Órganos', sub:'', color:'#e5736b', icon:'<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 5.500-7 10-7 10z"/>' },
+  vessels: { name:'Vasos sanguíneos', sub:'', color:'#d63b3b', icon:'<path d="M4 6c4 0 4 4 8 4s4-4 8-4M4 14c4 0 4 4 8 4s4-4 8-4"/>' },
+  nerves:  { name:'Nervios', sub:'', color:'#e0b200', icon:'<path d="M12 3v8m0 0-5 5m5-5 5 5m-5-5v10"/>' }
+};
+const ES={ heart:'Corazón', aorta:'Aorta', coronary_arteries:'Arterias coronarias', lung:'Pulmón', bronchi:'Bronquios', trachea:'Tráquea', larynx:'Laringe', pharynx:'Faringe', liver:'Hígado', spleen:'Bazo', pancreas:'Páncreas', gallbladder:'Vesícula biliar', kidney:'Riñón', adrenal:'Glándula suprarrenal', ureter:'Uréter', bladder:'Vejiga',
+  brain:'Cerebro', cerebellum:'Cerebelo', brainstem:'Tronco encefálico', pituitary:'Hipófisis', eye:'Ojo', stomach:'Estómago', colon:'Colon', small_intestine:'Intestino delgado', esophagus:'Esófago', appendix:'Apéndice', diaphragm:'Diafragma', thymus:'Timo', tongue:'Lengua', salivary_glands:'Glándulas salivales', teeth:'Dientes',
+  skull:'Cráneo', mandible:'Mandíbula', femur:'Fémur', pelvis:'Pelvis', ribs:'Costillas', sternum:'Esternón', spine_cervical:'Columna cervical', spine_thoracic:'Columna torácica', spine_lumbar:'Columna lumbar', humerus:'Húmero', scapula:'Escápula', clavicle:'Clavícula', patella:'Rótula', forearm:'Antebrazo (huesos)', hand:'Mano (huesos)', foot:'Pie (huesos)', intercostals:'Músculos intercostales',
+  quadriceps:'Cuádriceps (muslo)', hamstrings:'Isquiotibiales', calf:'Pantorrilla', gluteal:'Glúteos', adductors:'Aductores', iliopsoas:'Iliopsoas', abdominal_muscles:'Abdominales', chest_muscles:'Pectorales', deltoid:'Deltoides', trapezius:'Trapecio', back_muscles:'Músculos de la espalda', neck_muscles:'Músculos del cuello', upper_arm_muscles:'Músculos del brazo', forearm_muscles:'Músculos del antebrazo', shoulder_muscles:'Músculos del hombro', rotator_cuff:'Manguito rotador', hand_muscles:'Músculos de la mano', foot_muscles:'Músculos del pie', shin_muscles:'Músculos de la espinilla', lower_leg:'Pierna inferior (músculos)',
+  vena_cava_inferior:'Vena cava inferior', vena_cava_superior:'Vena cava superior', pulmonary_vessels:'Vasos pulmonares', carotid:'Arteria carótida', spinal_cord:'Médula espinal', cranial_nerves:'Nervios craneales', pelvic_floor:'Suelo pélvico' };
+const DESC={ heart:'Bomba que mueve la sangre por todo el cuerpo. Sin gravedad la sangre se reparte distinto y el corazón puede acostumbrarse a trabajar menos.', lung:'Intercambian oxígeno y dióxido de carbono. El ejercicio aeróbico ayuda a mantener su capacidad.', brain:'Controla el cuerpo. En el espacio puede cambiar la presión dentro del cráneo, algo que se vigila en los ojos.', eye:'En misiones largas puede cambiar la forma del ojo y la vista (síndrome neuro-ocular).', liver:'Filtra la sangre y procesa nutrientes.', stomach:'Digiere los alimentos; en microgravedad la digestión se adapta.', kidney:'Filtran la sangre. Más calcio en la orina puede indicar pérdida de hueso.',
+  femur:'Hueso del muslo, el más largo. Sin carga por la gravedad pierde densidad, por eso los astronautas hacen ejercicio con peso.', pelvis:'Une la columna con las piernas. Es una de las zonas donde más hueso se pierde en el espacio.', skull:'Protege el cerebro.', spine_lumbar:'Parte baja de la columna; el dolor lumbar es común en el espacio.', ribs:'Protegen el corazón y los pulmones.',
+  quadriceps:'Músculo grande del muslo que estira la rodilla. Es clave para levantarse y caminar, y de los que más fuerza pierden sin gravedad.', calf:'Músculos de la pantorrilla (gastrocnemio y sóleo): empujan el cuerpo al caminar y correr. Pierden fuerza rápido sin gravedad.', gluteal:'Glúteos: extienden la cadera y dan estabilidad al caminar.', back_muscles:'Erectores de la columna y dorsal ancho: mantienen el tronco erguido.', hamstrings:'Parte de atrás del muslo; flexionan la rodilla.', spinal_cord:'Lleva las señales entre el cerebro y el cuerpo.' };
+const SYS_TXT={ muscles:'Los músculos mueven el cuerpo. En el espacio se debilitan por no cargar peso.', skeleton:'Los huesos sostienen el cuerpo. Sin gravedad pierden densidad.', organs:'Órganos internos del tórax y el abdomen.', vessels:'Venas y arterias que reparten la sangre.', nerves:'Llevan las señales entre el cerebro y el cuerpo.' };
+const baseKey=n=>n.replace(/_(l|r)$/,'');
+const nameEs=n=>{ const k=baseKey(n), s=n.endsWith('_l')?' izquierdo':n.endsWith('_r')?' derecho':''; if(ES[k]) return ES[k]; const g=k.replace(/^(arteries|veins)_(.*)/,(m,a,b)=>(a==='arteries'?'Arterias':'Venas')+' ('+b.replace(/_/g,' ')+')'); return g.charAt(0).toUpperCase()+g.slice(1).replace(/_/g,' '); };
+
+/* =====================================================================
+   2) ESCENA (luz clara, sombras suaves)
+   ===================================================================== */
+const Q=new URLSearchParams(location.search), $=id=>document.getElementById(id), cv=$('cv'), canvas=$('gl'), tip=$('tip');
+const renderer=new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+renderer.setPixelRatio(Q.has('lite')?1:Math.min(devicePixelRatio,2)); renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.localClippingEnabled=true;
+renderer.shadowMap.enabled=!Q.has('lite'); renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene(); scene.environment=new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(),0.04).texture;
+const camera=new THREE.PerspectiveCamera(32,1,0.05,200);
+const controls=new OrbitControls(camera,canvas); controls.target.set(0,0.92,0); controls.enableDamping=true; controls.dampingFactor=0.08; controls.minDistance=1.0; controls.maxDistance=9; controls.maxPolarAngle=Math.PI*0.52; controls.autoRotateSpeed=1.6;
+scene.add(new THREE.HemisphereLight(0xffffff,0xc9d6ea,0.9));
+const sun=new THREE.DirectionalLight(0xffffff,2.2); sun.position.set(2.5,5,3.5); sun.castShadow=true; sun.shadow.mapSize.set(1024,1024); const sc=sun.shadow.camera; sc.left=-2.5; sc.right=2.5; sc.top=3; sc.bottom=-2; sc.near=1; sc.far=14; sun.shadow.bias=-0.0004; sun.shadow.normalBias=0.02; scene.add(sun);
+const shadowFloor=new THREE.Mesh(new THREE.PlaneGeometry(14,14),new THREE.ShadowMaterial({ opacity:.2 })); shadowFloor.rotation.x=-Math.PI/2; shadowFloor.receiveShadow=true; scene.add(shadowFloor);
+const beltTex=(()=>{ const c=document.createElement('canvas'); c.width=128; c.height=256; const x=c.getContext('2d'); x.fillStyle='#cfd8e6'; x.fillRect(0,0,128,256); x.fillStyle='#b4c0d3'; for(let y=0;y<256;y+=32) x.fillRect(0,y,128,6); x.fillStyle='#fff'; x.fillRect(4,0,4,256); x.fillRect(120,0,4,256); const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(1,5); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=8; return t; })();
+const treadmill=new THREE.Group(), belt=new THREE.Mesh(new THREE.BoxGeometry(1.0,0.06,3.6),new THREE.MeshStandardMaterial({ map:beltTex, roughness:.8 })); belt.position.y=-0.03; belt.receiveShadow=true; treadmill.add(belt);
+[-0.56,0.56].forEach(x=>{ const r=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.09,3.7),new THREE.MeshStandardMaterial({ color:0x8fa3c4, roughness:.5, metalness:.3 })); r.position.set(x,-0.025,0); r.receiveShadow=true; treadmill.add(r); }); scene.add(treadmill);
+const earth=new THREE.Group(); earth.add(new THREE.Mesh(new THREE.SphereGeometry(9,64,48),new THREE.MeshStandardMaterial({ color:0x2b6cd9, emissive:0x0d3a82, emissiveIntensity:.5, roughness:.9 }))); earth.add(new THREE.Mesh(new THREE.SphereGeometry(9.3,64,48),new THREE.MeshBasicMaterial({ color:0x7db8ff, transparent:true, opacity:.2, side:THREE.BackSide }))); earth.position.set(-3,-12.2,-9); earth.visible=false; scene.add(earth);
+const stars=(()=>{ const n=700,p=new Float32Array(n*3); for(let i=0;i<n;i++){ const r=25+Math.random()*25,t=Math.random()*6.283,f=Math.acos(2*Math.random()-1); p[i*3]=r*Math.sin(f)*Math.cos(t); p[i*3+1]=r*Math.cos(f); p[i*3+2]=r*Math.sin(f)*Math.sin(t); } const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(p,3)); const s=new THREE.Points(g,new THREE.PointsMaterial({ color:0xffffff,size:0.1,transparent:true,opacity:.9 })); s.visible=false; scene.add(s); return s; })();
+function anatMat(color,opacity){   // uPulse infla el músculo a lo largo de su normal al contraerse
+  const m=new THREE.MeshStandardMaterial({ color, emissive:color, emissiveIntensity:.1, transparent:opacity<0.98, opacity, roughness:.5, metalness:0, depthWrite:opacity>0.85 }), uPulse={ value:0 }; m.userData.uPulse=uPulse;
+  m.onBeforeCompile=sh=>{ sh.uniforms.uPulse=uPulse; sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nuniform float uPulse;').replace('#include <skinning_vertex>','#include <skinning_vertex>\ntransformed += normalize(objectNormal) * uPulse;'); }; return m; }   // el inflado se aplica DESPUÉS del skinning
+
+/* =====================================================================
+   3) ANIMACIÓN: retargeting en espacio mundial + ejercicios generados con geometría
+   ===================================================================== */
+const nm=n=>n.replace(/^mixamorig:?/,'');
+const wq=(o,q=new THREE.Quaternion())=>{ o.updateWorldMatrix(true,false); o.matrixWorld.decompose(new THREE.Vector3(),q,new THREE.Vector3()); return q; };
+function bake(srcRoot,dstRoot,clip,fps=30){
+  srcRoot.updateMatrixWorld(true); dstRoot.updateMatrixWorld(true);
+  const sB={}, dB={}, order=[]; srcRoot.traverse(o=>{ if(o.isBone) sB[nm(o.name)]=o; }); dstRoot.traverse(o=>{ if(o.isBone){ dB[nm(o.name)]=o; if(sB[nm(o.name)]) order.push(nm(o.name)); } });
+  const rS={}, rT={}; order.forEach(n=>{ rS[n]=wq(sB[n]); rT[n]=wq(dB[n]); });
+  const sHip=new THREE.Vector3().setFromMatrixPosition(sB.Hips.matrixWorld), tHip=new THREE.Vector3().setFromMatrixPosition(dB.Hips.matrixWorld), ratio=tHip.y/sHip.y, hipParentInv=dB.Hips.parent.matrixWorld.clone().invert();
+  const mixer=new THREE.AnimationMixer(srcRoot); mixer.clipAction(clip).play();
+  const nF=Math.max(2,Math.round(clip.duration*fps)), times=new Float32Array(nF), qv={}, pv=new Float32Array(nF*3); order.forEach(n=>qv[n]=new Float32Array(nF*4));
+  const Wt={}, q=new THREE.Quaternion(), qi=new THREE.Quaternion(), pw=new THREE.Quaternion(), p=new THREE.Vector3();
+  for(let f=0;f<nF;f++){ const t=f/fps; times[f]=t; mixer.setTime(t); srcRoot.updateMatrixWorld(true);
+    order.forEach(n=>{ const target=wq(sB[n]).multiply(qi.copy(rS[n]).invert()).multiply(rT[n]); Wt[n]=target.clone(); const par=dB[n].parent, parentW=(par&&par.isBone&&Wt[nm(par.name)])?Wt[nm(par.name)]:wq(par,pw); q.copy(parentW).invert().multiply(target); q.toArray(qv[n],f*4); });
+    p.setFromMatrixPosition(sB.Hips.matrixWorld).sub(sHip).multiplyScalar(ratio).add(tHip).applyMatrix4(hipParentInv); p.toArray(pv,f*3); }
+  mixer.stopAllAction(); const tracks=order.map(n=>new THREE.QuaternionKeyframeTrack(dB[n].name+'.quaternion',times,qv[n])); tracks.push(new THREE.VectorKeyframeTrack(dB.Hips.name+'.position',times,pv)); return new THREE.AnimationClip(clip.name,clip.duration,tracks); }
+function exerciseClip(ch,kind){
+  const { root, bones, idleClip }=ch, order=[]; root.traverse(o=>{ if(o.isBone) order.push(nm(o.name)); });
+  const mixer=new THREE.AnimationMixer(root); mixer.clipAction(idleClip).play(); mixer.setTime(0); root.updateMatrixWorld(true);
+  const W0={}, P=v=>new THREE.Vector3().setFromMatrixPosition(v.matrixWorld); order.forEach(n=>W0[n]=wq(bones[n]));
+  const H0=P(bones.Hips), L1=P(bones.LeftUpLeg).distanceTo(P(bones.LeftLeg)), L2=P(bones.LeftLeg).distanceTo(P(bones.LeftFoot)), Lf=P(bones.LeftFoot).distanceTo(P(bones.LeftToeBase)), hipParentInv=bones.Hips.parent.matrixWorld.clone().invert(); mixer.stopAllAction();
+  const dur=kind==='squat'?3.4:2.4, fps=30, nF=Math.round(dur*fps), times=new Float32Array(nF), qv={}, pv=new Float32Array(nF*3); order.forEach(n=>qv[n]=new Float32Array(nF*4));
+  const Wt={}, q=new THREE.Quaternion(), pw=new THREE.Quaternion(), rx=new THREE.Quaternion(), X=new THREE.Vector3(1,0,0);
+  for(let f=0;f<nF;f++){ const t=f/fps; times[f]=t; const s=0.5-0.5*Math.cos(2*Math.PI*t/dur); let a=0, lean=0, armUp=0, foot=0, dy=0, dz=0, bAng=0;
+    if(kind==='squat'){ a=1.15*s; lean=0.55*a; armUp=1.35*s; dz=-0.20*(L1+L2)*Math.sin(a); bAng=Math.asin(clamp((dz+L1*Math.sin(a))/L2,-1,1)); dy=L1*Math.cos(a)+L2*Math.cos(bAng)-(L1+L2); } else { foot=0.75*s; dy=Lf*Math.sin(foot)*0.9; }
+    const ang=n=>{ if(/UpLeg/.test(n)) return -a; if(/Leg$/.test(n)) return bAng; if(/Foot|Toe/.test(n)) return foot; if(n==='Spine') return lean*0.35; if(n==='Spine1') return lean*0.7; if(n==='Spine2') return lean; if(/Neck/.test(n)) return lean*0.6; if(/Head|Eye/.test(n)) return lean*0.25; if(/Shoulder|Arm|Hand/.test(n)) return lean-armUp; return 0; };
+    order.forEach(n=>{ const target=rx.setFromAxisAngle(X,ang(n)).clone().multiply(W0[n]); Wt[n]=target; const par=bones[n].parent, parentW=(par&&par.isBone&&Wt[nm(par.name)])?Wt[nm(par.name)]:wq(par,pw); q.copy(parentW).invert().multiply(target); q.toArray(qv[n],f*4); });
+    new THREE.Vector3(H0.x,H0.y+dy,H0.z+dz).applyMatrix4(hipParentInv).toArray(pv,f*3); }
+  const tracks=order.map(n=>new THREE.QuaternionKeyframeTrack(bones[n].name+'.quaternion',times,qv[n])); tracks.push(new THREE.VectorKeyframeTrack(bones.Hips.name+'.position',times,pv)); return new THREE.AnimationClip(kind,dur,tracks); }
+
+/* =====================================================================
+   4) PERSONAJES + ANATOMÍA PEGADA AL ESQUELETO
+   ===================================================================== */
+const S={ a:0, day:0, trained:false, mode:'run', view:'person', sel:{ key:'quad', side:'R' }, playing:false, t:0, spin:false, focus:null, pick:null, statusColor:true, skinA:0.14,
+          layers:{ skin:true, muscles:true, skeleton:false, organs:false, vessels:false, nerves:false } };
+const CH={}, anatMeshes=[], monitors={}, SYS_GROUPS=['skin','skeleton','muscles','organs','vessels','nerves'];
+const sysOf=o=>{ for(let n=o;n;n=n.parent) if(SYS_GROUPS.includes(n.name)) return n.name; return ''; };
+const HIDE=/^skin$|reproductive|prostate|uterus|ovary|fallopian|vagina|breast/;
+const healthSys=(m,sys)=>sys==='muscles'?'muscular':sys==='skeleton'?'oseo':(sys==='vessels'||/heart|aorta|coronary|pulmonary|lung|vena_cava/.test(m))?'cardio':(sys==='nerves'||/brain|cerebellum|brainstem|pituitary/.test(m))?'nervioso':/^eye_/.test(m)?'ocular':null;
+const ORG=[[/heart/,0xd62839],[/aorta|coronary/,0xe5252a],[/^lung/,0xf3a0b6],[/bronchi|trachea|larynx|pharynx/,0xb4d3ee],[/liver/,0x8a3b2e],[/spleen/,0x7a3b6e],[/pancreas/,0xf0c987],[/gallbladder/,0x5f9e4a],[/kidney/,0xa4493f],[/adrenal/,0xe8b04a],[/ureter|bladder/,0xf2d16b],[/cerebellum/,0xd99ab0],[/brainstem/,0xc98aa0],[/pituitary/,0xf2c230],[/brain/,0xf1b7c8],[/eye/,0xffffff],[/teeth/,0xffffff],[/tongue/,0xe36f7f],[/stomach/,0xf1a66b],[/colon/,0xd98c6a],[/intestine/,0xf3b9a0],[/esophagus/,0xe58f8f],[/diaphragm/,0xe8a0a0],[/thymus/,0xf5d0a8]];
+const colorFor=(n,sys)=>{ if(sys==='muscles') return 0xb8433a; if(sys==='skeleton') return 0xf1ead7; if(sys==='nerves') return /spinal/.test(n)?0xfff0a8:0xffd23f; if(sys==='vessels') return /pulmonary/.test(n)?0x7a5cd6:/arter|aorta|carotid|coronary/.test(n)?0xe5252a:0x2f5fd0; for(const [re,c] of ORG) if(re.test(n)) return c; return 0xe8a090; };
+const MON={ quadriceps:'quad', gluteal:'glute', calf:'gastro', back_muscles:'back' };
+const BONE_RULES=[[/^(gluteal|pelvis$|pelvic_floor|bladder|arteries_pelvis|veins_pelvis)/,'Hips'],[/^(quadriceps|hamstrings|adductors|iliopsoas|femur)/,'UpLeg'],[/^(calf|shin_muscles|lower_leg|patella)/,'Leg'],[/^(foot)/,'Foot'],[/^(hand)/,'Hand'],[/^(forearm)/,'ForeArm'],[/^(upper_arm|deltoid|shoulder_muscles|rotator_cuff|humerus)/,'Arm'],[/^(abdominal_muscles)/,'Spine'],[/^(back_muscles)/,'Spine1'],[/^(chest_muscles|trapezius|scapula|clavicle|sternum|ribs|intercostals)/,'Spine2'],[/^(neck_muscles|spine_cervical|larynx|pharynx|trachea)/,'Neck'],[/^(skull|mandible|teeth|brain|cerebellum|brainstem|pituitary|eye|tongue|salivary|cranial|arteries_head|carotid)/,'Head']];
+const MAIN=['Hips','Spine','Spine1','Spine2','Neck','Head','LeftArm','LeftForeArm','LeftHand','RightArm','RightForeArm','RightHand','LeftUpLeg','LeftLeg','LeftFoot','RightUpLeg','RightLeg','RightFoot'];
+const SEG_END={ Hips:'Spine', Spine:'Spine1', Spine1:'Spine2', Spine2:'Neck', Neck:'Head', Head:'HeadTop_End', LeftArm:'LeftForeArm', LeftForeArm:'LeftHand', LeftHand:'LeftHandMiddle2', RightArm:'RightForeArm', RightForeArm:'RightHand', RightHand:'RightHandMiddle2', LeftUpLeg:'LeftLeg', LeftLeg:'LeftFoot', LeftFoot:'LeftToeBase', RightUpLeg:'RightLeg', RightLeg:'RightFoot', RightFoot:'RightToeBase' };
+const segDist=(p,a,b)=>{ const ab=b.clone().sub(a), t=clamp(p.clone().sub(a).dot(ab)/Math.max(ab.lengthSq(),1e-9),0,1); return p.distanceTo(a.clone().add(ab.multiplyScalar(t))); };
+function boneFor(bones,name,center){ const side=/_l$/.test(name)?'Left':/_r$/.test(name)?'Right':'';
+  for(const [re,b] of BONE_RULES) if(re.test(name)){ const full=(['Hips','Spine','Spine1','Spine2','Neck','Head'].includes(b)?b:side+b); if(bones[full]) return full; }
+  let best=null,bd=1e9; MAIN.forEach(n=>{ if(side&&/^(Left|Right)/.test(n)&&!n.startsWith(side)) return; const a=new THREE.Vector3(), b=new THREE.Vector3(); bones[n].getWorldPosition(a); bones[SEG_END[n]].getWorldPosition(b); const d=segDist(center,a,b); if(d<bd){ bd=d; best=n; } }); return best; }
+/* SKINNING de la anatomía: en vez de pegar cada pieza a UN hueso (se ve rígida y sobresale al doblar rodillas o columna),
+   cada vértice sigue a los 2-4 huesos más cercanos de entre los que le corresponden, con pesos suaves.
+   Así el muslo se dobla con la rodilla como la piel de un personaje de videojuego. */
+const PARENT={ Spine:'Hips', Spine1:'Spine', Spine2:'Spine1', Neck:'Spine2', Head:'Neck', LeftArm:'Spine2', RightArm:'Spine2', LeftForeArm:'LeftArm', LeftHand:'LeftForeArm', RightForeArm:'RightArm', RightHand:'RightForeArm', LeftUpLeg:'Hips', RightUpLeg:'Hips', LeftLeg:'LeftUpLeg', LeftFoot:'LeftLeg', RightLeg:'RightUpLeg', RightFoot:'RightLeg' };
+const SPINE=['Hips','Spine','Spine1','Spine2','Neck'], SIGMA=0.05;
+function allowedBones(bn,side,names){ let base; if(SPINE.includes(bn)){ base=SPINE.slice(); if(bn==='Neck') base.push('Head'); if(bn==='Hips') (side?[side+'UpLeg']:['LeftUpLeg','RightUpLeg']).forEach(x=>base.push(x)); } else base=[PARENT[bn],bn,SEG_END[bn]];
+  return [...new Set(base.filter(x=>x&&names.includes(x)))]; }
+function skinGeometry(o,bn,side,names,segs){
+  const pos=o.geometry.attributes.position, nor=o.geometry.attributes.normal, n=pos.count, mw=o.matrixWorld, nmat=new THREE.Matrix3().getNormalMatrix(mw);
+  const P=new Float32Array(n*3), N=new Float32Array(n*3), SI=new Uint16Array(n*4), SW=new Float32Array(n*4), v=new THREE.Vector3(), nv=new THREE.Vector3();
+  const al=allowedBones(bn,side,names).map(x=>names.indexOf(x)), K=al.length, A=al.map(i=>{ const s=segs[i], ab=s.b.clone().sub(s.a); return { a:s.a, ab, il:1/Math.max(ab.lengthSq(),1e-9) }; }), d=new Float32Array(K), w=new Float32Array(K), ord=new Array(K);
+  for(let i=0;i<n;i++){ v.set(pos.getX(i),pos.getY(i),pos.getZ(i)).applyMatrix4(mw); P[i*3]=v.x; P[i*3+1]=v.y; P[i*3+2]=v.z;
+    if(nor){ nv.set(nor.getX(i),nor.getY(i),nor.getZ(i)).applyMatrix3(nmat).normalize(); N[i*3]=nv.x; N[i*3+1]=nv.y; N[i*3+2]=nv.z; }
+    let dmin=1e9; for(let k=0;k<K;k++){ const s=A[k], dx=v.x-s.a.x, dy=v.y-s.a.y, dz=v.z-s.a.z, t=Math.min(1,Math.max(0,(dx*s.ab.x+dy*s.ab.y+dz*s.ab.z)*s.il)), ex=dx-s.ab.x*t, ey=dy-s.ab.y*t, ez=dz-s.ab.z*t; d[k]=Math.sqrt(ex*ex+ey*ey+ez*ez); if(d[k]<dmin) dmin=d[k]; }
+    for(let k=0;k<K;k++){ const q=(d[k]-dmin)/SIGMA; w[k]=Math.exp(-q*q); ord[k]=k; } ord.sort((a,b)=>w[b]-w[a]);
+    let sum=0; const m=Math.min(4,K); for(let j=0;j<m;j++) sum+=w[ord[j]]; for(let j=0;j<m;j++){ SI[i*4+j]=al[ord[j]]; SW[i*4+j]=w[ord[j]]/sum; } }
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(P,3)); if(nor) g.setAttribute('normal',new THREE.BufferAttribute(N,3)); g.setAttribute('skinIndex',new THREE.BufferAttribute(SI,4)); g.setAttribute('skinWeight',new THREE.BufferAttribute(SW,4));
+  if(o.geometry.index) g.setIndex(new THREE.BufferAttribute(o.geometry.index.array.slice(),1)); return g; }
+function bindAnatomy(ch,gltf,sex){
+  ch.root.updateMatrixWorld(true);
+  const bones=ch.bones, hd=new THREE.Vector3(), tl=new THREE.Vector3(), tr=new THREE.Vector3(); bones.HeadTop_End.getWorldPosition(hd); bones.LeftToeBase.getWorldPosition(tl); bones.RightToeBase.getWorldPosition(tr);
+  const skNames=MAIN.filter(n=>bones[n]), skel=new THREE.Skeleton(skNames.map(n=>bones[n])), segs=skNames.map(n=>{ const a=new THREE.Vector3(), b=new THREE.Vector3(); bones[n].getWorldPosition(a); bones[SEG_END[n]].getWorldPosition(b); return { a, b }; });   // la postura actual (reposo) es la "postura de enlace"
+  const floor=Math.min(tl.y,tr.y)-0.02, top=hd.y+0.02, root=gltf.scene; scene.add(root); root.updateMatrixWorld(true);
+  let bb=new THREE.Box3().setFromObject(root); root.scale.setScalar((top-floor)/(bb.max.y-bb.min.y)); root.updateMatrixWorld(true); bb=new THREE.Box3().setFromObject(root); root.position.set(-(bb.min.x+bb.max.x)/2,floor-bb.min.y,0); root.updateMatrixWorld(true);
+  const list=[]; root.traverse(o=>{ if(o.isMesh) list.push(o); });
+  list.forEach(o=>{ const name=o.name.replace(/_\d+$/,''), sys=sysOf(o); if(!sys||sys==='skin'||HIDE.test(name)){ o.visible=false; o.userData={ dead:true }; return; }
+    if(!o.geometry.attributes.normal) o.geometry.computeVertexNormals();
+    const center=new THREE.Box3().setFromObject(o).getCenter(new THREE.Vector3()), bn=boneFor(bones,name,center), mk=Object.keys(MON).find(k=>name.startsWith(k)), side=/_l$/.test(name)?'L':/_r$/.test(name)?'R':null, base=colorFor(name,sys);
+    const ud={ sex, sys, name, key:baseKey(name), hsys:healthSys(name,sys), base:new THREE.Color(base), cur:new THREE.Color(base), op:0.95, mon:mk&&side?{ key:MON[mk], side }:null, bone:bn };
+    const sm=new THREE.SkinnedMesh(skinGeometry(o,bn,side==='L'?'Left':side==='R'?'Right':'',skNames,segs),anatMat(base,0.95)); sm.bind(skel,new THREE.Matrix4()); sm.renderOrder=3; sm.frustumCulled=false; sm.userData=ud; sm.name=name; sm.visible=false;
+    if(ud.mon){ const k=sex+ud.mon.key+ud.mon.side; (monitors[k]=monitors[k]||{}).local=bones[bn].worldToLocal(center.clone()); Object.assign(monitors[k],{ bone:bn, sex, key:ud.mon.key, side:ud.mon.side, act:0 }); }   // posición de la etiqueta en el sistema del hueso, para que lo siga
+    scene.add(sm); anatMeshes.push(sm); });
+  root.removeFromParent(); }
+
+const prog={ x:0, m:0, f:0, am:0, af:0 }, upd=()=>{ $('loadBar').style.width=(Object.values(prog).reduce((a,b)=>a+b,0)/5*100).toFixed(0)+'%'; };
+const ld=(url,k)=>new Promise((res,rej)=>{ new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load(url,res,e=>{ if(e.total){ prog[k]=e.loaded/e.total; upd(); } },rej); });
+Promise.all([ ld('assets/Xbot.glb','x'), ld('assets/avatar-male.glb','m'), ld('assets/Michelle.glb','f'), ld('assets/anatomy-male.glb','am'), ld('assets/anatomy-female.glb','af') ]).then(([gx,gm,gf,anm,anf])=>{
+  const srcClips={}; gx.animations.forEach(c=>srcClips[c.name]=c);
+  [['M',gm,anm],['F',gf,anf]].forEach(([sex,g,an])=>{
+    const root=g.scene, bones={}, mats=[], smeshes=[]; root.traverse(o=>{ if(o.isBone) bones[nm(o.name)]=o; if(o.isSkinnedMesh){ smeshes.push(o); o.castShadow=true; o.frustumCulled=false; [].concat(o.material).forEach(m=>{ if(!mats.includes(m)) mats.push(m); }); } });
+    root.updateMatrixWorld(true); const ch=CH[sex]={ root, bones, mats, smeshes, mixer:new THREE.AnimationMixer(root), actions:{}, cur:null };
+    ['idle','walk','run','agree','headShake'].forEach(n=>{ const clip=bake(gx.scene,root,srcClips[n]); if(n==='idle') ch.idleClip=clip; ch.actions[n]=ch.mixer.clipAction(clip); });
+    ch.actions.squat=ch.mixer.clipAction(exerciseClip(ch,'squat')); ch.actions.calf=ch.mixer.clipAction(exerciseClip(ch,'calf'));
+    ch.mixer.stopAllAction(); ch.actions.idle.play(); ch.mixer.setTime(0); root.updateMatrixWorld(true); scene.add(root); root.visible=false;
+    mats.forEach(m=>{ m.userData.orig={ transparent:m.transparent, opacity:m.opacity, depthWrite:m.depthWrite }; m.envMapIntensity=.8; });
+    bindAnatomy(ch,an,sex);
+    smeshes.forEach(o=>{ [].concat(o.material).forEach(m=>{ if(m.name==='Wolf3D_Headwear'){ o.visible=false; o.userData.keepHidden=true; } }); });   // sin sombrero
+    ch.faces=smeshes.filter(o=>o.morphTargetDictionary&&o.morphTargetDictionary.mouthSmile!==undefined); ch.outfit=mats.filter(m=>/Outfit_(Top|Bottom)/.test(m.name)); });
+  Object.keys(monitors).forEach(k=>{ const el=document.createElement('div'); el.className='pill'; el.innerHTML='<i></i><span></span>'; $('pills').appendChild(el); el.addEventListener('click',e=>{ e.stopPropagation(); S.sel={ key:monitors[k].key, side:monitors[k].side }; refresh(); }); monitors[k].el=el; });
+  applyUrl(); applyAstronaut(); setView(S.view); buildLayerList(); $('load').style.display='none'; refresh(); resize(); ready=true; if(Q.has('diag')) runDiag();
+}).catch(e=>{ console.error(e); $('loadTxt').innerHTML=location.protocol==='file:'?'El navegador no deja cargar los modelos con doble clic.<br>Abre <code>iniciar-servidor.bat</code> y entra a <code>http://localhost:8080/astrafit-claro.html</code>':'No se pudieron cargar los modelos: '+(e&&e.message||e); $('loadBar').parentNode.style.display='none'; });
+
+// Diagnóstico (solo con ?diag=1): mide altura de los pies y la velocidad del pie apoyado en cada animación, para detectar pies hundidos/flotando o deslizando sobre la cinta
+function runDiag(){ const out=[], v=new THREE.Vector3();
+  ['M','F'].forEach(sex=>{ const ch=CH[sex]; ['walk','run'].forEach(n=>{ const act=ch.actions[n], clip=act.getClip(), dt=1/30, nF=Math.round(clip.duration/dt), rec={ L:[], R:[] }, hips=[];
+    ch.mixer.stopAllAction(); act.reset().play(); act.enabled=true; act.setEffectiveWeight(1); act.setEffectiveTimeScale(1);
+    for(let f=0;f<nF;f++){ ch.mixer.setTime(f*dt); ch.root.updateMatrixWorld(true); ['L','R'].forEach(s=>{ const nmF=(s==='L'?'Left':'Right'); ch.bones[nmF+'Foot'].getWorldPosition(v); const ay=v.y; ch.bones[nmF+'ToeBase'].getWorldPosition(v); rec[s].push({ ay, ty:v.y, tz:v.z }); }); ch.bones.Hips.getWorldPosition(v); hips.push(v.y); }
+    const st=s=>{ const r=rec[s], minTy=Math.min(...r.map(x=>x.ty)), maxTy=Math.max(...r.map(x=>x.ty)), minAy=Math.min(...r.map(x=>x.ay)), sp=[]; for(let f=0;f<nF;f++){ const a=r[f], b=r[(f+1)%nF]; if(a.ty<minTy+0.03&&b.ty<minTy+0.03) sp.push((b.tz-a.tz)/dt); } const mean=sp.length?sp.reduce((x,y)=>x+y,0)/sp.length:NaN; return `puntaY[${minTy.toFixed(3)}..${maxTy.toFixed(3)}] tobilloYmin=${minAy.toFixed(3)} velApoyoZ=${mean.toFixed(2)}m/s(${sp.length}/${nF})`; };
+    out.push(`${sex} ${n} dur=${clip.duration.toFixed(2)}s caderaY[${Math.min(...hips).toFixed(3)}..${Math.max(...hips).toFixed(3)}] I:${st('L')} D:${st('R')}`); }); });
+  Object.values(CH).forEach(c=>c.mixer.stopAllAction()); applyAstronaut(); console.info('[DIAG]\n'+out.join('\n')); }
+
+/* =====================================================================
+   5) VISTAS (Persona / Corte / Anatomía), CAPAS, BUSCADOR, FICHA
+   ===================================================================== */
+const BASE={ idle:{ clip:'idle', v:0 }, walk:{ clip:'walk', v:1.7 }, run:{ clip:'run', v:3.7 }, float:{ clip:'idle', v:0 }, squat:{ clip:'squat', v:0 }, calf:{ clip:'calf', v:0 }, feel:{ clip:'idle', v:0 } };
+// Velocidad a la que se mueve el pie apoyado en cada animación (medida con ?diag=1). La cinta debe ir exactamente a esa velocidad o los pies patinan.
+const STANCE={ M:{ walk:1.71, run:3.75 }, F:{ walk:1.63, run:3.54 } };
+const CAMS={ front:[[0.4,1.15,3.9],[0,0.92,0]], three:[[2.4,1.4,2.9],[0,0.92,0]], side:[[3.6,1.15,0.3],[0,0.92,0]], back:[[-0.4,1.15,-3.9],[0,0.92,0]] };
+const ct={ on:false, t:0, p0:new THREE.Vector3(), p1:new THREE.Vector3(), a0:new THREE.Vector3(), a1:new THREE.Vector3() };
+function goCam(n){ const [p,t]=CAMS[n]; ct.p0.copy(camera.position); ct.a0.copy(controls.target); ct.p1.set(...p); ct.a1.set(...t); ct.t=0; ct.on=true; S.spin=false; chips(); }
+camera.position.set(...CAMS.three[0]);
+const activeCh=()=>CH[PROFILES[S.a].sex];
+function clipFor(m){ if(m==='feel'){ const st=overall(S.a,S.day,S.trained); return st===0?'agree':st===2?'headShake':'idle'; } return BASE[m].clip; }
+function setMode(m,instant){ S.mode=m; const ch=activeCh(); if(!ch) return; const nxt=ch.actions[clipFor(m)]; if(!nxt) return; nxt.reset().play(); nxt.enabled=true; if(ch.cur&&ch.cur!==nxt) ch.cur.crossFadeTo(nxt,instant?0:0.45,false); ch.cur=nxt; chips(); }
+function applyAstronaut(){ const P=PROFILES[S.a]; Object.keys(CH).forEach(s=>CH[s].root.visible=(s===P.sex)); const ch=CH[P.sex]; if(!ch) return;
+  if(P.sex==='M') ch.outfit.forEach(m=>{ m.map=null; m.color.setHex(/Top/.test(m.name)?P.top:P.bottom); m.needsUpdate=true; });      // cada astronauta con su color de ropa
+  ch.cur=null; setMode(S.mode,true); applyVisibility(); buildLayerList(); }
+// Corte: la persona se recorta en x>0 y la anatomía en x<0 (planos de recorte del mundo)
+const planePerson=new THREE.Plane(new THREE.Vector3(-1,0,0),0), planeAnat=new THREE.Plane(new THREE.Vector3(1,0,0),0);
+function setView(v){ S.view=v; document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===v)); const cut=v==='cut';
+  Object.values(CH).forEach(ch=>ch.mats.forEach(m=>{ m.clippingPlanes=cut?[planePerson]:[]; m.needsUpdate=true; })); anatMeshes.forEach(m=>{ if(m.material){ m.material.clippingPlanes=cut?[planeAnat]:[]; m.material.needsUpdate=true; } });
+  applyVisibility(); }
+function applyVisibility(){ const sex=PROFILES[S.a].sex, inside=S.view!=='person';
+  anatMeshes.forEach(m=>{ const u=m.userData; if(u.dead){ m.visible=false; return; } m.visible=!!(inside&&u.sex===sex&&(S.layers[u.sys]||(S.focus&&u.hsys===S.focus)||(S.pick&&u.key===S.pick))); }); }
+const SW_ICON=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${LAYERS[k].icon}</svg>`;
+const EYE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>', EYE_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3.200 3.900M6.600 6.600A17 17 0 0 0 2 12s4 7 10 7a10 10 0 0 0 4-.8"/></svg>';
+function buildLayerList(){ const sex=PROFILES[S.a].sex, cnt={}; anatMeshes.forEach(m=>{ const u=m.userData; if(!u.dead&&u.sex===sex){ cnt[u.sys]=(cnt[u.sys]||new Set()).add(u.key); } });
+  const solo=Object.keys(S.layers).filter(k=>S.layers[k]).length===1;
+  $('layerList').innerHTML=Object.keys(LAYERS).map(k=>{ const L=LAYERS[k], on=S.layers[k], n=cnt[k]?cnt[k].size:0, sub=k==='skin'?L.sub:`${n} estructuras`;
+    return `<div class="layer${on?'':' off'}${on&&solo?' solo':''}" data-l="${k}"><div class="sw" style="background:${L.color}">${SW_ICON(k)}</div><div><b>${L.name}</b><small>${sub}</small></div><button class="ib txt${on&&solo?' on':''}" data-solo="${k}" title="Mostrar solo esta capa">Solo</button><button class="ib" data-eye="${k}" title="${on?'Ocultar':'Mostrar'}">${on?EYE:EYE_OFF}</button></div>`; }).join('');
+  document.querySelectorAll('[data-eye]').forEach(b=>b.addEventListener('click',()=>{ const k=b.dataset.eye; S.layers[k]=!S.layers[k]; if(S.view==='person'&&k!=='skin') setView('anat'); layersChanged(); }));
+  document.querySelectorAll('[data-solo]').forEach(b=>b.addEventListener('click',()=>{ const k=b.dataset.solo; Object.keys(S.layers).forEach(x=>S.layers[x]=(x===k)); if(S.view==='person'&&k!=='skin') setView('anat'); layersChanged(); })); }
+function layersChanged(){ S.focus=null; S.pick=null; buildLayerList(); applyVisibility(); refresh(); }
+// buscador de estructuras
+const IDX=()=>{ const sex=PROFILES[S.a].sex, m=new Map(); anatMeshes.forEach(o=>{ const u=o.userData; if(!u.dead&&u.sex===sex&&!m.has(u.key)) m.set(u.key,{ key:u.key, es:nameEs(u.name.replace(/_(l|r)$/,'')), sys:u.sys }); }); return [...m.values()]; };
+const norm=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+$('q').addEventListener('input',e=>{ const t=norm(e.target.value.trim()), box=$('results'); if(!t){ box.classList.remove('show'); return; }
+  const r=IDX().filter(x=>norm(x.es).includes(t)||norm(x.key).includes(t)).slice(0,9); box.innerHTML=r.length?r.map(x=>`<button data-k="${x.key}"><i style="background:${LAYERS[x.sys].color}"></i>${x.es}<small>${LAYERS[x.sys].name}</small></button>`).join(''):'<button disabled>Sin resultados</button>'; box.classList.add('show');
+  box.querySelectorAll('[data-k]').forEach(b=>b.addEventListener('click',()=>{ pickKey(b.dataset.k); $('q').value=''; box.classList.remove('show'); })); });
+function pickKey(k){ S.pick=k; const u=anatMeshes.find(m=>!m.userData.dead&&m.userData.key===k&&m.userData.sex===PROFILES[S.a].sex); if(u){ S.layers[u.userData.sys]=true; if(S.view==='person') setView('anat'); } buildLayerList(); applyVisibility(); refresh(); }
+function infoCard(){ const el=$('infoCard'); if(!S.pick){ el.innerHTML='<h2>Ficha de la estructura</h2><p class="empty">Toca una parte del cuerpo o búscala arriba para ver qué es y cómo se relaciona con la salud del astronauta.</p>'; return; }
+  const u=anatMeshes.find(m=>!m.userData.dead&&m.userData.key===S.pick&&m.userData.sex===PROFILES[S.a].sex); if(!u){ el.innerHTML=''; return; } const d=u.userData, es=nameEs(d.name.replace(/_(l|r)$/,'')), L=LAYERS[d.sys];
+  let stat=''; if(d.hsys){ const v=sysValue(d.hsys,S.a,S.day,S.trained), st=sysStatus(d.hsys,S.a,S.day,S.trained); stat=`<div class="stat"><b>En este astronauta:</b> ${SYSTEMS[d.hsys].name.toLowerCase()} al <b style="color:${CSS[st]}">${v.toFixed(0)} %</b> (${['estable','vigilar','atención'][st]}).</div>`; }
+  el.innerHTML=`<h2>Ficha de la estructura</h2><h3>${es}</h3><span class="tag" style="background:${L.color}">${L.name}</span><p>${DESC[d.key]||SYS_TXT[d.sys]}</p>${stat}<div class="row2"><button class="btn" id="pickClear">Mostrar todo</button></div>`; $('pickClear').addEventListener('click',()=>{ S.pick=null; applyVisibility(); refresh(); }); }
+// clic en el cuerpo: se prueba contra las piezas visibles (solo al hacer clic, es pesado)
+const ray=new THREE.Raycaster(), mouse=new THREE.Vector2(); let down=null;
+canvas.addEventListener('pointerdown',e=>{ down={ x:e.clientX, y:e.clientY }; $('banner').style.display='none'; if(S.spin){ S.spin=false; chips(); } });
+canvas.addEventListener('pointerup',e=>{ if(!(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)<5)){ down=null; return; } down=null; if(S.view==='person') return;
+  const r=canvas.getBoundingClientRect(); mouse.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1); ray.setFromCamera(mouse,camera);
+  const vis=anatMeshes.filter(m=>m.visible&&m.parent&&m.material.opacity>0.3), hit=ray.intersectObjects(vis,false)[0]; if(hit){ S.pick=hit.object.userData.key; S.focus=null; applyVisibility(); refresh(); } });
+
+function chips(){ document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===S.mode)); $('spin').classList.toggle('on',S.spin); controls.autoRotate=S.spin;
+  $('train').classList.toggle('on',S.trained); $('train').setAttribute('aria-pressed',S.trained); $('statusColor').classList.toggle('on',S.statusColor); $('statusColor').setAttribute('aria-pressed',S.statusColor); }
+document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
+document.querySelectorAll('[data-cam]').forEach(b=>b.addEventListener('click',()=>goCam(b.dataset.cam)));
+$('spin').addEventListener('click',()=>{ S.spin=!S.spin; chips(); }); $('train').addEventListener('click',()=>{ S.trained=!S.trained; chips(); refresh(); if(S.mode==='feel') setMode('feel'); });
+$('statusColor').addEventListener('click',()=>{ S.statusColor=!S.statusColor; chips(); }); $('skinA').addEventListener('input',e=>{ S.skinA=+e.target.value/100; });
+$('day').addEventListener('input',e=>{ S.playing=false; $('play').textContent='▶ Reproducir'; setDay(+e.target.value); });
+$('play').addEventListener('click',()=>{ S.playing=!S.playing; if(S.playing&&S.day>=180) setDay(0); $('play').textContent=S.playing?'❚❚ Pausar':'▶ Reproducir'; });
+$('helpBtn').addEventListener('click',()=>$('modal').classList.add('show')); $('modalX').addEventListener('click',()=>$('modal').classList.remove('show')); $('bannerX').addEventListener('click',()=>$('banner').style.display='none');
+const setDay=d=>{ S.day=d; refresh(); };
+function applyUrl(){ if(Q.has('a')) S.a=clamp(+Q.get('a')|0,0,2); if(Q.has('day')) S.day=clamp(+Q.get('day')|0,0,180); if(Q.has('train')) S.trained=Q.get('train')==='1';
+  if(Q.has('sel')){ const [k,s]=Q.get('sel').split('-'); if(MUSCLES[k]) S.sel={ key:k, side:s==='L'?'L':'R' }; }
+  if(Q.has('layers')){ Object.keys(S.layers).forEach(k=>S.layers[k]=false); Q.get('layers').split(',').forEach(k=>{ if(k in S.layers) S.layers[k]=true; }); }
+  if(['person','cut','anat'].includes(Q.get('view'))) S.view=Q.get('view'); if(SYSTEMS[Q.get('focus')]){ S.focus=Q.get('focus'); if(S.view==='person') S.view='anat'; } if(Q.has('pick')){ S.pick=Q.get('pick'); if(S.view==='person') S.view='anat'; }
+  if(Q.has('skinA')) S.skinA=clamp(+Q.get('skinA'),0,1); if(Q.get('banner')==='0') $('banner').style.display='none'; if(Q.get('status')==='0') S.statusColor=false;
+  if(BASE[Q.get('mode')]) S.mode=Q.get('mode'); if(CAMS[Q.get('cam')]){ const [p,t]=CAMS[Q.get('cam')]; camera.position.set(...p); controls.target.set(...t); } chips(); }
+
+/* =====================================================================
+   6) PANELES
+   ===================================================================== */
+const emgC=$('emg'), grfC=$('grf'), chartC=$('chart');
+function fit(c){ const r=c.getBoundingClientRect(); if(!r.width) return; const d=Math.min(devicePixelRatio,2); c.width=r.width*d; c.height=(c.getAttribute('height')|0)*d; c.getContext('2d').setTransform(d,0,0,d,0,0); c._w=r.width; c._h=c.height/d; }
+function refresh(){ const {key:k,side:sd}=S.sel, m=metricsOf(S.a,k,sd,S.day,S.trained), P=PROFILES[S.a], fr=m.mdf/MUSCLES[k].base, o=overall(S.a,S.day,S.trained), avg=avgStrength(S.a,S.day,S.trained);
+  $('musTitle').textContent=MUSCLES[k].name+' · lado '+SIDE_NAME[sd];
+  $('metrics').innerHTML=[['Fuerza',m.s.toFixed(0)+' %',stS(m.s)],['Igualdad entre piernas',m.sym.toFixed(0)+' %',stY(m.sym)],['Intensidad (RMS)',m.rms.toFixed(0)+' %',0],['Frecuencia mediana',m.mdf.toFixed(0)+' Hz',fr>=.93?0:fr>=.85?1:2]].map(([n,v,st])=>`<div><small>${n}</small><b style="color:${CSS[st]}">${v}</b></div>`).join('');
+  $('people').innerHTML=PROFILES.map((p,i)=>`<button class="person${i===S.a?' on':''}" data-a="${i}"><span class="st" style="background:${CSS[overall(i,S.day,S.trained)]}"></span><div class="av" style="background:${p.color}">${i+1}</div><b>Astronauta 00${i+1}</b><small>${p.label}, ${p.age} años<br>${p.h.toFixed(2)} m · ${p.w} kg</small></button>`).join('');
+  document.querySelectorAll('.person').forEach(el=>el.addEventListener('click',()=>{ S.a=+el.dataset.a; applyAstronaut(); refresh(); }));
+  $('systems').innerHTML=Object.keys(SYSTEMS).map(id=>{ const v=sysValue(id,S.a,S.day,S.trained), st=sysStatus(id,S.a,S.day,S.trained); return `<div class="sysrow${S.focus===id?' on':''}" data-s="${id}"><span class="d" style="background:${CSS[st]}"></span><b>${SYSTEMS[id].name}</b><span class="v" style="color:${CSS[st]}">${v.toFixed(0)} %</span><div class="bar"><span style="width:${v}%;background:${CSS[st]}"></span></div><small>${SYSTEMS[id].desc}</small></div>`; }).join('');
+  document.querySelectorAll('.sysrow').forEach(el=>el.addEventListener('click',()=>{ S.focus=S.focus===el.dataset.s?null:el.dataset.s; S.pick=null; if(S.focus&&S.view==='person') setView('anat'); applyVisibility(); refresh(); }));
+  const el=$('status'); el.className='status '+'gyr'[o]; $('sTitle').textContent=['Todo en orden','Hay que vigilar','Necesita atención médica'][o];
+  const bad=Object.keys(SYSTEMS).filter(id=>sysStatus(id,S.a,S.day,S.trained)>0);
+  $('sText').textContent=`Astronauta 00${S.a+1} (${P.label.toLowerCase()}, ${P.age} años) ${S.day===0?'aún no ha salido de la Tierra':'lleva '+S.day+' días en el espacio'}. Su fuerza media es del ${avg.toFixed(0)} % respecto al inicio${S.trained?', gracias al programa de ejercicio':''}.`;
+  $('sList').innerHTML=bad.length?bad.slice(0,3).map(id=>`<li><b>${SYSTEMS[id].name}:</b> ${SYSTEMS[id].tip}</li>`).join(''):'<li>Puede seguir con su entrenamiento habitual.</li>';
+  $('dayLbl').textContent='Día '+S.day; $('day').value=S.day; $('trainLbl').textContent=S.trained?'Encendido: el deterioro avanza más despacio.':'Apagado.'; infoCard(); drawChart(); }
+const emgBuf=new Array(400).fill(0);
+function pushEmg(act){ const m=metricsOf(S.a,S.sel.key,S.sel.side,S.day,S.trained), amp=(0.05+act)*(m.rms/100), f=m.mdf/12; for(let i=0;i<4;i++){ const n=Math.random()+Math.random()+Math.random()-1.5; emgBuf.push(amp*n*(0.7+0.5*Math.sin(S.t*f*8+i))); emgBuf.shift(); } }
+function drawEmg(){ const c=emgC,x=c.getContext('2d'),w=c._w,h=c._h; if(!w) return; x.clearRect(0,0,w,h); x.strokeStyle='#d5deee'; x.beginPath(); x.moveTo(0,h/2); x.lineTo(w,h/2); x.stroke(); x.strokeStyle='#3b6cf6'; x.lineWidth=1.2; x.beginPath(); emgBuf.forEach((v,i)=>{ const px=i/(emgBuf.length-1)*w, py=h/2-clamp(v,-1,1)*h*0.46; i?x.lineTo(px,py):x.moveTo(px,py); }); x.stroke(); }
+const humpRun=u=>{ u=((u%1)+1)%1; return u<0.38?Math.pow(Math.sin(Math.PI*u/0.38),1.4):0; }, humpWalk=u=>{ u=((u%1)+1)%1; if(u>=0.6) return 0; const v=u/0.6; return Math.pow(Math.sin(Math.PI*v),0.5)*(0.85-0.25*Math.cos(2*Math.PI*(v-0.5))); };
+const moving=()=>S.mode==='run'||S.mode==='walk', grfAt=(p,off,sc)=>S.mode==='run'?humpRun(p-off)*2.5*sc:S.mode==='walk'?humpWalk(p-off)*1.2*sc:(S.mode==='float'?0:0.5*sc), avgSide=s=>{ let t=0,n=0; for(const k in MUSCLES){ t+=strengthOf(S.a,k,s,S.day,S.trained); n++; } return t/n; };
+let phase=0;
+function drawGrf(){ const c=grfC,x=c.getContext('2d'),w=c._w,h=c._h; if(!w) return; x.clearRect(0,0,w,h); const sL=avgSide('L')/100, sR=avgSide('R')/100; x.strokeStyle='#e1e7f1'; for(let i=1;i<4;i++){ x.beginPath(); x.moveTo(0,h*i/4); x.lineTo(w,h*i/4); x.stroke(); }
+  [['#3b6cf6',0,sL],['#9333ea',.5,sR]].forEach(([col,off,sc])=>{ x.strokeStyle=col; x.lineWidth=1.8; x.beginPath(); for(let i=0;i<=120;i++){ const p=i/120, py=h-4-(grfAt(p,off,sc)/3)*(h-10); i?x.lineTo(p*w,py):x.moveTo(p*w,py); } x.stroke(); });
+  if(moving()){ const px=(((phase%1)+1)%1)*w; x.strokeStyle='#16233b'; x.lineWidth=1; x.beginPath(); x.moveTo(px,0); x.lineTo(px,h); x.stroke(); } x.font='11px system-ui'; x.fillStyle='#3b6cf6'; x.fillText('pierna izquierda',6,12); x.fillStyle='#9333ea'; x.fillText('pierna derecha',w-84,12); }
+const ACOL=['#3b6cf6','#ea7a2a','#9333ea'];
+function drawChart(){ const c=chartC,x=c.getContext('2d'),w=c._w,h=c._h,L=32,B=18,T=8,R=8; if(!w) return; x.clearRect(0,0,w,h); x.font='11px system-ui'; x.fillStyle='#5f6f89'; x.strokeStyle='#e1e7f1'; x.lineWidth=1;
+  const X=d=>L+d/180*(w-L-R), Y=v=>T+(100-v)/60*(h-T-B); [100,90,75,60,40].forEach(v=>{ x.beginPath(); x.moveTo(L,Y(v)); x.lineTo(w-R,Y(v)); x.stroke(); x.fillText(v,4,Y(v)+4); });
+  x.setLineDash([4,4]); x.strokeStyle=CSS[1]; x.beginPath(); x.moveTo(L,Y(90)); x.lineTo(w-R,Y(90)); x.stroke(); x.strokeStyle=CSS[2]; x.beginPath(); x.moveTo(L,Y(75)); x.lineTo(w-R,Y(75)); x.stroke(); x.setLineDash([]); [0,60,120,180].forEach(d=>x.fillText('día '+d,X(d)-14,h-4));
+  for(let a=0;a<3;a++){ x.strokeStyle=ACOL[a]; x.lineWidth=a===S.a?2.8:1.3; x.globalAlpha=a===S.a?1:.45; x.beginPath(); for(let d=0;d<=180;d+=3){ const v=strengthOf(a,S.sel.key,S.sel.side,d,S.trained); d?x.lineTo(X(d),Y(v)):x.moveTo(X(d),Y(v)); } x.stroke(); }
+  x.globalAlpha=1; x.strokeStyle='#16233b'; x.beginPath(); x.moveTo(X(S.day),T); x.lineTo(X(S.day),h-B); x.stroke(); const v=strengthOf(S.a,S.sel.key,S.sel.side,S.day,S.trained); x.fillStyle=ACOL[S.a]; x.beginPath(); x.arc(X(S.day),Y(v),5,0,7); x.fill();
+  $('chartLbl').innerHTML=MUSCLES[S.sel.key].short+' '+SIDE_NAME[S.sel.side]+' · '+['Astronauta 001','002','003'].map((n,i)=>`<span style="color:${ACOL[i]};font-weight:700">● ${n}</span>`).join(' &nbsp;'); }
+chartC.addEventListener('pointerdown',e=>{ const r=chartC.getBoundingClientRect(); setDay(Math.round(clamp((e.clientX-r.left-32)/(r.width-40),0,1)*180)); });
+
+/* =====================================================================
+   7) BUCLE
+   ===================================================================== */
+function resize(){ const r=cv.getBoundingClientRect(); if(!r.width) return; renderer.setSize(r.width,r.height,false); camera.aspect=r.width/r.height; camera.updateProjectionMatrix(); fit(emgC); fit(grfC); fit(chartC); drawChart();
+  if(ready) renderer.render(scene,camera); }   // setSize borra el lienzo: se vuelve a dibujar al instante para que no parpadee en blanco
+addEventListener('resize',resize); new ResizeObserver(resize).observe(cv); document.querySelector('details.exp').addEventListener('toggle',resize);
+function activation(key,side,p){ const amp=({ run:1, walk:.55, idle:.1, float:.05, feel:.1 })[S.mode]??.1, off=side==='L'?0:.5, hump=x=>Math.max(0,Math.sin(2*Math.PI*x));
+  if(S.mode==='squat') return { quad:.3+.7*load_, glute:.3+.7*load_, back:.5, gastro:.3 }[key]; if(S.mode==='calf') return { gastro:.25+.75*load_, quad:.12, glute:.1, back:.25 }[key];
+  const pat={ quad:.3+.7*hump(p-off), gastro:.3+.7*hump(p-off+.25), glute:.3+.7*hump(p-off+.1), back:.55+.15*Math.sin(4*Math.PI*p) }[key]; return clamp(amp*pat+(moving()?0:.04),0,1); }
+// opacidad por capa según lo que haya por debajo: así cada capa se distingue y las de adentro se ven
+const layerOp=sys=>{ const L=S.layers; if(sys==='muscles') return (L.skeleton||L.organs||L.vessels||L.nerves)?0.4:0.96; if(sys==='organs') return L.skeleton?0.85:0.97; return 0.97; };
+const PILL_OFF={ quad:[105,10], gastro:[105,0], glute:[120,-28], back:[115,-60] };
+let ready=false, load_=0, last=performance.now(), dayAcc=0, speedFactor=1, ty=0.92, outfitA=1, smile=0, nFrames=0; const maxFrames=Q.has('frames')?+Q.get('frames'):Infinity, tmp=new THREE.Color(), v1=new THREE.Vector3(), scr=new THREE.Vector3(), lab={ quad:'Muslo', gastro:'Pantorrilla', glute:'Glúteo', back:'Espalda' };
+function frame(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now; S.t+=dt;
+  if(S.playing){ dayAcc+=dt*14; if(dayAcc>=1){ const n=Math.floor(dayAcc); dayAcc-=n; setDay(Math.min(180,S.day+n)); if(S.day>=180){ S.playing=false; $('play').textContent='▶ Reproducir'; } } }
+  const P=PROFILES[S.a], ch=activeCh(), fl=S.mode==='float', mv=moving(), vmax=(STANCE[P.sex][S.mode]||0)*P.scale;   // velocidad real del pie × estatura
+  speedFactor+=((0.55+0.45*avgStrength(S.a,S.day,S.trained)/100)-speedFactor)*(1-Math.exp(-4*dt)); cv.classList.toggle('space',fl); earth.visible=stars.visible=fl; treadmill.visible=!fl;
+  if(ch){ ch.root.scale.setScalar(P.scale); const root=ch.root, k=1-Math.exp(-3*dt), t=S.t;
+    root.position.y+=((fl?0.5+0.06*Math.sin(t*0.8):0)-root.position.y)*k; root.rotation.x+=((fl?0.14*Math.sin(t*0.37):0)-root.rotation.x)*k; root.rotation.z+=((fl?0.18*Math.sin(t*0.45):0)-root.rotation.z)*k; root.rotation.y+=((fl?0.8*Math.sin(t*0.25):0)-root.rotation.y)*k;
+    const cur=ch.cur; if(cur) cur.setEffectiveTimeScale(fl?0.35:(mv?speedFactor:1)); ch.mixer.update(dt);
+    phase=cur?cur.time/cur.getClip().duration:S.t*0.4; load_=S.mode==='squat'||S.mode==='calf'?0.5-0.5*Math.cos(2*Math.PI*(cur?cur.time:0)/(cur?cur.getClip().duration:1)):0;
+    // persona: opaca en «Persona» y «Corte»; en «Anatomía» se vuelve un contorno translúcido (o desaparece si la capa está apagada)
+    const target=S.view==='anat'?(S.layers.skin?S.skinA:0):1; outfitA+=(target-outfitA)*(1-Math.exp(-6*dt));
+    ch.mats.forEach(m=>{ const o=m.userData.orig, tr=o.transparent||outfitA<0.995; if(m.transparent!==tr){ m.transparent=tr; m.needsUpdate=true; } m.opacity=o.opacity*outfitA; m.depthWrite=outfitA>0.99?o.depthWrite:false; });
+    ch.smeshes.forEach(o=>{ o.visible=!o.userData.keepHidden&&outfitA>0.01; });
+    const st=overall(S.a,S.day,S.trained); smile+=((st===0?0.9:st===1?0.25:0)-smile)*(1-Math.exp(-3*dt)); (ch.faces||[]).forEach(o=>{ o.morphTargetInfluences[o.morphTargetDictionary.mouthSmile]=smile; });
+    const dTy=((fl?1.2:0.92)-ty)*k; ty+=dTy; controls.target.y+=dTy; camera.position.y+=dTy; }
+  beltTex.offset.y-=(mv?vmax*speedFactor:0)*dt/(3.6/5); stars.rotation.y+=dt*0.006;
+  if(ct.on){ ct.t=Math.min(1,ct.t+dt/0.9); const e=1-Math.pow(1-ct.t,3); camera.position.lerpVectors(ct.p0,ct.p1,e); controls.target.lerpVectors(ct.a0,ct.a1,e); if(ct.t>=1) ct.on=false; }
+  controls.update();
+  if(ch){ const sex=P.sex, acts={}, inside=S.view!=='person', w=cv.clientWidth, h=cv.clientHeight, sysSt={}, cs=1-Math.exp(-5*dt); Object.keys(SYSTEMS).forEach(id=>{ sysSt[id]=sysStatus(id,S.a,S.day,S.trained); });
+    Object.values(monitors).forEach(mo=>{ const key=mo.key, side=mo.side; mo.act+=(activation(key,side,phase)-mo.act)*(1-Math.exp(-10*dt)); acts[key+side]=mo.act;
+      const show=inside&&mo.sex===sex&&side==='R'&&(S.layers.muscles||S.focus==='muscular')&&!S.pick; mo.el.style.display=show?'flex':'none'; if(!show) return;
+      ch.bones[mo.bone].localToWorld(v1.copy(mo.local)); scr.copy(v1).project(camera); const off=PILL_OFF[key];   // las etiquetas se separan hacia un lado para que no se amontonen
+      mo.el.style.transform=`translate(${(scr.x*0.5+0.5)*w+off[0]}px,${(-scr.y*0.5+0.5)*h+off[1]}px) translate(-50%,-50%)`;
+      const m=metricsOf(S.a,key,side,S.day,S.trained); mo.el.querySelector('i').style.background=CSS[m.status]; mo.el.style.borderColor=CSS[m.status]; mo.el.lastChild.textContent=lab[key]+' '+m.s.toFixed(0)+' %'; mo.el.classList.toggle('sel',key===S.sel.key&&side===S.sel.side); });
+    anatMeshes.forEach(m=>{ if(!m.visible) return; const u=m.userData; let col=u.base, op=layerOp(u.sys), em=.1, pulse=0;
+      if(u.mon){ const st=metricsOf(S.a,u.mon.key,u.mon.side,S.day,S.trained).status, a=acts[u.mon.key+u.mon.side]||0, sel=u.mon.key===S.sel.key&&u.mon.side===S.sel.side; if(S.statusColor){ tmp.setHex(COLORS[st]); col=tmp; } em=.1+.3*a+(st===2&&S.statusColor?.1*Math.sin(S.t*6):0)+(sel?.15:0); pulse=.006*a+(sel?.001:0); }
+      if(S.focus){ if(u.hsys===S.focus){ tmp.setHex(COLORS[sysSt[S.focus]]); col=tmp; op=Math.max(op,.95); em=.3+.15*Math.sin(S.t*4); } else op*=.16; }
+      if(S.pick){ if(u.key===S.pick){ tmp.set(0x5b8cff).lerp(u.base,0.35); col=tmp; op=1; em=.35+.15*Math.sin(S.t*5); pulse=.0015; } else op*=.1; }
+      u.cur.lerp(col,cs); u.op+=(op-u.op)*cs; const mt=m.material; mt.color.copy(u.cur); mt.emissive.copy(u.cur); mt.emissiveIntensity=em; mt.opacity=u.op; const tr=u.op<0.98; if(mt.transparent!==tr){ mt.transparent=tr; mt.needsUpdate=true; } mt.depthWrite=u.op>0.85; mt.userData.uPulse.value=pulse; }); }
+  $('spd').textContent=(mv?vmax*speedFactor:0).toFixed(1)+' m/s'; $('cad').textContent=(ch&&ch.cur&&mv)?Math.round((2/ch.cur.getClip().duration)*60*speedFactor):0;
+  const selM=monitors[P.sex+S.sel.key+S.sel.side]; pushEmg(selM?selM.act:0); if(emgC._w){ drawEmg(); drawGrf(); }
+  renderer.render(scene,camera);
+  if(Q.has('dbg')&&nFrames===40){ const gl=renderer.getContext(); console.info('[DBG] llamadas='+renderer.info.render.calls+' triangulos='+renderer.info.render.triangles+' contextoPerdido='+gl.isContextLost()+' errorGL='+gl.getError()+' canvas='+canvas.width+'x'+canvas.height+' cam='+camera.position.toArray().map(v=>v.toFixed(2))+' char='+(ch?ch.root.visible+'/'+ch.root.scale.x+'/'+ch.root.position.y.toFixed(2):'sin ch')); }
+  if(ready) nFrames++; if(nFrames<maxFrames) requestAnimationFrame(frame); }   // el límite ?frames=N solo cuenta cuando ya cargó todo (sirve para pruebas)
+resize(); requestAnimationFrame(frame);
+</script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!--
+  JsCalculos.html — Cálculos y formatos compartidos (sin nada visual).
+    Calc.imc(peso, tallaCm)            → número o null
+    Calc.categoriaImc(imc)             → { nombre, nivel, desde, hasta }   (tabla del documento ASTRA-FIT)
+    Calc.pesoActual(astronauta)        → { valor, fecha, fuente }  el más reciente entre perfil y seguimiento
+    Calc.ultimo(tabla, id, campo)      → { valor, fecha } última fila con dato
+    Calc.relativo(fecha) / Calc.fechaCorta(fecha) / Calc.numero(x, decimales) / Calc.decimal(x, decimales)
+    Calc.ENTORNOS                      → datos de órbita, Luna y Marte (con fuentes)
+  Usa Sesion.datos (lo carga SeccionAcceso.html).
+-->
+<script>
+const Calc = (() => {
+  /* ---------------- IMC: clasificación del documento ASTRA-FIT (OMS) ---------------- */
+  const IMC_CATEGORIAS = [
+    { nombre: 'Bajo peso', desde: 0, hasta: 18.5, nivel: 'amarillo' },
+    { nombre: 'Peso normal', desde: 18.5, hasta: 25, nivel: 'verde' },
+    { nombre: 'Sobrepeso', desde: 25, hasta: 30, nivel: 'amarillo' },
+    { nombre: 'Obesidad grado I', desde: 30, hasta: 35, nivel: 'rojo' },
+    { nombre: 'Obesidad grado II', desde: 35, hasta: 40, nivel: 'rojo' },
+    { nombre: 'Obesidad grado III', desde: 40, hasta: Infinity, nivel: 'rojo' }
+  ];
+  function imc(peso, tallaCm) {
+    const p = Number(peso), t = Number(tallaCm) / 100;
+    if (!p || !t) return null;
+    return p / (t * t);
+  }
+  const categoriaImc = (v) => (v == null ? null : IMC_CATEGORIAS.find((c) => v >= c.desde && v < c.hasta));
+
+  /* ---------------- Fechas ---------------- */
+  // Acepta 'yyyy-mm-dd' o 'yyyy-mm-dd HH:mm' y lo lee como hora local
+  function fecha(texto) {
+    if (!texto) return null;
+    const [d, h = '00:00'] = String(texto).split(' ');
+    const [y, m, dd] = d.split('-').map(Number);
+    const [hh, mi] = h.split(':').map(Number);
+    const f = new Date(y, m - 1, dd, hh || 0, mi || 0);
+    return isNaN(f) ? null : f;
+  }
+  function diasDesde(texto, hoy = new Date()) {
+    const f = fecha(texto);
+    if (!f) return null;
+    const a = new Date(f.getFullYear(), f.getMonth(), f.getDate());
+    const b = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    return Math.round((b - a) / 864e5);
+  }
+  function relativo(texto) {
+    const d = diasDesde(texto);
+    if (d === null) return 'Sin registro';
+    if (d <= 0) return 'Hoy';
+    if (d === 1) return 'Ayer';
+    if (d < 14) return `Hace ${d} días`;
+    if (d < 60) return `Hace ${Math.round(d / 7)} semanas`;
+    return `Hace ${Math.round(d / 30)} meses`;
+  }
+  const fmtFecha = new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+  const fechaCorta = (texto) => { const f = fecha(texto); return f ? fmtFecha.format(f).replace('.', '') : '—'; };
+
+  /* ---------------- Números ---------------- */
+  const numero = (x, dec = 1) => (x == null || isNaN(x) ? '—' : new Intl.NumberFormat('es-CO', { maximumFractionDigits: dec, minimumFractionDigits: 0 }).format(x));
+  // Siempre con los decimales pedidos (IMC 24,0 y no 24)
+  const decimal = (x, dec = 1) => (x == null || isNaN(x) ? '—' : new Intl.NumberFormat('es-CO', { maximumFractionDigits: dec, minimumFractionDigits: dec }).format(x));
+
+  /* ---------------- Datos del astronauta ---------------- */
+  function ultimo(tabla, id, campo) {
+    const filas = ((Sesion.datos && Sesion.datos[tabla]) || [])
+      .filter((r) => r.id_astronauta === id && r[campo] !== null && r[campo] !== '' && r[campo] !== undefined)
+      .sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+    const f = filas[filas.length - 1];
+    return f ? { valor: Number(f[campo]), fecha: f.fecha, fila: f } : null;
+  }
+  // El peso más reciente: el del perfil o el del seguimiento diario (masa corporal), el que sea más nuevo
+  function pesoActual(a) {
+    const perfil = { valor: Number(a.peso_kg), fecha: a.peso_actualizado_en || a.registrado_en, fuente: 'perfil' };
+    const seg = ultimo('Seguimiento', a.id_astronauta, 'masa_kg');
+    // Se compara fecha y hora: si el peso se editó en el perfil después de la medición del día, gana el perfil
+    const momentoSeg = seg ? String(seg.fila.registrado_en || seg.fecha + ' 00:00') : '';
+    if (seg && (!perfil.fecha || momentoSeg >= String(perfil.fecha))) return { valor: seg.valor, fecha: seg.fecha, fuente: 'seguimiento' };
+    return perfil;
+  }
+
+  /* ---------------- Emojis de perfil (los dibuja el sistema: en Mac y iPhone se ven los de Apple) ---------------- */
+  const BASES = { persona: 0x1F9D1, mujer: 0x1F469, hombre: 0x1F468 };
+  const TONOS = [null, 0x1F3FB, 0x1F3FC, 0x1F3FD, 0x1F3FE, 0x1F3FF];
+  const NOMBRE_TONO = ['tono predeterminado', 'tono claro', 'tono claro medio', 'tono medio', 'tono oscuro medio', 'tono oscuro'];
+  const astronautaEmoji = (base, tono) => String.fromCodePoint(...[base, tono].filter(Boolean)) + '‍\u{1F680}';
+  const EMOJIS = Object.entries(BASES).flatMap(([nombre, base]) =>
+    TONOS.map((t, i) => ({ valor: astronautaEmoji(base, t), etiqueta: `Astronauta ${nombre === 'persona' ? '' : nombre + ', '}${NOMBRE_TONO[i]}`.replace('  ', ' ') })));
+  const emojiPorDefecto = (sexo) => astronautaEmoji(sexo === 'F' ? BASES.mujer : sexo === 'M' ? BASES.hombre : BASES.persona, null);
+
+  /* ---------------- Entornos de misión ----------------
+     Fuentes: NASA (Space Station facts and figures, Moon/Mars fact sheets), Agencia Espacial Canadiense,
+     The Planetary Society. Valores redondeados para mostrar.                                            */
+  const ENTORNOS = {
+    orbita: {
+      nombre: 'Estación en órbita baja', enFrase: 'la estación en órbita baja', corto: 'Órbita',
+      gravedad: { g: 0, texto: '≈ 0 g', detalle: 'Microgravedad: caída libre continua alrededor de la Tierra' },
+      temperatura: { min: -157, max: 121, detalle: '121 °C al sol y −157 °C a la sombra' },
+      cabina: 22,
+      dia: { cifra: '90', unidad: 'min', detalle: 'Una vuelta a la Tierra: 16 amaneceres y atardeceres al día' },
+      musculo: 'Sin carga sobre el cuerpo, piernas y espalda casi no trabajan. El ejercicio diario es la principal defensa.'
+    },
+    luna: {
+      nombre: 'Base lunar', enFrase: 'la base lunar', corto: 'Luna',
+      gravedad: { g: 0.165, texto: '0,17 g', detalle: '1,62 m/s², cerca de un sexto de la gravedad terrestre' },
+      temperatura: { min: -173, max: 127, detalle: '127 °C de día y −173 °C de noche' },
+      cabina: 22,
+      dia: { cifra: '29,5', unidad: 'días', detalle: 'De un amanecer al siguiente: unas dos semanas de luz y dos de noche' },
+      musculo: 'Con un sexto de la gravedad terrestre, los músculos siguen trabajando mucho menos que en casa.'
+    },
+    marte: {
+      nombre: 'Base en Marte', enFrase: 'la base en Marte', corto: 'Marte',
+      gravedad: { g: 0.38, texto: '0,38 g', detalle: '3,71 m/s², el 38 % de la gravedad terrestre' },
+      temperatura: { min: -153, max: 20, detalle: 'De −153 °C a 20 °C; promedio cercano a −63 °C' },
+      cabina: 22,
+      dia: { cifra: '24 h 39', unidad: 'min', detalle: 'Un sol (día marciano), apenas 39 minutos más largo que en la Tierra' },
+      musculo: 'Con el 38 % de la gravedad terrestre, la carga sobre piernas y espalda baja a menos de la mitad.'
+    }
+  };
+
+  return { imc, categoriaImc, IMC_CATEGORIAS, fecha, diasDesde, relativo, fechaCorta, numero, decimal, ultimo, pesoActual, EMOJIS, emojiPorDefecto, ENTORNOS };
+})();
+</script>

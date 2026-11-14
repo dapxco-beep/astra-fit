@@ -1,0 +1,218 @@
+<!-- SeccionRegistro.html — Formularios que guardan en el Sheet.  Fondo: gris.  Responsable: Dashboard
+     Dos formularios: evaluación (sesión de ejercicio + EMG) y seguimiento diario.
+     Al guardar, el motor de alertas (JsAlertas.html) compara con la basal y guarda las alertas que correspondan.
+     Avisa al resto de la página con el evento "datos-actualizados". -->
+<section class="seccion seccion--gris" id="registro">
+  <div class="contenedor">
+    <div class="seccion-cabecera">
+      <h2 class="titulo">Registra una evaluación.</h2>
+      <p class="subtitulo">Lo que guardes aquí queda en la base de datos y actualiza el estado del astronauta.</p>
+      <div class="segmentado" data-segmentado id="ctl-registro" role="group" aria-label="Tipo de registro">
+        <button type="button" data-valor="sesion" aria-pressed="true">Evaluación</button>
+        <button type="button" data-valor="seguimiento" aria-pressed="false">Seguimiento diario</button>
+      </div>
+    </div>
+
+    <!-- ---------- Evaluación: una sesión de ejercicio ---------- -->
+    <form class="tarjeta formulario" id="form-sesion" novalidate>
+      <h3 class="titulo-tarjeta">Sesión de ejercicio</h3>
+      <div class="formulario-filas">
+        <div class="campo" data-campo="fecha"><label for="r-fecha">Fecha</label><input id="r-fecha" name="fecha" type="date"><span class="error" hidden></span></div>
+        <div class="campo" data-campo="ejercicio"><label for="r-ejercicio">Ejercicio</label><select id="r-ejercicio" name="ejercicio"></select><span class="error" hidden></span></div>
+        <div class="campo" data-campo="fase"><label for="r-fase">Fase</label><select id="r-fase" name="fase"></select><span class="error" hidden></span></div>
+        <div class="campo" data-campo="carga_kg"><label for="r-carga">Carga <span class="texto-2">(kg)</span></label><input id="r-carga" name="carga_kg" type="text" inputmode="decimal" autocomplete="off"><span class="error" hidden></span></div>
+        <div class="campo" data-campo="repeticiones"><label for="r-reps">Repeticiones</label><input id="r-reps" name="repeticiones" type="text" inputmode="numeric" autocomplete="off"><span class="error" hidden></span></div>
+        <div class="campo" data-campo="fuerza_pico_n"><label for="r-fuerza">Fuerza pico <span class="texto-2">(N)</span></label><input id="r-fuerza" name="fuerza_pico_n" type="text" inputmode="decimal" autocomplete="off"><span class="error" hidden></span></div>
+        <div class="campo" data-campo="velocidad_media_ms"><label for="r-vel">Velocidad media <span class="texto-2">(m/s)</span></label><input id="r-vel" name="velocidad_media_ms" type="text" inputmode="decimal" autocomplete="off"><span class="error" hidden></span></div>
+        <div class="campo" data-campo="rom_grados"><label for="r-rom">Rango de movimiento <span class="texto-2">(grados)</span></label><input id="r-rom" name="rom_grados" type="text" inputmode="decimal" autocomplete="off"><span class="error" hidden></span></div>
+        <div class="campo" data-campo="simetria_pct"><label for="r-sim">Simetría <span class="texto-2">(%)</span></label><input id="r-sim" name="simetria_pct" type="text" inputmode="decimal" autocomplete="off"><span class="ayuda">100 % significa que los dos lados trabajan igual.</span><span class="error" hidden></span></div>
+        <div class="campo" data-campo="rpe"><label for="r-rpe">Esfuerzo percibido <span class="texto-2">(1 a 10)</span></label><input id="r-rpe" name="rpe" type="text" inputmode="numeric" autocomplete="off"><span class="error" hidden></span></div>
+      </div>
+      <div>
+        <h3 class="titulo-tarjeta">Electromiografía</h3>
+        <p class="pequeno texto-2" style="margin-top: var(--e-1)">Amplitud (RMS) y frecuencia mediana de cada lado. Si no mediste un grupo, deja sus campos vacíos.</p>
+      </div>
+      <div id="r-emg" class="pila" style="gap: var(--e-5)"></div>
+      <div class="campo" data-campo="notas"><label for="r-notas">Notas <span class="texto-2">(opcional)</span></label><input id="r-notas" name="notas" type="text" autocomplete="off"><span class="error" hidden></span></div>
+      <div><button class="boton" type="submit" id="r-guardar-sesion">Guardar evaluación</button></div>
+    </form>
+
+    <!-- ---------- Seguimiento diario ---------- -->
+    <form class="tarjeta formulario" id="form-seguimiento" novalidate hidden>
+      <h3 class="titulo-tarjeta">Seguimiento diario</h3>
+      <div class="formulario-filas">
+        <div class="campo" data-campo="fecha"><label for="g-fecha">Fecha</label><input id="g-fecha" name="fecha" type="date"><span class="error" hidden></span></div>
+        <div class="campo" data-campo="fase"><label for="g-fase">Fase</label><select id="g-fase" name="fase"></select><span class="error" hidden></span></div>
+        <div class="campo" data-campo="agarre_kg"><label for="g-agarre">Fuerza de agarre <span class="texto-2">(kg)</span></label><input id="g-agarre" name="agarre_kg" type="text" inputmode="decimal" autocomplete="off"><span class="ayuda">Mejor de 3 intentos, mano dominante.</span><span class="error" hidden></span></div>
+        <div class="campo" data-campo="pantorrilla_cm"><label for="g-pant">Circunferencia de pantorrilla <span class="texto-2">(cm)</span></label><input id="g-pant" name="pantorrilla_cm" type="text" inputmode="decimal" autocomplete="off"><span class="error" hidden></span></div>
+        <div class="campo" data-campo="muslo_cm"><label for="g-muslo">Circunferencia de muslo <span class="texto-2">(cm)</span></label><input id="g-muslo" name="muslo_cm" type="text" inputmode="decimal" autocomplete="off"><span class="error" hidden></span></div>
+        <div class="campo" data-campo="masa_kg"><label for="g-masa">Masa corporal <span class="texto-2">(kg)</span></label><input id="g-masa" name="masa_kg" type="text" inputmode="decimal" autocomplete="off"><span class="error" hidden></span></div>
+        <div class="campo" data-campo="dolor_lumbar"><label for="g-dolor">Dolor lumbar <span class="texto-2">(0 a 10)</span></label><input id="g-dolor" name="dolor_lumbar" type="text" inputmode="numeric" autocomplete="off"><span class="error" hidden></span></div>
+      </div>
+      <p class="nota">Llena solo lo que mediste hoy. Los campos vacíos no se comparan con la basal.</p>
+      <div><button class="boton" type="submit" id="r-guardar-seguimiento">Guardar seguimiento</button></div>
+    </form>
+  </div>
+</section>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const formSesion = $('form-sesion'), formSeg = $('form-seguimiento');
+
+  // Qué grupos musculares se miden con cada ejercicio, y el código corto que lleva el id de la sesión
+  const GRUPOS_EJERCICIO = { sentadilla: ['cuadriceps', 'gluteo_mayor'], peso_muerto: ['erectores_espinales'], elevacion_talones: ['gastrocnemio_soleo'], remo_sentado: ['dorsal_ancho'] };
+  const CODIGO = { sentadilla: 'SENT', peso_muerto: 'PMUE', elevacion_talones: 'TALO', remo_sentado: 'REMO' };
+  const LADOS = [['izquierdo', 'izquierdo'], ['derecho', 'derecho']];
+
+  const pad = (n) => String(n).padStart(2, '0');
+  const hoy = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+  const catalogo = (lista) => Sesion.datos.Catalogos.filter((c) => c.lista === lista);
+  const opciones = (items, elegido) => items.map((c) => `<option value="${UI.esc(c.valor)}"${c.valor === elegido ? ' selected' : ''}>${UI.esc(c.etiqueta || c.valor)}</option>`).join('');
+  const etiqueta = (lista, valor) => { const c = catalogo(lista).find((x) => x.valor === valor); return c ? c.etiqueta : valor; };
+  const dias = (desde, hasta) => Math.floor((Date.parse(hasta) - Date.parse(desde)) / 864e5);
+
+  /* ---------------- Errores bajo cada campo ---------------- */
+  function limpiar(form) { form.querySelectorAll('.campo[data-error]').forEach((c) => { c.removeAttribute('data-error'); const e = c.querySelector('.error'); if (e) e.hidden = true; }); }
+  function marcar(form, campo, texto) {
+    const c = form.querySelector(`[data-campo="${campo}"]`); if (!c) return;
+    c.setAttribute('data-error', ''); const e = c.querySelector('.error'); e.textContent = texto; e.hidden = false;
+  }
+  [formSesion, formSeg].forEach((f) => f.addEventListener('input', (e) => {
+    const c = e.target.closest('.campo[data-error]'); if (c) { c.removeAttribute('data-error'); c.querySelector('.error').hidden = true; }
+  }));
+
+  /** Lee un número del campo. Devuelve null si está vacío, NaN si no es un número. Acepta coma decimal. */
+  function leer(form, nombre) {
+    const t = String(form.elements[nombre].value).trim();
+    return t === '' ? null : Number(t.replace(',', '.'));
+  }
+  /** Valida un número contra su rango. Devuelve el valor, o undefined si hay error (ya marcado). */
+  function numero(form, nombre, min, max, { requerido = false, entero = false } = {}) {
+    const v = leer(form, nombre);
+    if (v === null) { if (requerido) { marcar(form, nombre, 'Escribe un valor.'); return undefined; } return null; }
+    if (!Number.isFinite(v) || v < min || v > max || (entero && !Number.isInteger(v))) { marcar(form, nombre, `Debe estar entre ${String(min).replace('.', ',')} y ${String(max).replace('.', ',')}.`); return undefined; }
+    return v;
+  }
+
+  /* ---------------- EMG: una fila por grupo y lado, según el ejercicio ---------------- */
+  function dibujarEmg() {
+    const grupos = GRUPOS_EJERCICIO[formSesion.elements.ejercicio.value] || [];
+    $('r-emg').innerHTML = grupos.map((g) => `
+      <div class="pila">
+        <p class="texto" style="font-weight:600">${UI.esc(etiqueta('grupo_muscular', g))}</p>
+        <div class="formulario-filas">
+          ${LADOS.map(([lado, texto]) => `
+            <div class="campo" data-campo="emg_${g}_rms_${lado}"><label for="r-${g}-rms-${lado}">RMS ${texto} <span class="texto-2">(µV)</span></label><input id="r-${g}-rms-${lado}" name="emg_${g}_rms_${lado}" type="text" inputmode="decimal" autocomplete="off"><span class="error" hidden></span></div>
+            <div class="campo" data-campo="emg_${g}_frec_${lado}"><label for="r-${g}-frec-${lado}">Frecuencia mediana ${texto} <span class="texto-2">(Hz)</span></label><input id="r-${g}-frec-${lado}" name="emg_${g}_frec_${lado}" type="text" inputmode="decimal" autocomplete="off"><span class="error" hidden></span></div>`).join('')}
+        </div>
+      </div>`).join('');
+  }
+  formSesion.elements.ejercicio.addEventListener('change', dibujarEmg);
+
+  /* ---------------- Preparar los formularios al elegir astronauta ---------------- */
+  function preparar() {
+    const ejercicios = catalogo('ejercicio'), fases = catalogo('fase');
+    formSesion.elements.ejercicio.innerHTML = opciones(ejercicios);
+    formSesion.elements.fase.innerHTML = opciones(fases, 'mision');
+    formSeg.elements.fase.innerHTML = opciones(fases, 'mision');
+    formSesion.elements.fecha.value = formSeg.elements.fecha.value = hoy();
+    dibujarEmg();
+  }
+  document.addEventListener('astronauta-elegido', () => { formSesion.reset(); formSeg.reset(); limpiar(formSesion); limpiar(formSeg); preparar(); });
+
+  $('ctl-registro').addEventListener('cambio', (e) => {
+    formSesion.hidden = e.detail !== 'sesion';
+    formSeg.hidden = e.detail !== 'seguimiento';
+  });
+
+  /* ---------------- Guardar alertas y avisar al resto de la página ---------------- */
+  async function publicarAlertas(lista) {
+    if (!lista.length) return [];
+    const res = await API.guardarAlertas(lista);
+    res.alertas.forEach((a) => Sesion.datos.Alertas.push(a));
+    return res.alertas;
+  }
+  function textoAlertas(n) { return n === 1 ? 'Se generó 1 alerta.' : `Se generaron ${n} alertas.`; }
+
+  /* ---------------- Evaluación ---------------- */
+  formSesion.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    limpiar(formSesion);
+    const a = Sesion.astronauta; if (!a) return;
+    const f = formSesion, ejercicio = f.elements.ejercicio.value, fecha = f.elements.fecha.value;
+    let valido = true;
+    if (!fecha) { marcar(f, 'fecha', 'Elige la fecha.'); valido = false; }
+    const v = {
+      carga_kg: numero(f, 'carga_kg', 0, 300), repeticiones: numero(f, 'repeticiones', 1, 50, { entero: true }),
+      fuerza_pico_n: numero(f, 'fuerza_pico_n', 100, 5000, { requerido: true }), velocidad_media_ms: numero(f, 'velocidad_media_ms', 0.1, 3, { requerido: true }),
+      rom_grados: numero(f, 'rom_grados', 20, 180), simetria_pct: numero(f, 'simetria_pct', 50, 100, { requerido: true }), rpe: numero(f, 'rpe', 1, 10, { entero: true })
+    };
+    if (Object.values(v).includes(undefined)) valido = false;
+
+    const idSesion = `SES-${String(a.id_astronauta).replace('-', '')}-${fecha.replace(/-/g, '')}-${CODIGO[ejercicio] || 'EJER'}`;
+    if (fecha && Sesion.datos.Sesiones.some((s) => s.id_sesion === idSesion)) { marcar(f, 'fecha', 'Ya hay una sesión de este ejercicio en esa fecha.'); valido = false; }
+
+    const emg = [];
+    (GRUPOS_EJERCICIO[ejercicio] || []).forEach((g) => LADOS.forEach(([lado]) => {
+      const rms = numero(f, `emg_${g}_rms_${lado}`, 10, 2000), frec = numero(f, `emg_${g}_frec_${lado}`, 20, 200);
+      if (rms === undefined || frec === undefined) { valido = false; return; }
+      if (rms === null && frec === null) return;
+      if (rms === null) { marcar(f, `emg_${g}_rms_${lado}`, 'Escribe un valor o deja ambos vacíos.'); valido = false; return; }
+      if (frec === null) { marcar(f, `emg_${g}_frec_${lado}`, 'Escribe un valor o deja ambos vacíos.'); valido = false; return; }
+      emg.push({ id_sesion: idSesion, id_astronauta: a.id_astronauta, grupo_muscular: g, lado, rms_uv: rms, frec_mediana_hz: frec, amplitud_pico_uv: null });
+    }));
+    if (!valido) { UI.aviso('Revisa los campos marcados.', 'advertencia'); return; }
+
+    const semana = Math.max(0, Math.round(dias(a.fecha_inicio_mision, fecha) / 7));
+    const sesion = { id_sesion: idSesion, id_astronauta: a.id_astronauta, fecha, semana_mision: Number.isFinite(semana) ? semana : 0, fase: f.elements.fase.value, ejercicio, ...v, notas: f.elements.notas.value.trim(), registrado_por: 'manual' };
+
+    const boton = $('r-guardar-sesion'); boton.disabled = true; boton.textContent = 'Guardando…';
+    try {
+      const nuevas = Alertas.evaluarSesion(Sesion.datos, sesion, emg);      // antes de agregarla a los datos
+      await API.guardarSesion(sesion, emg);
+      Sesion.datos.Sesiones.push(sesion); emg.forEach((x) => Sesion.datos.EMG.push(x));
+      let guardadas = [];
+      try { guardadas = await publicarAlertas(nuevas); }
+      catch (err) { UI.aviso('La evaluación se guardó, pero no se pudieron guardar las alertas: ' + err.message, 'error'); }
+      document.dispatchEvent(new CustomEvent('datos-actualizados'));
+      if (guardadas.length || !nuevas.length) UI.aviso(guardadas.length ? `Evaluación guardada. ${textoAlertas(guardadas.length)}` : 'Evaluación guardada.', guardadas.length ? 'advertencia' : 'completado');
+      f.reset(); preparar();
+    } catch (err) { UI.aviso('No se pudo guardar: ' + err.message, 'error'); }
+    finally { boton.disabled = false; boton.textContent = 'Guardar evaluación'; }
+  });
+
+  /* ---------------- Seguimiento diario ---------------- */
+  formSeg.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    limpiar(formSeg);
+    const a = Sesion.astronauta; if (!a) return;
+    const f = formSeg, fecha = f.elements.fecha.value;
+    let valido = true;
+    if (!fecha) { marcar(f, 'fecha', 'Elige la fecha.'); valido = false; }
+    else if (Sesion.datos.Seguimiento.some((s) => s.id_astronauta === a.id_astronauta && s.fecha === fecha)) { marcar(f, 'fecha', 'Ya hay un seguimiento de esa fecha.'); valido = false; }
+    const v = {
+      agarre_kg: numero(f, 'agarre_kg', 5, 90), pantorrilla_cm: numero(f, 'pantorrilla_cm', 20, 60), muslo_cm: numero(f, 'muslo_cm', 30, 90),
+      masa_kg: numero(f, 'masa_kg', 40, 150), dolor_lumbar: numero(f, 'dolor_lumbar', 0, 10, { entero: true })
+    };
+    if (Object.values(v).includes(undefined)) valido = false;
+    else if (Object.values(v).every((x) => x === null)) { marcar(f, 'agarre_kg', 'Llena al menos una medición.'); valido = false; }
+    if (!valido) { UI.aviso('Revisa los campos marcados.', 'advertencia'); return; }
+
+    const registro = { id_astronauta: a.id_astronauta, fecha, dia_mision: dias(a.fecha_inicio_mision, fecha), fase: f.elements.fase.value, ...v, notas: '', registrado_por: 'manual' };
+    const boton = $('r-guardar-seguimiento'); boton.disabled = true; boton.textContent = 'Guardando…';
+    try {
+      const nuevas = Alertas.evaluarSeguimiento(Sesion.datos, registro);
+      await API.guardarSeguimiento(registro);
+      Sesion.datos.Seguimiento.push(registro);
+      let guardadas = [];
+      try { guardadas = await publicarAlertas(nuevas); }
+      catch (err) { UI.aviso('El seguimiento se guardó, pero no se pudieron guardar las alertas: ' + err.message, 'error'); }
+      document.dispatchEvent(new CustomEvent('datos-actualizados'));
+      if (guardadas.length || !nuevas.length) UI.aviso(guardadas.length ? `Seguimiento guardado. ${textoAlertas(guardadas.length)}` : 'Seguimiento guardado.', guardadas.length ? 'advertencia' : 'completado');
+      f.reset(); preparar();
+    } catch (err) { UI.aviso('No se pudo guardar: ' + err.message, 'error'); }
+    finally { boton.disabled = false; boton.textContent = 'Guardar seguimiento'; }
+  });
+})();
+</script>

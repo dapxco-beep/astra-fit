@@ -1,0 +1,55 @@
+<!--
+  JsUi.html — Comportamientos visuales compartidos (sin datos).
+  Úsalos en vez de reescribirlos:
+    UI.aviso('Evaluación guardada.', 'completado')   tipos: estado | completado | advertencia | error
+    <div class="segmentado" data-segmentado> ... <button aria-pressed="true">  → alterna solo
+    UI.esc(texto)   escapa texto que viene de los datos antes de meterlo en innerHTML
+-->
+<script>
+const UI = (() => {
+  /* Aviso flotante (toast) */
+  let temporizador;
+  function aviso(texto, tipo = 'estado') {
+    let el = document.getElementById('aviso');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'aviso';
+      el.setAttribute('role', 'status');
+      el.setAttribute('aria-live', 'polite');
+      document.body.appendChild(el);
+    }
+    el.className = `aviso aviso--${tipo}`;
+    el.textContent = texto;
+    requestAnimationFrame(() => el.classList.add('visible'));
+    clearTimeout(temporizador);
+    temporizador = setTimeout(() => el.classList.remove('visible'), 3200);
+  }
+
+  /* Controles segmentados: un clic marca el botón y avisa con el evento "cambio" */
+  document.addEventListener('click', (e) => {
+    const boton = e.target.closest('[data-segmentado] button');
+    if (!boton) return;
+    const grupo = boton.closest('[data-segmentado]');
+    grupo.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b === boton)));
+    grupo.dispatchEvent(new CustomEvent('cambio', { detail: boton.dataset.valor ?? boton.textContent.trim() }));
+  });
+
+  /* Barra superior: marca la sección que se está viendo */
+  function seguirSecciones() {
+    const enlaces = [...document.querySelectorAll('.nav-enlace[href^="#"]')];
+    if (!enlaces.length || !('IntersectionObserver' in window)) return;
+    const obs = new IntersectionObserver((entradas) => {
+      entradas.forEach((en) => {
+        if (!en.isIntersecting) return;
+        enlaces.forEach((a) => a.setAttribute('aria-current', String(a.getAttribute('href') === '#' + en.target.id)));
+      });
+    }, { rootMargin: '-45% 0px -50% 0px' });
+    enlaces.forEach((a) => { const s = document.querySelector(a.getAttribute('href')); if (s) obs.observe(s); });
+  }
+  document.addEventListener('DOMContentLoaded', seguirSecciones);
+
+  const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  return { aviso, esc };
+})();
+</script>

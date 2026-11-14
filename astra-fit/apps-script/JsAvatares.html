@@ -1,0 +1,62 @@
+<!--
+  JsAvatares.html — Avatares de perfil: busto de astronauta con casco, estilo plano y sobrio (sin caras ni emojis).
+
+    Avatares.svg('azul', 'J')      SVG listo para meter en un <span class="avatar avatar--serio">
+    Avatares.claveDe(astronauta)   su avatar guardado (campo "avatar"); si no tiene, uno por número de astronauta
+    Avatares.LISTA                 opciones para el selector de FormPerfil
+
+  Los acentos usan los colores de la marca (variables de Estilos.html). Los grises del traje son parte de la
+  ilustración. Verde, amarillo y rojo no se usan: solo significan estado del semáforo.
+-->
+<script>
+const Avatares = (() => {
+  const LISTA = [
+    { valor: 'turquesa', etiqueta: 'Astronauta, acento turquesa' },
+    { valor: 'azul',     etiqueta: 'Astronauta, acento azul' },
+    { valor: 'morado',   etiqueta: 'Astronauta, acento morado' },
+    { valor: 'grafito',  etiqueta: 'Astronauta, acento grafito' },
+    { valor: 'plata',    etiqueta: 'Astronauta, acento plata' }
+  ];
+  const ACENTO = {
+    turquesa: 'var(--marca-turquesa)', azul: 'var(--marca-azul)', morado: 'var(--marca-morado)',
+    grafito: '#3a3f4a', plata: '#aeb4c0'
+  };
+  // Mismo orden que los círculos de color de antes (.avatar--0, --1, --2)
+  const POR_NUMERO = ['turquesa', 'azul', 'morado'];
+  let contador = 0;
+
+  function claveDe(a) {
+    if (a && ACENTO[a.avatar]) return a.avatar;
+    const n = parseInt(String(a && a.id_astronauta || '').replace(/\D/g, ''), 10) || 0;
+    return POR_NUMERO[n % 3];
+  }
+
+  /** inicial: letra de la etiqueta del pecho ('' si no se quiere). */
+  function svg(clave, inicial = '') {
+    const acento = ACENTO[clave] || ACENTO.azul, id = 'av' + (++contador);
+    const letra = String(inicial || '').trim().slice(0, 1).toUpperCase().replace(/[&<>"']/g, '');
+    return `<svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true">
+  <defs>
+    <linearGradient id="${id}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#222b45"/><stop offset="1" stop-color="#0c1224"/></linearGradient>
+    <linearGradient id="${id}t" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#c9d0dc"/><stop offset=".45" stop-color="#f1f3f8"/><stop offset="1" stop-color="#b9c1cf"/></linearGradient>
+    <radialGradient id="${id}c" cx=".38" cy=".3" r=".85"><stop offset="0" stop-color="#ffffff"/><stop offset=".6" stop-color="#e3e7ef"/><stop offset="1" stop-color="#b4bccb"/></radialGradient>
+    <linearGradient id="${id}v" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2b3a63"/><stop offset=".55" stop-color="#101830"/><stop offset="1" stop-color="#070b18"/></linearGradient>
+  </defs>
+  <rect width="96" height="96" fill="url(#${id}f)"/>
+  <path d="M6 96 C8 80 22 74 35 71 L61 71 C74 74 88 80 90 96 Z" fill="url(#${id}t)"/>
+  <path d="M35 71 L61 71 L58 76 L38 76 Z" fill="#9aa3b4" opacity=".55"/>
+  <ellipse cx="48" cy="70" rx="16" ry="5.2" style="fill:${acento}"/>
+  <ellipse cx="48" cy="69" rx="16" ry="4.2" fill="none" stroke="#ffffff" stroke-opacity=".28" stroke-width=".8"/>
+  <circle cx="20.5" cy="44" r="3.6" fill="#aab2c1"/><circle cx="75.5" cy="44" r="3.6" fill="#aab2c1"/>
+  <circle cx="48" cy="42" r="27.5" fill="url(#${id}c)"/>
+  <path d="M26 31 Q48 14 70 31" fill="none" stroke-width="3" stroke-linecap="round" style="stroke:${acento}"/>
+  <ellipse cx="48" cy="44" rx="19.5" ry="16.5" fill="url(#${id}v)" stroke="#8f99ad" stroke-width="1.2"/>
+  <path d="M33 38 Q38 31 50 31.5" fill="none" stroke="#ffffff" stroke-opacity=".34" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M55 52 Q60 50 62.5 45" fill="none" stroke="#ffffff" stroke-opacity=".12" stroke-width="1.6" stroke-linecap="round"/>
+  ${letra ? `<rect x="28" y="79.5" width="16" height="9" rx="2" style="fill:${acento}"/><text x="36" y="86.7" text-anchor="middle" font-family="system-ui, sans-serif" font-size="7.4" font-weight="700" fill="#ffffff">${letra}</text>` : ''}
+</svg>`;
+  }
+
+  return { LISTA, svg, claveDe };
+})();
+</script>

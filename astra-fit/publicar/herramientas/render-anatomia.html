@@ -1,0 +1,71 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>render anatomía (temporal)</title>
+<style>html,body{margin:0;background:transparent}canvas{display:block}</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
+<canvas id="c" width="640" height="1000"></canvas>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+
+const W = 640, H = 1000;
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H, false); renderer.setPixelRatio(1); renderer.setClearColor(0x000000, 0);
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .95; renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const GRUPO_DE = { quadriceps: 'quad', gluteal: 'glute', calf: 'gastro', back_muscles: 'back' };
+const modelos = {};
+async function cargar(sexo) {
+  if (modelos[sexo]) return modelos[sexo];
+  const g = await new Promise((ok, mal) => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load('/assets/anatomy-' + (sexo === 'F' ? 'female' : 'male') + '.glb', ok, undefined, mal));
+  const raiz = g.scene, mallas = [];
+  raiz.updateMatrixWorld(true);
+  raiz.traverse((o) => {
+    if (!o.isMesh) return;
+    let sis = ''; for (let n = o; n; n = n.parent) if (['skin', 'skeleton', 'muscles', 'organs', 'vessels', 'nerves'].includes(n.name)) { sis = n.name; break; }
+    if (sis !== 'muscles') { o.visible = false; return; }
+    if (!o.geometry.attributes.normal) o.geometry.computeVertexNormals();
+    const nombre = o.name.replace(/_\d+$/, ''), pref = Object.keys(GRUPO_DE).find((k) => nombre.startsWith(k));
+    mallas.push({ o, grupo: pref ? GRUPO_DE[pref] : null });
+  });
+  modelos[sexo] = { raiz, mallas }; return modelos[sexo];
+}
+
+const matBase = new THREE.MeshStandardMaterial({ color: 0x9eaac2, roughness: .46, metalness: .08 });
+const matMasc = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+window.dibujar = async (sexo, vista, modo) => {      // modo: 'base' o un grupo ('quad', 'glute', 'gastro', 'back')
+  const { raiz, mallas } = await cargar(sexo);
+  const escena = new THREE.Scene(); escena.add(raiz);
+  mallas.forEach(({ o, grupo }) => { o.visible = modo === 'base' ? true : grupo === modo; o.material = modo === 'base' ? matBase : matMasc; });
+  // Encuadre fijo: el de todos los músculos, igual en todas las imágenes
+  const caja = new THREE.Box3(); mallas.forEach(({ o }) => { o.visible = true; });
+  caja.setFromObject(raiz); mallas.forEach(({ o, grupo }) => { o.visible = modo === 'base' ? true : grupo === modo; });
+  const centro = caja.getCenter(new THREE.Vector3()), alto = (caja.max.y - caja.min.y) * 1.06, ancho = alto * (W / H);
+  const cam = new THREE.OrthographicCamera(-ancho / 2, ancho / 2, alto / 2, -alto / 2, .01, 100);
+  const lado = vista === 'back' ? -1 : 1;
+  cam.position.set(centro.x, centro.y, centro.z + lado * 10); cam.lookAt(centro.x, centro.y, centro.z);
+  if (modo === 'base') {
+    escena.add(new THREE.HemisphereLight(0xffffff, 0x4d587a, .62));
+    const clave = new THREE.DirectionalLight(0xffffff, 3.0); clave.position.set(-2.5, 4, lado * 4); escena.add(clave);
+    const relleno = new THREE.DirectionalLight(0xa9bcff, .55); relleno.position.set(3, 1, lado * 3); escena.add(relleno);
+    const borde = new THREE.DirectionalLight(0xdfe8ff, 1.5); borde.position.set(0, 2, -lado * 5); escena.add(borde);
+  }
+  renderer.render(escena, cam);
+  escena.remove(raiz);
+  // Caja de la zona en pantalla (0 a 1) para colocar las marcas
+  let bb = null;
+  if (modo !== 'base') {
+    const v = new THREE.Vector3(); let x0 = 1, y0 = 1, x1 = 0, y1 = 0, hay = false;
+    mallas.filter((m) => m.grupo === modo).forEach(({ o }) => {
+      const geo = o.geometry; geo.computeBoundingBox(); const c = geo.boundingBox;
+      [[c.min.x, c.min.y, c.min.z], [c.max.x, c.min.y, c.min.z], [c.min.x, c.max.y, c.min.z], [c.max.x, c.max.y, c.min.z], [c.min.x, c.min.y, c.max.z], [c.max.x, c.min.y, c.max.z], [c.min.x, c.max.y, c.max.z], [c.max.x, c.max.y, c.max.z]].forEach((p) => {
+        v.set(...p).applyMatrix4(o.matrixWorld).project(cam); x0 = Math.min(x0, (v.x + 1) / 2); x1 = Math.max(x1, (v.x + 1) / 2); y0 = Math.min(y0, 1 - (v.y + 1) / 2); y1 = Math.max(y1, 1 - (v.y + 1) / 2); hay = true; });
+    });
+    if (hay) bb = { x0, y0, x1, y1 };
+  }
+  return { png: document.getElementById('c').toDataURL('image/png'), bb };
+};
+window.listo = true;
+</script>

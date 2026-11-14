@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERDM-A | Escala de riesgo muscular en astronautas</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#172438;--muted:#65748a;--line:#e3eaf2;--blue:#245c91;--blue2:#eaf3fc;--green:#16845b;--greenbg:#e8f6ef;--amber:#a86b08;--amberbg:#fff4dc;--red:#b83e45;--redbg:#ffebec;--shadow:0 12px 34px rgba(27,52,82,.08)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif} .wrap{max-width:980px;margin:36px auto;padding:0 18px 50px}.hero{background:linear-gradient(125deg,#163b62,#286b9e);color:white;padding:30px;border-radius:22px;box-shadow:var(--shadow)}.eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:11px;font-weight:800;opacity:.8}.hero h1{font-size:clamp(27px,4vw,40px);line-height:1.1;margin:10px 0}.hero p{max-width:720px;color:#e2edf7;margin:10px 0 0}.pill{display:inline-block;border:1px solid #ffffff55;border-radius:99px;padding:5px 10px;font-size:12px;margin-top:18px}.layout{display:grid;grid-template-columns:1.45fr .8fr;gap:18px;margin-top:20px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow)}h2{font-size:20px;margin:0 0 5px}h3{font-size:16px;margin:0}.sub{color:var(--muted);font-size:13px;margin:0 0 18px}.domain{padding:17px 0;border-top:1px solid var(--line)}.domain:first-of-type{border-top:0}.domain-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.weight{font-size:12px;font-weight:750;color:var(--blue);background:var(--blue2);padding:4px 9px;border-radius:99px;white-space:nowrap}.desc{font-size:13px;color:var(--muted);margin:4px 0 12px}.choices{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.choice{position:relative}.choice input{position:absolute;opacity:0;pointer-events:none}.choice label{display:block;text-align:center;border:1px solid var(--line);border-radius:10px;padding:9px 5px;font-size:13px;cursor:pointer;background:#fff}.choice input:checked+label{border-color:var(--blue);background:var(--blue2);color:var(--blue);font-weight:750;box-shadow:inset 0 0 0 1px var(--blue)}.choice label small{display:block;color:var(--muted);font-size:11px;font-weight:500}.side{position:sticky;top:18px;height:max-content}.score{font-size:52px;font-weight:800;letter-spacing:-2px;line-height:1.1;margin:8px 0}.outof{font-size:16px;color:var(--muted);font-weight:500;letter-spacing:0}.status{display:inline-block;padding:6px 12px;border-radius:99px;font-weight:800;font-size:13px}.status.leve{background:var(--greenbg);color:var(--green)}.status.moderado{background:var(--amberbg);color:var(--amber)}.status.alto{background:var(--redbg);color:var(--red)}.meter{height:11px;background:#edf1f6;border-radius:99px;overflow:hidden;margin:18px 0 8px}.meter>div{height:100%;width:0;background:var(--green);border-radius:99px;transition:width .2s,background .2s}.scale{display:flex;justify-content:space-between;color:var(--muted);font-size:11px}.breakdown{margin-top:20px}.breakrow{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}.breakrow:last-child{border:0}.actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:18px}button{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:13px}.primary{background:var(--blue);color:white}.secondary{background:#edf2f7;color:var(--ink)}.note{background:#f7f9fc;border:1px solid var(--line);border-radius:12px;padding:13px;color:var(--muted);font-size:12px;margin-top:15px}.section{margin-top:20px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:11px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted);font-weight:700;background:#f8fafc}.tag{font-size:11px;font-weight:800;border-radius:6px;padding:3px 7px;white-space:nowrap}.tag.g{background:var(--greenbg);color:var(--green)}.tag.y{background:var(--amberbg);color:var(--amber)}.tag.r{background:var(--redbg);color:var(--red)}.footer{color:var(--muted);font-size:12px;text-align:center;margin:24px 0 0}
+@media(max-width:760px){.layout{grid-template-columns:1fr}.side{position:static}.hero{padding:23px}.card{padding:17px}.choices{gap:5px}.choice label{font-size:12px}}
+@media print{body{background:#fff}.wrap{margin:0;max-width:none}.hero,.card{box-shadow:none}.layout{grid-template-columns:1.4fr .8fr}.side{position:static}.actions{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="hero">
+  <div class="eyebrow">Herramienta experimental · Monitorización longitudinal</div>
+  <h1>ERDM-A</h1>
+  <div style="font-size:18px;font-weight:650">Escala de Riesgo de Desacondicionamiento Muscular en Astronautas</div>
+  <p>Evalúa cinco dimensiones fisiológicas comparando las mediciones actuales con el valor basal individual del astronauta antes del vuelo. Selecciona el nivel de alteración observado para calcular una puntuación orientativa.</p>
+  <span class="pill">Puntuación total: 0–100 puntos</span>
+</header>
+<div class="layout">
+<main class="card">
+  <h2>Evaluación por dimensiones</h2>
+  <p class="sub">Selecciona una categoría por dimensión. Los puntos se asignan automáticamente.</p>
+  <section class="domain" data-name="Fuerza muscular" data-max="25">
+    <div class="domain-head"><div><h3>1. Fuerza muscular</h3><div class="desc">Dinamometría: prensión, extensión de rodilla y flexión plantar. Cambio porcentual respecto al basal.</div></div><span class="weight">25 puntos</span></div>
+    <div class="choices">
+      <div class="choice"><input type="radio" name="d0" id="d0a" value="0" checked><label for="d0a">Leve<small>&lt; 5% de pérdida · 0 pts</small></label></div>
+      <div class="choice"><input type="radio" name="d0" id="d0b" value="12.5"><label for="d0b">Moderado<small>5–10% · 12,5 pts</small></label></div>
+      <div class="choice"><input type="radio" name="d0" id="d0c" value="25"><label for="d0c">Alto<small>&gt; 10% · 25 pts</small></label></div>
+    </div>
+  </section>
+  <section class="domain" data-name="Integridad muscular" data-max="20">
+    <div class="domain-head"><div><h3>2. Integridad muscular</h3><div class="desc">Ecografía (grosor/área) y MyotonPRO (propiedades mecánicas). Se considera el hallazgo más alterado.</div></div><span class="weight">20 puntos</span></div>
+    <div class="choices">
+      <div class="choice"><input type="radio" name="d1" id="d1a" value="0" checked><label for="d1a">Leve<small>Grosor &lt; 3% de pérdida y rigidez estable · 0 pts</small></label></div>
+      <div class="choice"><input type="radio" name="d1" id="d1b" value="10"><label for="d1b">Moderado<small>Grosor 3–7% o rigidez cambia 10–20% · 10 pts</small></label></div>
+      <div class="choice"><input type="radio" name="d1" id="d1c" value="20"><label for="d1c">Alto<small>Grosor &gt; 7% o rigidez cambia &gt; 20% · 20 pts</small></label></div>
+    </div>
+  </section>
+  <section class="domain" data-name="Función neuromuscular" data-max="20">
+    <div class="domain-head"><div><h3>3. Función neuromuscular</h3><div class="desc">EMG de superficie: RMS normalizada, frecuencia mediana, activación y fatigabilidad durante tareas estandarizadas.</div></div><span class="weight">20 puntos</span></div>
+    <div class="choices">
+      <div class="choice"><input type="radio" name="d2" id="d2a" value="0" checked><label for="d2a">Leve<small>Variación &lt; 10% · 0 pts</small></label></div>
+      <div class="choice"><input type="radio" name="d2" id="d2b" value="10"><label for="d2b">Moderado<small>Variación 10–20% · 10 pts</small></label></div>
+      <div class="choice"><input type="radio" name="d2" id="d2c" value="20"><label for="d2c">Alto<small>Variación &gt; 20% · 20 pts</small></label></div>
+    </div>
+  </section>
+  <section class="domain" data-name="Capacidad funcional" data-max="20">
+    <div class="domain-head"><div><h3>4. Capacidad funcional</h3><div class="desc">IMU y tareas adaptadas al entorno: velocidad, coordinación, simetría, precisión y ejecución de tareas operacionales.</div></div><span class="weight">20 puntos</span></div>
+    <div class="choices">
+      <div class="choice"><input type="radio" name="d3" id="d3a" value="0" checked><label for="d3a">Leve<small>Deterioro &lt; 5% · 0 pts</small></label></div>
+      <div class="choice"><input type="radio" name="d3" id="d3b" value="10"><label for="d3b">Moderado<small>Deterioro 5–15% · 10 pts</small></label></div>
+      <div class="choice"><input type="radio" name="d3" id="d3c" value="20"><label for="d3c">Alto<small>Deterioro &gt; 15% · 20 pts</small></label></div>
+    </div>
+  </section>
+  <section class="domain" data-name="Reserva fisiológica" data-max="15">
+    <div class="domain-head"><div><h3>5. Reserva fisiológica</h3><div class="desc">VO₂pico/VO₂máx respecto al basal. Frecuencia cardíaca y recuperación cardiovascular son complementarias.</div></div><span class="weight">15 puntos</span></div>
+    <div class="choices">
+      <div class="choice"><input type="radio" name="d4" id="d4a" value="0" checked><label for="d4a">Leve<small>Pérdida &lt; 5% · 0 pts</small></label></div>
+      <div class="choice"><input type="radio" name="d4" id="d4b" value="7.5"><label for="d4b">Moderado<small>Pérdida 5–10% · 7,5 pts</small></label></div>
+      <div class="choice"><input type="radio" name="d4" id="d4c" value="15"><label for="d4c">Alto<small>Pérdida &gt; 10% · 15 pts</small></label></div>
+    </div>
+  </section>
+  <div class="note"><strong>Importante:</strong> las categorías se basan en cambios respecto al valor basal individual. Las mediciones deben realizarse con protocolos, posiciones, dispositivos y condiciones comparables. En EMG y rigidez muscular, la dirección y magnitud del cambio requieren interpretación específica; no son equivalentes directos de pérdida de fuerza o atrofia.</div>
+</main>
+<aside class="card side">
+  <h2>Resultado de riesgo</h2>
+  <p class="sub">Puntuación acumulada de las cinco dimensiones.</p>
+  <div class="score"><span id="total">0</span><span class="outof"> / 100</span></div>
+  <span id="status" class="status leve">RIESGO LEVE</span>
+  <div class="meter"><div id="fill"></div></div>
+  <div class="scale"><span>0</span><span>25</span><span>50</span><span>100</span></div>
+  <div class="breakdown" id="breakdown"></div>
+  <div class="note" id="interpretation">Cambios fisiológicos pequeños según las categorías seleccionadas. Mantener entrenamiento preventivo y monitorización periódica.</div>
+  <div class="actions"><button class="primary" onclick="window.print()">Imprimir / guardar PDF</button><button class="secondary" onclick="copyResult()">Copiar resultado</button><button class="secondary" onclick="resetForm()">Reiniciar</button></div>
+  <div class="note"><strong>Alerta de seguridad propuesta:</strong> una pérdida de fuerza superior al 20% en un grupo muscular crítico requiere evaluación prioritaria, independientemente del puntaje global.</div>
+</aside>
+</div>
+<section class="card section">
+  <h2>Interpretación y conducta orientativa</h2>
+  <div class="table-wrap"><table><thead><tr><th>Riesgo</th><th>Puntaje</th><th>Interpretación</th><th>Conducta propuesta</th></tr></thead><tbody>
+  <tr><td><span class="tag g">Leve</span></td><td>0–24</td><td>Cambios pequeños, sin deterioro funcional significativo identificado.</td><td>Mantener contramedidas de ejercicio y seguimiento periódico.</td></tr>
+  <tr><td><span class="tag y">Moderado</span></td><td>25–49</td><td>Alteraciones detectables en una o varias dimensiones.</td><td>Revisar adherencia y técnica; ajustar entrenamiento y aumentar seguimiento.</td></tr>
+  <tr><td><span class="tag r">Alto</span></td><td>50–100</td><td>Deterioro multidimensional potencialmente relevante para el desempeño operacional.</td><td>Evaluación médica/fisiológica integral, revisión de contramedidas y seguimiento estrecho.</td></tr>
+  </tbody></table></div>
+</section>
+<section class="card section">
+  <h2>Fundamento y limitaciones</h2>
+  <ul style="padding-left:20px;margin-bottom:0;color:var(--muted);font-size:13px">
+    <li>Instrumento conceptual y experimental; no está validado ni debe utilizarse como diagnóstico clínico de fragilidad.</li>
+    <li>Los porcentajes y ponderaciones son umbrales iniciales propuestos para desarrollo y requieren calibración con datos longitudinales de astronautas y modelos análogos de descarga.</li>
+    <li>La fragilidad es multidimensional y no equivale a atrofia o pérdida aislada de fuerza. Este índice prioriza desacondicionamiento muscular y deterioro funcional.</li>
+    <li>Las pruebas funcionales deben adaptarse al entorno: ISS, nave en tránsito o superficie con gravedad parcial. No deben compararse directamente resultados obtenidos bajo condiciones gravitacionales distintas sin normalización.</li>
+    <li>Para investigación, se recomienda registrar fecha, fase de misión, grupo muscular, lado, dispositivo, protocolo, valor basal y valor actual.</li>
+  </ul>
+</section>
+<p class="footer">ERDM-A · Versión conceptual 1.0 · Uso educativo y de investigación; requiere validación científica antes de aplicación operacional.</p>
+</div>
+<script>
+const sections=[...document.querySelectorAll('.domain')];
+function update(){let total=0;const rows=[];sections.forEach((s,i)=>{const selected=s.querySelector('input:checked');const val=Number(selected.value);total+=val;rows.push({name:s.dataset.name,val,max:Number(s.dataset.max)});});total=Math.round(total*10)/10;document.getElementById('total').textContent=Number.isInteger(total)?total:total.toFixed(1);const level=total<25?'leve':total<50?'moderado':'alto';const status=document.getElementById('status');status.className='status '+level;status.textContent='RIESGO '+level.toUpperCase();const fill=document.getElementById('fill');fill.style.width=total+'%';fill.style.background=level==='leve'?'var(--green)':level==='moderado'?'var(--amber)':'var(--red)';document.getElementById('breakdown').innerHTML=rows.map(r=>`<div class="breakrow"><span>${r.name}</span><strong>${r.val} / ${r.max}</strong></div>`).join('');document.getElementById('interpretation').textContent=level==='leve'?'Cambios fisiológicos pequeños según las categorías seleccionadas. Mantener entrenamiento preventivo y monitorización periódica.':level==='moderado'?'Alteraciones detectables en una o varias dimensiones. Revisar el programa de ejercicio, priorizar los grupos afectados y aumentar el seguimiento.':'Deterioro multidimensional potencialmente relevante. Recomendar evaluación médica y fisiológica integral, revisión de contramedidas y seguimiento estrecho.';window.currentResult={total,level,rows};}
+function resetForm(){sections.forEach((s,i)=>s.querySelector('input[value="0"]').checked=true);update();}
+async function copyResult(){const r=window.currentResult;const txt='ERDM-A | Evaluación de riesgo\n'+r.rows.map(x=>`${x.name}: ${x.val}/${x.max}`).join('\n')+`\nTotal: ${r.total}/100\nClasificación: ${r.level.toUpperCase()}\n\nInstrumento experimental no validado.`;try{await navigator.clipboard.writeText(txt);alert('Resultado copiado.');}catch(e){prompt('Copia el resultado:',txt);}}
+document.querySelectorAll('input[type=radio]').forEach(x=>x.addEventListener('change',update));update();
+</script>
+</body>
+</html>

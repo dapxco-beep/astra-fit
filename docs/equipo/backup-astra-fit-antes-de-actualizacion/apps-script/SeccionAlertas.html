@@ -1,0 +1,121 @@
+<!-- SeccionAlertas.html — Alertas y recomendaciones.  Fondo: blanco.  Responsable: Dashboard
+     Muestra las alertas del astronauta elegido (Sesion.datos.Alertas), con la recomendación de cada una.
+     Permite pasarlas a "en seguimiento" o cerrarlas (API.actualizarAlerta).
+     Se vuelve a dibujar con los eventos "astronauta-elegido" y "datos-actualizados". -->
+<section class="seccion seccion--blanca" id="alertas">
+  <div class="contenedor">
+    <div class="seccion-cabecera">
+      <h2 class="titulo">Lo que requiere atención.</h2>
+      <p class="subtitulo">Cambios que cruzaron un umbral, con la recomendación para cada uno.</p>
+    </div>
+
+    <div class="rejilla rejilla-3" id="alertas-resumen" aria-live="polite"></div>
+
+    <div style="display:flex; justify-content:center; margin: var(--e-8) 0">
+      <div class="segmentado" data-segmentado id="ctl-alertas" role="group" aria-label="Qué alertas ver">
+        <button type="button" data-valor="abiertas" aria-pressed="true">Abiertas</button>
+        <button type="button" data-valor="todas" aria-pressed="false">Todas</button>
+      </div>
+    </div>
+
+    <div class="pila" id="alertas-lista" style="gap: var(--e-4)" aria-live="polite"></div>
+    <p class="nota" style="margin-top: var(--e-8); text-align:center">Las alertas son indicadores de seguimiento, no diagnósticos médicos. Los umbrales están por validar.</p>
+  </div>
+</section>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const ORDEN = { rojo: 0, amarillo: 1 };
+  const TEXTO_NIVEL = { rojo: 'Alerta', amarillo: 'Precaución', verde: 'Estable' };
+  const TEXTO_ESTADO = { abierta: 'Abierta', en_seguimiento: 'En seguimiento', cerrada: 'Cerrada' };
+  let filtro = 'abiertas';
+
+  const num = (n, d = 1) => Number(n).toLocaleString('es', { maximumFractionDigits: d });
+  const cerrada = (a) => a.estado === 'cerrada';
+  const propias = () => Sesion.astronauta ? Sesion.datos.Alertas.filter((a) => a.id_astronauta === Sesion.astronauta.id_astronauta) : [];
+  const regla = (indicador) => (Sesion.datos.Umbrales || []).find((u) => u.indicador === indicador);
+  const grupo = (valor) => { if (!valor) return ''; const c = Sesion.datos.Catalogos.find((x) => x.lista === 'grupo_muscular' && x.valor === valor); return c ? c.etiqueta : valor; };
+  const con = (valor, r) => valor === null || valor === undefined ? '—' : `${num(valor, 2)} ${r ? r.unidad : ''}`.trim();
+
+  /* ---------------- Resumen: tres cifras ---------------- */
+  function dibujarResumen(todas) {
+    const abiertas = todas.filter((a) => !cerrada(a)), n = (nivel) => abiertas.filter((a) => a.nivel === nivel).length;
+    const tarjeta = (cifra, clase, texto, nota) => `<div class="tarjeta pila"><span class="cifra">${cifra}</span><span class="estado ${clase}">${texto}</span><p class="nota">${nota}</p></div>`;
+    $('alertas-resumen').innerHTML =
+      tarjeta(n('rojo'), 'estado--rojo', 'Alerta', 'Abiertas: requieren valoración del médico de vuelo') +
+      tarjeta(n('amarillo'), 'estado--amarillo', 'Precaución', 'Abiertas: vigilar o repetir la medición') +
+      tarjeta(todas.filter(cerrada).length, 'estado--gris', 'Cerradas', 'Ya atendidas');
+  }
+
+  /* ---------------- Una alerta ---------------- */
+  function tarjetaAlerta(a) {
+    const r = regla(a.indicador), estado = a.estado || 'abierta', id = UI.esc(a.id_alerta);
+    const gestion = cerrada(a)
+      ? `<p class="pequeno texto-2">${a.nota_cierre ? UI.esc(a.nota_cierre) : 'Cerrada sin nota.'}${a.atendida_por ? ` Atendida por ${UI.esc(a.atendida_por)}.` : ''}</p>`
+      : `<div class="acciones" style="justify-content:flex-start">
+           ${estado === 'abierta' ? `<button type="button" class="boton boton--pequeno boton--secundario" data-accion="seguimiento" data-id="${id}">Pasar a seguimiento</button>` : ''}
+           <button type="button" class="boton boton--pequeno" data-accion="cerrar" data-id="${id}">Cerrar alerta</button>
+         </div>
+         <form class="formulario" data-cierre="${id}" novalidate hidden>
+           <div class="formulario-filas">
+             <div class="campo"><label for="c-por-${id}">Atendida por</label><input id="c-por-${id}" name="atendida_por" type="text" autocomplete="off" placeholder="Médico de vuelo"></div>
+             <div class="campo" data-campo="nota"><label for="c-nota-${id}">Qué se hizo</label><input id="c-nota-${id}" name="nota_cierre" type="text" autocomplete="off"><span class="error" hidden></span></div>
+           </div>
+           <div class="acciones" style="justify-content:flex-start"><button type="submit" class="boton boton--pequeno">Guardar cierre</button><button type="button" class="enlace enlace--simple pequeno" data-accion="cancelar" data-id="${id}">Cancelar</button></div>
+         </form>`;
+    return `<article class="tarjeta pila" style="${cerrada(a) ? 'opacity:.7' : ''}" data-alerta="${id}">
+      <div style="display:flex; flex-wrap:wrap; gap:var(--e-2) var(--e-4); align-items:center; justify-content:space-between">
+        <span class="estado estado--${a.nivel === 'rojo' ? 'rojo' : 'amarillo'}">${TEXTO_NIVEL[a.nivel] || a.nivel}</span>
+        <span class="nota">${UI.esc(String(a.creada_en || '').slice(0, 10))} · ${TEXTO_ESTADO[estado] || UI.esc(estado)}</span>
+      </div>
+      <h3 class="titulo-tarjeta">${UI.esc(a.mensaje)}</h3>
+      <p class="nota">${a.grupo_muscular ? `${UI.esc(grupo(a.grupo_muscular))} · ` : ''}Actual ${con(a.valor_actual, r)} · Basal ${con(a.valor_basal, r)}</p>
+      ${a.recomendacion ? `<p class="pequeno texto-2">${UI.esc(a.recomendacion)}</p>` : ''}
+      ${gestion}
+    </article>`;
+  }
+
+  function dibujar() {
+    if (!Sesion.astronauta) return;
+    const todas = propias();
+    dibujarResumen(todas);
+    const visibles = todas.filter((a) => filtro === 'todas' || !cerrada(a))
+      .sort((p, q) => (cerrada(p) - cerrada(q)) || ((ORDEN[p.nivel] ?? 2) - (ORDEN[q.nivel] ?? 2)) || String(q.creada_en).localeCompare(String(p.creada_en)));
+    $('alertas-lista').innerHTML = visibles.length ? visibles.map(tarjetaAlerta).join('')
+      : `<div class="tarjeta pila" style="text-align:center"><h3 class="titulo-tarjeta">Todo dentro de lo esperado.</h3><p class="pequeno texto-2">${filtro === 'todas' ? 'Este astronauta no tiene alertas.' : 'No hay alertas abiertas para este astronauta.'}</p></div>`;
+  }
+
+  $('ctl-alertas').addEventListener('cambio', (e) => { filtro = e.detail; dibujar(); });
+  document.addEventListener('astronauta-elegido', dibujar);
+  document.addEventListener('datos-actualizados', dibujar);
+
+  /* ---------------- Acciones ---------------- */
+  function guardarCambios(id, cambios, texto) {
+    return API.actualizarAlerta(id, cambios)
+      .then(() => { Object.assign(Sesion.datos.Alertas.find((a) => a.id_alerta === id), cambios); UI.aviso(texto, 'completado'); dibujar(); document.dispatchEvent(new CustomEvent('datos-actualizados')); })
+      .catch((err) => UI.aviso('No se pudo guardar: ' + err.message, 'error'));
+  }
+
+  $('alertas-lista').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-accion]'); if (!b) return;
+    const id = b.dataset.id, form = $('alertas-lista').querySelector(`form[data-cierre="${id}"]`);
+    if (b.dataset.accion === 'seguimiento') { b.disabled = true; guardarCambios(id, { estado: 'en_seguimiento' }, 'Alerta en seguimiento.'); }
+    if (b.dataset.accion === 'cerrar' && form) { form.hidden = false; form.elements.atendida_por.focus(); }
+    if (b.dataset.accion === 'cancelar' && form) { form.reset(); form.hidden = true; }
+  });
+
+  $('alertas-lista').addEventListener('submit', (e) => {
+    const form = e.target.closest('form[data-cierre]'); if (!form) return;
+    e.preventDefault();
+    const nota = form.elements.nota_cierre.value.trim(), campo = form.querySelector('[data-campo="nota"]');
+    if (!nota) { campo.setAttribute('data-error', ''); const er = campo.querySelector('.error'); er.textContent = 'Escribe qué se hizo para cerrarla.'; er.hidden = false; return; }
+    const boton = form.querySelector('button[type="submit"]'); boton.disabled = true;
+    guardarCambios(form.dataset.cierre, { estado: 'cerrada', atendida_por: form.elements.atendida_por.value.trim(), nota_cierre: nota }, 'Alerta cerrada.')
+      .finally(() => { boton.disabled = false; });
+  });
+  $('alertas-lista').addEventListener('input', (e) => {
+    const c = e.target.closest('.campo[data-error]'); if (c) { c.removeAttribute('data-error'); c.querySelector('.error').hidden = true; }
+  });
+})();
+</script>

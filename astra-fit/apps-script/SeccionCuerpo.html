@@ -1,0 +1,616 @@
+<!-- SeccionCuerpo.html — Visor del cuerpo en 3D.  Fondo: negro.  Responsable: equipo 3D
+     Qué hace: muestra al astronauta elegido (hombre o mujer, con su estatura) corriendo, caminando o haciendo
+     ejercicio en una cinta. Se puede ver la persona, la anatomía por dentro o un corte con las dos mitades.
+     Cada grupo muscular se pinta con su estado (verde, amarillo, rojo) calculado desde la pestaña Alertas.
+     Al elegir un grupo (lista o luz sobre el cuerpo) se muestran su EMG más reciente frente a la basal y su última alerta.
+     Los modelos se cargan solo cuando se elige un astronauta (pesan ~23 MB). -->
+
+<!-- importmap: le dice al navegador de dónde bajar "three". Debe ir antes de cualquier import(). -->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<section class="seccion seccion--negra" id="cuerpo">
+  <div class="contenedor">
+    <div class="seccion-cabecera">
+      <h2 class="titulo">Cada grupo muscular, a simple vista.</h2>
+      <p class="subtitulo">El color de cada zona muestra su estado frente a la evaluación basal.</p>
+    </div>
+
+    <div class="cuerpo-rejilla">
+      <div class="visor" id="visor-cuerpo">
+        <canvas id="cuerpo-lienzo" aria-label="Cuerpo del astronauta en 3D. Arrastra para girar." role="img"></canvas>
+        <div class="visor-carga" id="cuerpo-carga">
+          <p class="texto" id="cuerpo-carga-texto">Elige un astronauta para ver su cuerpo.</p>
+        </div>
+        <div class="visor-pista" id="cuerpo-pista" role="status"></div>
+      </div>
+
+      <div class="cuerpo-panel">
+        <div class="tarjeta">
+          <h3 class="titulo-tarjeta">Grupos musculares</h3>
+          <ul class="lista" id="cuerpo-grupos"></ul>
+        </div>
+        <div class="tarjeta" id="cuerpo-detalle" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div class="cuerpo-controles">
+      <div><span class="nota">Vista</span>
+        <div class="segmentado" data-segmentado id="ctl-vista" role="group" aria-label="Vista">
+          <button type="button" data-valor="person" aria-pressed="false">Persona</button>
+          <button type="button" data-valor="cut" aria-pressed="true">Corte</button>
+          <button type="button" data-valor="anat" aria-pressed="false">Anatomía</button>
+        </div></div>
+      <div><span class="nota">Actividad</span>
+        <div class="segmentado" data-segmentado id="ctl-actividad" role="group" aria-label="Actividad">
+          <button type="button" data-valor="run" aria-pressed="true">Correr</button>
+          <button type="button" data-valor="walk" aria-pressed="false">Caminar</button>
+          <button type="button" data-valor="idle" aria-pressed="false">Reposo</button>
+          <button type="button" data-valor="squat" aria-pressed="false">Sentadilla</button>
+          <button type="button" data-valor="calf" aria-pressed="false">Talones</button>
+        </div></div>
+      <div><span class="nota">Capa</span>
+        <div class="segmentado" data-segmentado id="ctl-capa" role="group" aria-label="Capa">
+          <button type="button" data-valor="muscles" aria-pressed="true">Músculos</button>
+          <button type="button" data-valor="skeleton" aria-pressed="false">Huesos</button>
+          <button type="button" data-valor="organs" aria-pressed="false">Órganos</button>
+          <button type="button" data-valor="vessels" aria-pressed="false">Vasos</button>
+          <button type="button" data-valor="nerves" aria-pressed="false">Nervios</button>
+          <button type="button" data-valor="all" aria-pressed="false">Todo</button>
+        </div></div>
+      <div><span class="nota">Cámara</span>
+        <div class="segmentado" data-segmentado id="ctl-camara" role="group" aria-label="Cámara">
+          <button type="button" data-valor="three" aria-pressed="true">3/4</button>
+          <button type="button" data-valor="front" aria-pressed="false">Frente</button>
+          <button type="button" data-valor="back" aria-pressed="false">Espalda</button>
+          <button type="button" data-valor="side" aria-pressed="false">Lateral</button>
+        </div></div>
+    </div>
+    <p class="nota" style="margin-top: var(--e-5); color: var(--tinta-clara-2)">
+      Anatomía: BodyParts3D © DBCLS (CC BY 4.0), adaptada por open-anatomy-3d (CC BY 4.0). Personas y animaciones de los ejemplos de three.js
+      (avatar de Ready Player Me, personaje Michelle y esqueleto Xbot de Mixamo). Estados calculados con datos simulados.
+    </p>
+  </div>
+</section>
+
+<script>
+(() => {
+  /* ============================================================
+     CONFIGURACIÓN
+     ============================================================ */
+  // Dónde viven los .glb. En local los sirve local/server.js; en Apps Script NO caben (límite ~10 MB),
+  // así que hay que publicarlos fuera (p. ej. GitHub + jsDelivr) y poner aquí esa dirección.
+  const BASE_MODELOS = (typeof API !== 'undefined' && API.modo === 'local')
+    ? '/assets/'
+    : 'https://astra-fit-modelos.dapxco.workers.dev/assets/';   // Cloudflare: carpeta publicar-cloudflare/ (para actualizar: npx wrangler deploy)
+
+  // Grupo muscular de la base de datos -> malla del modelo 3D.
+  // El modelo junta erectores y dorsal en una sola malla ("back"), por eso se toma el peor de los dos.
+  const MALLAS = {
+    quad:   { grupos: ['cuadriceps'] },
+    glute:  { grupos: ['gluteo_mayor'] },
+    gastro: { grupos: ['gastrocnemio_soleo'] },
+    back:   { grupos: ['erectores_espinales', 'dorsal_ancho'] }
+  };
+  const MALLA_DE_PREFIJO = { quadriceps: 'quad', gluteal: 'glute', calf: 'gastro', back_muscles: 'back' };
+  const NIVEL = { verde: 0, amarillo: 1, rojo: 2 };
+  const NOMBRE_NIVEL = ['verde', 'amarillo', 'rojo'];
+  const LADO = { L: 'izquierdo', R: 'derecho' };
+
+  const $ = (id) => document.getElementById(id);
+  const lienzo = $('cuerpo-lienzo'), visor = $('visor-cuerpo');
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+  /* ============================================================
+     DATOS: de la base de datos al estado de cada grupo
+     ============================================================ */
+  const etiquetaGrupo = (valor) => {
+    const c = Sesion.datos.Catalogos.find((x) => x.lista === 'grupo_muscular' && x.valor === valor);
+    return c ? c.etiqueta : valor;
+  };
+  const gruposCatalogo = () => Sesion.datos.Catalogos.filter((x) => x.lista === 'grupo_muscular');
+
+  /** Última alerta del astronauta para un grupo (la más reciente manda: refleja cómo va ahora). */
+  function ultimaAlerta(idAstronauta, grupo) {
+    return Sesion.datos.Alertas
+      .filter((a) => a.id_astronauta === idAstronauta && a.grupo_muscular === grupo)
+      .sort((p, q) => String(q.creada_en).localeCompare(String(p.creada_en)))[0] || null;
+  }
+  const nivelGrupo = (idAstronauta, grupo) => {
+    const a = ultimaAlerta(idAstronauta, grupo);
+    return a ? (NIVEL[a.nivel] ?? 0) : 0;
+  };
+  const nivelMalla = (idAstronauta, malla) => Math.max(...MALLAS[malla].grupos.map((g) => nivelGrupo(idAstronauta, g)));
+
+  /** EMG más reciente de un grupo frente a la media basal del mismo astronauta. */
+  function resumenEmg(idAstronauta, grupo) {
+    const sesiones = new Map(Sesion.datos.Sesiones.filter((s) => s.id_astronauta === idAstronauta).map((s) => [s.id_sesion, s]));
+    const filas = Sesion.datos.EMG
+      .filter((e) => e.id_astronauta === idAstronauta && e.grupo_muscular === grupo && sesiones.has(e.id_sesion))
+      .map((e) => ({ ...e, fecha: sesiones.get(e.id_sesion).fecha, fase: sesiones.get(e.id_sesion).fase }));
+    if (!filas.length) return null;
+    const media = (arr, k) => arr.reduce((t, x) => t + Number(x[k]), 0) / arr.length;
+    const fecha = filas.map((f) => f.fecha).sort().pop();
+    const ult = filas.filter((f) => f.fecha === fecha);
+    const basal = filas.filter((f) => f.fase === 'basal');
+    const cambio = (k) => basal.length ? (media(ult, k) / media(basal, k) - 1) * 100 : null;
+    return { fecha, rms: media(ult, 'rms_uv'), frec: media(ult, 'frec_mediana_hz'), cambioRms: cambio('rms_uv'), cambioFrec: cambio('frec_mediana_hz') };
+  }
+
+  const num = (n, d = 0) => Number(n).toLocaleString('es', { maximumFractionDigits: d, minimumFractionDigits: d });
+  const pct = (v) => v === null ? 'sin basal' : `${v < 0 ? '−' : '+'}${num(Math.abs(v), 1)} %`;
+
+  /* ============================================================
+     PANEL (lista de grupos + detalle). Texto de los datos siempre con UI.esc.
+     ============================================================ */
+  let grupoActivo = null;
+
+  function dibujarPanel() {
+    const a = Sesion.astronauta;
+    if (!a) return;
+    const grupos = gruposCatalogo();
+    if (!grupoActivo || !grupos.some((g) => g.valor === grupoActivo)) grupoActivo = grupos[0] && grupos[0].valor;
+    $('cuerpo-grupos').innerHTML = grupos.map((g) => {
+      const n = NOMBRE_NIVEL[nivelGrupo(a.id_astronauta, g.valor)];
+      const texto = { verde: 'Estable', amarillo: 'Vigilar', rojo: 'Atender' }[n];
+      return `<li aria-current="${g.valor === grupoActivo}">
+        <button type="button" data-grupo="${UI.esc(g.valor)}"><span class="texto">${UI.esc(g.etiqueta)}</span>
+        <span class="estado estado--${n}">${texto}</span></button></li>`;
+    }).join('');
+    dibujarDetalle();
+  }
+
+  function dibujarDetalle() {
+    const a = Sesion.astronauta, caja = $('cuerpo-detalle');
+    if (!a || !grupoActivo) { caja.innerHTML = ''; return; }
+    const emg = resumenEmg(a.id_astronauta, grupoActivo), alerta = ultimaAlerta(a.id_astronauta, grupoActivo);
+    const n = NOMBRE_NIVEL[nivelGrupo(a.id_astronauta, grupoActivo)];
+    caja.innerHTML = `
+      <h3 class="titulo-tarjeta">${UI.esc(etiquetaGrupo(grupoActivo))}</h3>
+      ${emg ? `<div class="cuerpo-datos">
+        <div><p class="nota">Amplitud (RMS)</p><p class="titulo-tarjeta">${num(emg.rms)} µV</p><p class="pequeno texto-2">${pct(emg.cambioRms)} vs. basal</p></div>
+        <div><p class="nota">Frecuencia mediana</p><p class="titulo-tarjeta">${num(emg.frec, 1)} Hz</p><p class="pequeno texto-2">${pct(emg.cambioFrec)} vs. basal</p></div>
+      </div><p class="nota">EMG de la sesión del ${UI.esc(emg.fecha)}, promedio de ambos lados.</p>`
+        : '<p class="pequeno texto-2">Todavía no hay registros de EMG para este grupo.</p>'}
+      <p class="estado estado--${n}" style="margin-top: var(--e-4)">${alerta ? UI.esc(alerta.mensaje) : 'Sin alertas para este grupo.'}</p>
+      ${alerta && n !== 'verde' ? `<p class="pequeno texto-2" style="margin-top: var(--e-2)">${UI.esc(alerta.recomendacion)}</p>` : ''}`;
+  }
+
+  $('cuerpo-grupos').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-grupo]');
+    if (b) elegirGrupo(b.dataset.grupo);
+  });
+  function elegirGrupo(grupo) { grupoActivo = grupo; dibujarPanel(); }
+
+  /* ============================================================
+     MOTOR 3D (se crea la primera vez que se elige un astronauta)
+     ============================================================ */
+  let motor = null, iniciando = null;
+
+  async function crearMotor(sexoPrimero) {
+    // Las librerías se piden todas a la vez: antes iban una tras otra y cada una esperaba a la anterior
+    const [THREE, { OrbitControls }, { GLTFLoader }, { MeshoptDecoder }, { RoomEnvironment }] = await Promise.all([
+      import('three'), import('three/addons/controls/OrbitControls.js'), import('three/addons/loaders/GLTFLoader.js'),
+      import('three/addons/libs/meshopt_decoder.module.js'), import('three/addons/environments/RoomEnvironment.js')]);
+
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    // Los colores de estado salen de Estilos.html, para que el visor y el resto de la página coincidan
+    const COLORES = [new THREE.Color(css('--verde')), new THREE.Color(css('--amarillo')), new THREE.Color(css('--rojo'))];
+    const COLORES_ROPA = ['--marca-azul', '--marca-morado', '--marca-turquesa'].map((v) => new THREE.Color(css(v)));
+
+    const renderer = new THREE.WebGLRenderer({ canvas: lienzo, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.localClippingEnabled = true;                        // necesario para la vista «Corte»
+    const escena = new THREE.Scene();
+    escena.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;   // reflejos suaves en la ropa
+    const camara = new THREE.PerspectiveCamera(32, 1, 0.05, 100);
+    const controles = new OrbitControls(camara, lienzo);
+    controles.target.set(0, 0.92, 0); controles.enableDamping = true; controles.dampingFactor = 0.08;
+    controles.minDistance = 1.0; controles.maxDistance = 8; controles.enablePan = false; controles.maxPolarAngle = Math.PI * 0.52;
+    escena.add(new THREE.HemisphereLight(0xffffff, 0x445066, 1.0));
+    const luz = new THREE.DirectionalLight(0xffffff, 2.0); luz.position.set(2.5, 5, 3.5); escena.add(luz);
+    const luzBorde = new THREE.DirectionalLight(0x9fc4ff, 0.8); luzBorde.position.set(-4, 2, -4); escena.add(luzBorde);
+
+    /* Cinta de correr. Su velocidad se ajusta a la del pie apoyado (medida en cada animación) para que los pies no patinen. */
+    const texCinta = (() => {
+      const c = document.createElement('canvas'); c.width = 128; c.height = 256; const x = c.getContext('2d');
+      x.fillStyle = '#26262a'; x.fillRect(0, 0, 128, 256); x.fillStyle = '#3c3c42'; for (let y = 0; y < 256; y += 32) x.fillRect(0, y, 128, 6);
+      x.fillStyle = '#6e6e73'; x.fillRect(4, 0, 4, 256); x.fillRect(120, 0, 4, 256);
+      const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, 5); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+    })();
+    const cinta = new THREE.Group();
+    const banda = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.06, 3.6), new THREE.MeshStandardMaterial({ map: texCinta, roughness: .8 })); banda.position.y = -0.03; cinta.add(banda);
+    [-0.56, 0.56].forEach((x) => { const r = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.09, 3.7), new THREE.MeshStandardMaterial({ color: 0x55565c, roughness: .5, metalness: .3 })); r.position.set(x, -0.025, 0); cinta.add(r); });
+    escena.add(cinta);
+    const PASO = { M: { walk: 1.71, run: 3.75 }, F: { walk: 1.63, run: 3.54 } };   // m/s del pie apoyado (medido con las animaciones)
+
+    /* Material de la anatomía. uPulse infla el músculo al contraerse; se aplica DESPUÉS del skinning. */
+    function materialAnat(color, opacidad) {
+      const m = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: .1, transparent: opacidad < 0.98, opacity: opacidad, roughness: .5, metalness: 0, depthWrite: opacidad > 0.85 });
+      const uPulse = { value: 0 }; m.userData.uPulse = uPulse;
+      m.onBeforeCompile = (sh) => {
+        sh.uniforms.uPulse = uPulse;
+        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uPulse;')
+          .replace('#include <skinning_vertex>', '#include <skinning_vertex>\ntransformed += normalize(objectNormal) * uPulse;');
+      };
+      return m;
+    }
+
+    /* ---------- Animación ----------
+       Las personas no traen animaciones propias: se copian las del esqueleto Xbot. Como cada esqueleto tiene otras unidades,
+       ejes y postura de reposo, se mide cuánto GIRA cada hueso respecto a su reposo (en el mundo) y se aplica ese giro al destino. */
+    const nm = (n) => n.replace(/^mixamorig:?/, '');
+    const giroMundo = (o, q = new THREE.Quaternion()) => { o.updateWorldMatrix(true, false); o.matrixWorld.decompose(new THREE.Vector3(), q, new THREE.Vector3()); return q; };
+    function copiarAnimacion(origen, destino, clip, fps = 30) {
+      origen.updateMatrixWorld(true); destino.updateMatrixWorld(true);
+      const sB = {}, dB = {}, orden = [];
+      origen.traverse((o) => { if (o.isBone) sB[nm(o.name)] = o; });
+      destino.traverse((o) => { if (o.isBone) { dB[nm(o.name)] = o; if (sB[nm(o.name)]) orden.push(nm(o.name)); } });
+      const rS = {}, rT = {}; orden.forEach((n) => { rS[n] = giroMundo(sB[n]); rT[n] = giroMundo(dB[n]); });
+      const cO = new THREE.Vector3().setFromMatrixPosition(sB.Hips.matrixWorld), cD = new THREE.Vector3().setFromMatrixPosition(dB.Hips.matrixWorld);
+      const razon = cD.y / cO.y, padreInv = dB.Hips.parent.matrixWorld.clone().invert();
+      const mezcla = new THREE.AnimationMixer(origen); mezcla.clipAction(clip).play();
+      const nF = Math.max(2, Math.round(clip.duration * fps)), tiempos = new Float32Array(nF), qv = {}, pv = new Float32Array(nF * 3); orden.forEach((n) => qv[n] = new Float32Array(nF * 4));
+      const Wt = {}, q = new THREE.Quaternion(), qi = new THREE.Quaternion(), pw = new THREE.Quaternion(), p = new THREE.Vector3();
+      for (let f = 0; f < nF; f++) {
+        const t = f / fps; tiempos[f] = t; mezcla.setTime(t); origen.updateMatrixWorld(true);
+        orden.forEach((n) => {
+          const objetivo = giroMundo(sB[n]).multiply(qi.copy(rS[n]).invert()).multiply(rT[n]); Wt[n] = objetivo.clone();
+          const par = dB[n].parent, giroPadre = (par && par.isBone && Wt[nm(par.name)]) ? Wt[nm(par.name)] : giroMundo(par, pw);
+          q.copy(giroPadre).invert().multiply(objetivo); q.toArray(qv[n], f * 4);
+        });
+        p.setFromMatrixPosition(sB.Hips.matrixWorld).sub(cO).multiplyScalar(razon).add(cD).applyMatrix4(padreInv); p.toArray(pv, f * 3);
+      }
+      mezcla.stopAllAction();
+      const pistas = orden.map((n) => new THREE.QuaternionKeyframeTrack(dB[n].name + '.quaternion', tiempos, qv[n])); pistas.push(new THREE.VectorKeyframeTrack(dB.Hips.name + '.position', tiempos, pv));
+      return new THREE.AnimationClip(clip.name, clip.duration, pistas);
+    }
+    /* Sentadilla y elevación de talones: el esqueleto no las trae, así que se calculan. Se gira cada zona en el plano vertical
+       y se resuelve con geometría el ángulo de la espinilla y la altura de la cadera para que los pies no se despeguen. */
+    function ejercicio(ch, tipo) {
+      const { raiz, huesos, clipReposo } = ch, orden = []; raiz.traverse((o) => { if (o.isBone) orden.push(nm(o.name)); });
+      const mezcla = new THREE.AnimationMixer(raiz); mezcla.clipAction(clipReposo).play(); mezcla.setTime(0); raiz.updateMatrixWorld(true);
+      const W0 = {}, pos = (b) => new THREE.Vector3().setFromMatrixPosition(b.matrixWorld); orden.forEach((n) => W0[n] = giroMundo(huesos[n]));
+      const H0 = pos(huesos.Hips), L1 = pos(huesos.LeftUpLeg).distanceTo(pos(huesos.LeftLeg)), L2 = pos(huesos.LeftLeg).distanceTo(pos(huesos.LeftFoot)), Lf = pos(huesos.LeftFoot).distanceTo(pos(huesos.LeftToeBase));
+      const padreInv = huesos.Hips.parent.matrixWorld.clone().invert(); mezcla.stopAllAction();
+      const dur = tipo === 'squat' ? 3.4 : 2.4, fps = 30, nF = Math.round(dur * fps), tiempos = new Float32Array(nF), qv = {}, pv = new Float32Array(nF * 3); orden.forEach((n) => qv[n] = new Float32Array(nF * 4));
+      const Wt = {}, q = new THREE.Quaternion(), pw = new THREE.Quaternion(), rx = new THREE.Quaternion(), X = new THREE.Vector3(1, 0, 0);
+      for (let f = 0; f < nF; f++) {
+        const t = f / fps; tiempos[f] = t; const s = 0.5 - 0.5 * Math.cos(2 * Math.PI * t / dur);
+        let a = 0, incl = 0, brazos = 0, pie = 0, dy = 0, dz = 0, b = 0;
+        if (tipo === 'squat') { a = 1.15 * s; incl = 0.55 * a; brazos = 1.35 * s; dz = -0.20 * (L1 + L2) * Math.sin(a); b = Math.asin(clamp((dz + L1 * Math.sin(a)) / L2, -1, 1)); dy = L1 * Math.cos(a) + L2 * Math.cos(b) - (L1 + L2); }
+        else { pie = 0.75 * s; dy = Lf * Math.sin(pie) * 0.9; }
+        const ang = (n) => {
+          if (/UpLeg/.test(n)) return -a; if (/Leg$/.test(n)) return b; if (/Foot|Toe/.test(n)) return pie;
+          if (n === 'Spine') return incl * 0.35; if (n === 'Spine1') return incl * 0.7; if (n === 'Spine2') return incl;
+          if (/Neck/.test(n)) return incl * 0.6; if (/Head|Eye/.test(n)) return incl * 0.25; if (/Shoulder|Arm|Hand/.test(n)) return incl - brazos; return 0;
+        };
+        orden.forEach((n) => {
+          const objetivo = rx.setFromAxisAngle(X, ang(n)).clone().multiply(W0[n]); Wt[n] = objetivo;
+          const par = huesos[n].parent, giroPadre = (par && par.isBone && Wt[nm(par.name)]) ? Wt[nm(par.name)] : giroMundo(par, pw);
+          q.copy(giroPadre).invert().multiply(objetivo); q.toArray(qv[n], f * 4);
+        });
+        new THREE.Vector3(H0.x, H0.y + dy, H0.z + dz).applyMatrix4(padreInv).toArray(pv, f * 3);
+      }
+      const pistas = orden.map((n) => new THREE.QuaternionKeyframeTrack(huesos[n].name + '.quaternion', tiempos, qv[n])); pistas.push(new THREE.VectorKeyframeTrack(huesos.Hips.name + '.position', tiempos, pv));
+      return new THREE.AnimationClip(tipo, dur, pistas);
+    }
+
+    /* ---------- Anatomía pegada al esqueleto (skinning) ----------
+       Cada vértice sigue a los 2-4 huesos más cercanos de los que le corresponden, con pesos suaves:
+       así el muslo se dobla con la rodilla en vez de sobresalir como un bloque rígido. */
+    const SISTEMAS = ['skin', 'skeleton', 'muscles', 'organs', 'vessels', 'nerves'];
+    const sistemaDe = (o) => { for (let n = o; n; n = n.parent) if (SISTEMAS.includes(n.name)) return n.name; return ''; };
+    const OCULTAR = /^skin$|reproductive|prostate|uterus|ovary|fallopian|vagina|breast/;
+    const COLOR_ORGANO = [[/heart/, 0xd62839], [/aorta|coronary/, 0xe5252a], [/^lung/, 0xf3a0b6], [/bronchi|trachea|larynx|pharynx/, 0xb4d3ee], [/liver/, 0x8a3b2e], [/spleen/, 0x7a3b6e], [/pancreas/, 0xf0c987], [/gallbladder/, 0x5f9e4a], [/kidney/, 0xa4493f], [/adrenal/, 0xe8b04a], [/ureter|bladder/, 0xf2d16b], [/cerebellum/, 0xd99ab0], [/brainstem/, 0xc98aa0], [/pituitary/, 0xf2c230], [/brain/, 0xf1b7c8], [/eye|teeth/, 0xffffff], [/tongue/, 0xe36f7f], [/stomach/, 0xf1a66b], [/colon/, 0xd98c6a], [/intestine/, 0xf3b9a0], [/esophagus/, 0xe58f8f], [/diaphragm/, 0xe8a0a0], [/thymus/, 0xf5d0a8]];
+    const colorDe = (nombre, sis) => {
+      if (sis === 'muscles') return 0xb8433a; if (sis === 'skeleton') return 0xf1ead7; if (sis === 'nerves') return /spinal/.test(nombre) ? 0xfff0a8 : 0xffd23f;
+      if (sis === 'vessels') return /pulmonary/.test(nombre) ? 0x7a5cd6 : /arter|aorta|carotid|coronary/.test(nombre) ? 0xe5252a : 0x2f5fd0;
+      for (const [re, c] of COLOR_ORGANO) if (re.test(nombre)) return c; return 0xe8a090;
+    };
+    const REGLAS_HUESO = [   // a qué hueso "pertenece" cada estructura (los nombres con _l / _r reciben Left / Right)
+      [/^(gluteal|pelvis$|pelvic_floor|bladder|arteries_pelvis|veins_pelvis)/, 'Hips'], [/^(quadriceps|hamstrings|adductors|iliopsoas|femur)/, 'UpLeg'],
+      [/^(calf|shin_muscles|lower_leg|patella)/, 'Leg'], [/^(foot)/, 'Foot'], [/^(hand)/, 'Hand'], [/^(forearm)/, 'ForeArm'],
+      [/^(upper_arm|deltoid|shoulder_muscles|rotator_cuff|humerus)/, 'Arm'], [/^(abdominal_muscles)/, 'Spine'], [/^(back_muscles)/, 'Spine1'],
+      [/^(chest_muscles|trapezius|scapula|clavicle|sternum|ribs|intercostals)/, 'Spine2'], [/^(neck_muscles|spine_cervical|larynx|pharynx|trachea)/, 'Neck'],
+      [/^(skull|mandible|teeth|brain|cerebellum|brainstem|pituitary|eye|tongue|salivary|cranial|arteries_head|carotid)/, 'Head']];
+    const TRONCO = ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head'];
+    const PRINCIPALES = [...TRONCO, 'LeftArm', 'LeftForeArm', 'LeftHand', 'RightArm', 'RightForeArm', 'RightHand', 'LeftUpLeg', 'LeftLeg', 'LeftFoot', 'RightUpLeg', 'RightLeg', 'RightFoot'];
+    const FIN_SEGMENTO = { Hips: 'Spine', Spine: 'Spine1', Spine1: 'Spine2', Spine2: 'Neck', Neck: 'Head', Head: 'HeadTop_End', LeftArm: 'LeftForeArm', LeftForeArm: 'LeftHand', LeftHand: 'LeftHandMiddle2', RightArm: 'RightForeArm', RightForeArm: 'RightHand', RightHand: 'RightHandMiddle2', LeftUpLeg: 'LeftLeg', LeftLeg: 'LeftFoot', LeftFoot: 'LeftToeBase', RightUpLeg: 'RightLeg', RightLeg: 'RightFoot', RightFoot: 'RightToeBase' };
+    const PADRE = { Spine: 'Hips', Spine1: 'Spine', Spine2: 'Spine1', Neck: 'Spine2', Head: 'Neck', LeftArm: 'Spine2', RightArm: 'Spine2', LeftForeArm: 'LeftArm', LeftHand: 'LeftForeArm', RightForeArm: 'RightArm', RightHand: 'RightForeArm', LeftUpLeg: 'Hips', RightUpLeg: 'Hips', LeftLeg: 'LeftUpLeg', LeftFoot: 'LeftLeg', RightLeg: 'RightUpLeg', RightFoot: 'RightLeg' };
+    const SIGMA = 0.05;
+    const distSegmento = (p, a, b) => { const ab = b.clone().sub(a), t = clamp(p.clone().sub(a).dot(ab) / Math.max(ab.lengthSq(), 1e-9), 0, 1); return p.distanceTo(a.clone().add(ab.multiplyScalar(t))); };
+    function huesoPara(huesos, nombre, centro) {
+      const lado = /_l$/.test(nombre) ? 'Left' : /_r$/.test(nombre) ? 'Right' : '';
+      for (const [re, b] of REGLAS_HUESO) if (re.test(nombre)) { const completo = TRONCO.includes(b) ? b : lado + b; if (huesos[completo]) return completo; }
+      let mejor = null, md = 1e9;       // sin regla: el segmento de hueso más cercano
+      PRINCIPALES.forEach((n) => {
+        if (lado && /^(Left|Right)/.test(n) && !n.startsWith(lado)) return;
+        const a = new THREE.Vector3(), b = new THREE.Vector3(); huesos[n].getWorldPosition(a); huesos[FIN_SEGMENTO[n]].getWorldPosition(b);
+        const d = distSegmento(centro, a, b); if (d < md) { md = d; mejor = n; }
+      });
+      return mejor;
+    }
+    function huesosPermitidos(hueso, lado, nombres) {
+      let base;
+      if (TRONCO.includes(hueso) && hueso !== 'Head') { base = TRONCO.slice(0, 5); if (hueso === 'Neck') base.push('Head'); if (hueso === 'Hips') (lado ? [lado + 'UpLeg'] : ['LeftUpLeg', 'RightUpLeg']).forEach((x) => base.push(x)); }
+      else base = [PADRE[hueso], hueso, FIN_SEGMENTO[hueso]];
+      return [...new Set(base.filter((x) => x && nombres.includes(x)))];
+    }
+    function geometriaConPesos(o, hueso, lado, nombres, segs) {
+      const pos = o.geometry.attributes.position, nor = o.geometry.attributes.normal, n = pos.count, mw = o.matrixWorld, nmat = new THREE.Matrix3().getNormalMatrix(mw);
+      const P = new Float32Array(n * 3), N = new Float32Array(n * 3), SI = new Uint16Array(n * 4), SW = new Float32Array(n * 4), v = new THREE.Vector3(), nv = new THREE.Vector3();
+      const al = huesosPermitidos(hueso, lado, nombres).map((x) => nombres.indexOf(x)), K = al.length;
+      const A = al.map((i) => { const s = segs[i], ab = s.b.clone().sub(s.a); return { a: s.a, ab, il: 1 / Math.max(ab.lengthSq(), 1e-9) }; });
+      const d = new Float32Array(K), w = new Float32Array(K), ord = new Array(K);
+      for (let i = 0; i < n; i++) {
+        v.set(pos.getX(i), pos.getY(i), pos.getZ(i)).applyMatrix4(mw); P[i * 3] = v.x; P[i * 3 + 1] = v.y; P[i * 3 + 2] = v.z;
+        if (nor) { nv.set(nor.getX(i), nor.getY(i), nor.getZ(i)).applyMatrix3(nmat).normalize(); N[i * 3] = nv.x; N[i * 3 + 1] = nv.y; N[i * 3 + 2] = nv.z; }
+        let dmin = 1e9;
+        for (let k = 0; k < K; k++) {
+          const s = A[k], dx = v.x - s.a.x, dy = v.y - s.a.y, dz = v.z - s.a.z, t = Math.min(1, Math.max(0, (dx * s.ab.x + dy * s.ab.y + dz * s.ab.z) * s.il)), ex = dx - s.ab.x * t, ey = dy - s.ab.y * t, ez = dz - s.ab.z * t;
+          d[k] = Math.sqrt(ex * ex + ey * ey + ez * ez); if (d[k] < dmin) dmin = d[k];
+        }
+        for (let k = 0; k < K; k++) { const q = (d[k] - dmin) / SIGMA; w[k] = Math.exp(-q * q); ord[k] = k; }
+        ord.sort((p, q) => w[q] - w[p]);
+        const m = Math.min(4, K); let suma = 0; for (let j = 0; j < m; j++) suma += w[ord[j]];
+        for (let j = 0; j < m; j++) { SI[i * 4 + j] = al[ord[j]]; SW[i * 4 + j] = w[ord[j]] / suma; }
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(P, 3)); if (nor) g.setAttribute('normal', new THREE.BufferAttribute(N, 3));
+      g.setAttribute('skinIndex', new THREE.BufferAttribute(SI, 4)); g.setAttribute('skinWeight', new THREE.BufferAttribute(SW, 4));
+      if (o.geometry.index) g.setIndex(new THREE.BufferAttribute(o.geometry.index.array.slice(), 1));
+      return g;
+    }
+
+    /* ---------- Estado y carga ---------- */
+    const mallas = [], monitores = {}, personajes = {};
+    const estado = { actividad: 'run', capa: 'muscles', vista: 'cut', sexo: 'M', t: 0, visible: true };
+    const CAPAS = { muscles: ['muscles'], skeleton: ['skeleton'], organs: ['organs'], vessels: ['vessels'], nerves: ['nerves'], all: ['muscles', 'skeleton', 'organs', 'vessels', 'nerves'] };
+
+    function pegarAnatomia(ch, gltf, sexo) {
+      ch.raiz.updateMatrixWorld(true);
+      const huesos = ch.huesos, cab = new THREE.Vector3(), tl = new THREE.Vector3(), tr = new THREE.Vector3();
+      huesos.HeadTop_End.getWorldPosition(cab); huesos.LeftToeBase.getWorldPosition(tl); huesos.RightToeBase.getWorldPosition(tr);
+      const nombres = PRINCIPALES.filter((n) => huesos[n]), esqueleto = new THREE.Skeleton(nombres.map((n) => huesos[n]));   // la postura de reposo es la «de enlace»
+      const segs = nombres.map((n) => { const a = new THREE.Vector3(), b = new THREE.Vector3(); huesos[n].getWorldPosition(a); huesos[FIN_SEGMENTO[n]].getWorldPosition(b); return { a, b }; });
+      const suelo = Math.min(tl.y, tr.y) - 0.02, tope = cab.y + 0.02, raiz = gltf.scene; escena.add(raiz); raiz.updateMatrixWorld(true);
+      let bb = new THREE.Box3().setFromObject(raiz); raiz.scale.setScalar((tope - suelo) / (bb.max.y - bb.min.y)); raiz.updateMatrixWorld(true);
+      bb = new THREE.Box3().setFromObject(raiz); raiz.position.set(-(bb.min.x + bb.max.x) / 2, suelo - bb.min.y, 0); raiz.updateMatrixWorld(true);
+      const lista = []; raiz.traverse((o) => { if (o.isMesh) lista.push(o); });
+      lista.forEach((o) => {
+        const nombre = o.name.replace(/_\d+$/, ''), sis = sistemaDe(o);
+        if (!sis || sis === 'skin' || OCULTAR.test(nombre)) return;
+        if (!o.geometry.attributes.normal) o.geometry.computeVertexNormals();
+        const centro = new THREE.Box3().setFromObject(o).getCenter(new THREE.Vector3()), hueso = huesoPara(huesos, nombre, centro);
+        const prefijo = Object.keys(MALLA_DE_PREFIJO).find((k) => nombre.startsWith(k)), lado = /_l$/.test(nombre) ? 'L' : /_r$/.test(nombre) ? 'R' : null;
+        const base = colorDe(nombre, sis), mon = prefijo && lado ? { malla: MALLA_DE_PREFIJO[prefijo], lado } : null;
+        const m = new THREE.SkinnedMesh(geometriaConPesos(o, hueso, lado === 'L' ? 'Left' : lado === 'R' ? 'Right' : '', nombres, segs), materialAnat(base, 0.95));
+        m.bind(esqueleto, new THREE.Matrix4()); m.renderOrder = 3; m.frustumCulled = false; m.visible = false; m.name = nombre;
+        m.userData = { sexo, sis, base: new THREE.Color(base), col: new THREE.Color(base), op: 0.95, mon };
+        if (mon) { const k = sexo + mon.malla + mon.lado; (monitores[k] = monitores[k] || {}).local = huesos[hueso].worldToLocal(centro.clone()); Object.assign(monitores[k], { hueso, sexo, malla: mon.malla, lado: mon.lado, act: 0 }); }   // la luz sigue a su hueso
+        escena.add(m); mallas.push(m);
+      });
+      raiz.removeFromParent();
+    }
+
+    const brillo = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 2, 64, 64, 62);
+      g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.3, 'rgba(255,255,255,.7)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); })();
+
+    // Solo se bajan los modelos del sexo del astronauta elegido (unos 12 MB en vez de 23). El otro sexo se baja si se cambia de astronauta.
+    const sexoInicial = String(sexoPrimero).toUpperCase() === 'F' ? 'F' : 'M';
+    estado.sexo = sexoInicial;
+    let avance = {}, esperados = 3;
+    const cargar = (archivo, k) => new Promise((ok, mal) => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load(BASE_MODELOS + archivo, ok,
+      (e) => { if (e.total) { avance[k] = e.loaded / e.total; $('cuerpo-carga-texto').textContent = `Cargando modelos 3D… ${Math.round(Object.values(avance).reduce((a, b) => a + b, 0) / esperados * 100)} %`; } }, mal));
+    const ARCHIVOS = { M: ['avatar-male.glb', 'anatomy-male.glb'], F: ['Michelle.glb', 'anatomy-female.glb'] };
+    const cargarSexo = (sexo) => Promise.all(ARCHIVOS[sexo].map((archivo, i) => cargar(archivo, sexo + i)));
+    const [gx, [gAvatar, gAnat]] = await Promise.all([cargar('Xbot.glb', 'x'), cargarSexo(sexoInicial)]);
+    $('cuerpo-carga-texto').textContent = 'Preparando animaciones…';
+    await new Promise((r) => setTimeout(r, 30));   // deja que el navegador pinte el aviso antes del cálculo pesado
+
+    const clipsOrigen = {}; gx.animations.forEach((c) => { clipsOrigen[c.name] = c; });
+    const montar = (sexo, g, anat) => {
+      const raiz = g.scene, huesos = {}, materiales = [], pieles = [];
+      raiz.traverse((o) => { if (o.isBone) huesos[nm(o.name)] = o; if (o.isSkinnedMesh) { pieles.push(o); o.frustumCulled = false; [].concat(o.material).forEach((m) => { if (!materiales.includes(m)) materiales.push(m); }); } });
+      raiz.updateMatrixWorld(true);
+      const ch = personajes[sexo] = { raiz, huesos, materiales, pieles, mezclador: new THREE.AnimationMixer(raiz), acciones: {}, actual: null, altura: 0 };
+      ['idle', 'walk', 'run'].forEach((n) => { const clip = copiarAnimacion(gx.scene, raiz, clipsOrigen[n]); if (n === 'idle') ch.clipReposo = clip; ch.acciones[n] = ch.mezclador.clipAction(clip); });
+      ch.acciones.squat = ch.mezclador.clipAction(ejercicio(ch, 'squat')); ch.acciones.calf = ch.mezclador.clipAction(ejercicio(ch, 'calf'));
+      ch.mezclador.stopAllAction(); ch.acciones.idle.play(); ch.mezclador.setTime(0); raiz.updateMatrixWorld(true);       // reposo: ahí se enlaza la anatomía
+      const cab = new THREE.Vector3(); huesos.HeadTop_End.getWorldPosition(cab); ch.altura = cab.y * 100;
+      escena.add(raiz); raiz.visible = false;
+      materiales.forEach((m) => { m.userData.orig = { transparent: m.transparent, opacity: m.opacity, depthWrite: m.depthWrite }; m.envMapIntensity = .8; });
+      pegarAnatomia(ch, anat, sexo);
+      pieles.forEach((o) => { [].concat(o.material).forEach((m) => { if (m.name === 'Wolf3D_Headwear') { o.visible = false; o.userData.ocultar = true; } }); });   // sin sombrero
+      ch.caras = pieles.filter((o) => o.morphTargetDictionary && o.morphTargetDictionary.mouthSmile !== undefined);
+      ch.ropa = materiales.filter((m) => /Outfit_(Top|Bottom)/.test(m.name));
+    };
+    montar(sexoInicial, gAvatar, gAnat);
+
+    // Una luz por cada músculo monitoreado (clic para elegir su grupo)
+    Object.keys(monitores).forEach((k) => {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: brillo, color: 0xffffff, transparent: true, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending, opacity: .9 }));
+      sp.scale.setScalar(.2); sp.renderOrder = 20; escena.add(sp); monitores[k].sprite = sp; sp.userData = { k };
+    });
+
+    /* ---------- Vista, actividad, capas y cámara ---------- */
+    const planoPersona = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0), planoAnatomia = new THREE.Plane(new THREE.Vector3(1, 0, 0), 0);   // «Corte»: persona a un lado, anatomía al otro
+    function aplicarVista() {
+      const corte = estado.vista === 'cut';
+      Object.values(personajes).forEach((ch) => ch.materiales.forEach((m) => { m.clippingPlanes = corte ? [planoPersona] : []; m.needsUpdate = true; }));
+      mallas.forEach((m) => { m.material.clippingPlanes = corte ? [planoAnatomia] : []; m.material.needsUpdate = true; });
+      aplicarVisibilidad();
+    }
+    function aplicarVisibilidad() {
+      const adentro = estado.vista !== 'person', capas = CAPAS[estado.capa];
+      mallas.forEach((m) => { const u = m.userData; m.visible = !!(adentro && u.sexo === estado.sexo && capas.includes(u.sis)); });
+    }
+    const actual = () => personajes[estado.sexo];
+    function fijarActividad(a, instantaneo) {
+      estado.actividad = a; const ch = actual(); if (!ch) return; const sig = ch.acciones[a]; if (!sig) return;
+      sig.reset().play(); sig.enabled = true; if (ch.actual && ch.actual !== sig) ch.actual.crossFadeTo(sig, instantaneo ? 0 : 0.45, false); ch.actual = sig;
+    }
+    const CAMARAS = { side: [[3.6, 1.15, 0.3], [0, 0.92, 0]], three: [[2.4, 1.4, 2.9], [0, 0.92, 0]], front: [[0.4, 1.15, 3.9], [0, 0.92, 0]], back: [[-0.4, 1.15, -3.9], [0, 0.92, 0]] };
+    const viaje = { on: false, t: 0, p0: new THREE.Vector3(), p1: new THREE.Vector3(), a0: new THREE.Vector3(), a1: new THREE.Vector3() };
+    function irACamara(n) { const [p, t] = CAMARAS[n]; viaje.p0.copy(camara.position); viaje.a0.copy(controles.target); viaje.p1.set(...p); viaje.a1.set(...t); viaje.t = 0; viaje.on = true; }
+    camara.position.set(...CAMARAS.three[0]);
+
+    /* ---------- Estado por astronauta (viene de los datos) ---------- */
+    let niveles = { quad: 0, glute: 0, gastro: 0, back: 0 };
+    function actualizarNiveles(a) { Object.keys(niveles).forEach((m) => { niveles[m] = nivelMalla(a.id_astronauta, m); }); }
+    async function ponerAstronauta(a) {
+      const sexoNuevo = String(a.sexo).toUpperCase() === 'F' ? 'F' : 'M';
+      if (!personajes[sexoNuevo]) {                     // primera vez que se elige un astronauta de este sexo: se bajan sus modelos
+        $('cuerpo-carga').hidden = false; avance = {}; esperados = 2; $('cuerpo-carga-texto').textContent = 'Cargando modelos 3D… 0 %';
+        const [g, anat] = await cargarSexo(sexoNuevo);
+        montar(sexoNuevo, g, anat); aplicarVista();
+        $('cuerpo-carga').hidden = true;
+      }
+      estado.sexo = sexoNuevo;
+      Object.keys(personajes).forEach((s) => { personajes[s].raiz.visible = (s === estado.sexo); });
+      const ch = actual();
+      ch.raiz.scale.setScalar(clamp((Number(a.talla_cm) || ch.altura) / ch.altura, 0.85, 1.15));   // la estatura real escala a la persona
+      if (estado.sexo === 'M') {                                                                   // cada astronauta con su color de ropa (el mismo de su avatar)
+        const n = (parseInt(String(a.id_astronauta).replace(/\D/g, ''), 10) || 0) % 3;
+        ch.ropa.forEach((m) => { m.map = null; m.color.copy(/Top/.test(m.name) ? COLORES_ROPA[n] : new THREE.Color(css('--marca-tinta'))); m.needsUpdate = true; });
+      }
+      ch.actual = null; fijarActividad(estado.actividad, true); actualizarNiveles(a); aplicarVisibilidad();
+    }
+    function mallaElegida() { return Object.keys(MALLAS).find((m) => MALLAS[m].grupos.includes(grupoActivo)) || null; }
+
+    /* ---------- Clic y paso del ratón sobre las luces ---------- */
+    const rayo = new THREE.Raycaster(), raton = new THREE.Vector2(); let abajo = null, ultimoHover = 0;
+    const luces = () => Object.values(monitores).filter((m) => m.sprite && m.sprite.visible).map((m) => m.sprite);
+    function golpe(e) { const r = lienzo.getBoundingClientRect(); raton.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); rayo.setFromCamera(raton, camara); const h = rayo.intersectObjects(luces(), false); return h.length ? h[0].object : null; }
+    const pista = $('cuerpo-pista');
+    lienzo.addEventListener('pointerdown', (e) => { abajo = { x: e.clientX, y: e.clientY }; });
+    lienzo.addEventListener('pointerup', (e) => {
+      if (abajo && Math.hypot(e.clientX - abajo.x, e.clientY - abajo.y) < 5) {
+        const s = golpe(e);
+        if (s) { const m = monitores[s.userData.k].malla; elegirGrupo(MALLAS[m].grupos[0]); }
+      }
+      abajo = null;
+    });
+    lienzo.addEventListener('pointermove', (e) => {
+      if (abajo || performance.now() - ultimoHover < 60) return; ultimoHover = performance.now();
+      const s = golpe(e);
+      if (!s) { pista.classList.remove('visible'); lienzo.style.cursor = ''; return; }
+      const mo = monitores[s.userData.k]; pista.textContent = `${MALLAS[mo.malla].grupos.map(etiquetaGrupo).join(' y ')}, lado ${LADO[mo.lado]}`;
+      pista.classList.add('visible'); lienzo.style.cursor = 'pointer';
+    });
+    lienzo.addEventListener('pointerleave', () => pista.classList.remove('visible'));
+
+    /* ---------- Controles de la interfaz ---------- */
+    const marcar = (id, valor) => $(id).querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.valor === valor)));
+    $('ctl-vista').addEventListener('cambio', (e) => { estado.vista = e.detail; aplicarVista(); });
+    $('ctl-actividad').addEventListener('cambio', (e) => fijarActividad(e.detail));
+    $('ctl-capa').addEventListener('cambio', (e) => { estado.capa = e.detail; if (estado.vista === 'person') { estado.vista = 'anat'; marcar('ctl-vista', 'anat'); aplicarVista(); } else aplicarVisibilidad(); });
+    $('ctl-camara').addEventListener('cambio', (e) => irACamara(e.detail));
+    aplicarVista(); fijarActividad('run', true);
+
+    /* ---------- Tamaño y bucle (solo dibuja cuando se ve) ---------- */
+    function ajustar() { const r = visor.getBoundingClientRect(); if (!r.width) return; renderer.setSize(r.width, r.height, false); camara.aspect = r.width / r.height; camara.updateProjectionMatrix(); renderer.render(escena, camara); }   // setSize borra el lienzo: se vuelve a dibujar al instante
+    new ResizeObserver(ajustar).observe(visor); ajustar();
+    new IntersectionObserver((en) => { estado.visible = en[0].isIntersecting; }).observe(visor);
+
+    const reducir = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const tmp = new THREE.Color(), v1 = new THREE.Vector3(); let previo = performance.now(), alfaPersona = 1, sonrisa = 0, carga = 0;
+    const activacion = (malla, lado, p) => {
+      const off = lado === 'L' ? 0 : .5, h = (x) => Math.max(0, Math.sin(2 * Math.PI * x)), act = estado.actividad;
+      if (act === 'squat') return { quad: .3 + .7 * carga, glute: .3 + .7 * carga, back: .5, gastro: .3 }[malla];
+      if (act === 'calf') return { gastro: .25 + .75 * carga, quad: .12, glute: .1, back: .25 }[malla];
+      const amp = { run: 1, walk: .55, idle: .1 }[act] ?? .1;
+      const patron = { quad: .3 + .7 * h(p - off), gastro: .3 + .7 * h(p - off + .25), glute: .3 + .7 * h(p - off + .1), back: .55 + .15 * Math.sin(4 * Math.PI * p) }[malla];
+      return clamp(amp * patron + (act === 'idle' ? .04 : 0), 0, 1);
+    };
+    // Cada capa se ve mejor si las de arriba se vuelven translúcidas: los músculos tapan los huesos y los órganos
+    const opacidadCapa = (sis, capas) => (sis === 'muscles' && capas.length > 1) ? 0.4 : (sis === 'organs' && capas.includes('skeleton')) ? 0.85 : 0.96;
+    function cuadro(ahora) {
+      requestAnimationFrame(cuadro);
+      const dt = Math.min(0.05, (ahora - previo) / 1000); previo = ahora;
+      if (!estado.visible || document.hidden) return;
+      estado.t += dt;
+      const ch = actual(), sexo = estado.sexo, capas = CAPAS[estado.capa], k = 1 - Math.exp(-5 * dt);
+      let fase = estado.t * 0.4;
+      if (ch) {
+        ch.mezclador.update(reducir ? dt * 0.3 : dt);
+        if (ch.actual) { fase = ch.actual.time / ch.actual.getClip().duration; carga = (estado.actividad === 'squat' || estado.actividad === 'calf') ? 0.5 - 0.5 * Math.cos(2 * Math.PI * fase) : 0; }
+        // «Persona» y «Corte»: ropa opaca. «Anatomía»: la persona queda como un contorno translúcido.
+        const objetivo = estado.vista === 'anat' ? 0.14 : 1; alfaPersona += (objetivo - alfaPersona) * (1 - Math.exp(-6 * dt));
+        ch.materiales.forEach((m) => { const o = m.userData.orig, tr = o.transparent || alfaPersona < 0.995; if (m.transparent !== tr) { m.transparent = tr; m.needsUpdate = true; } m.opacity = o.opacity * alfaPersona; m.depthWrite = alfaPersona > 0.99 ? o.depthWrite : false; });
+        ch.pieles.forEach((o) => { o.visible = !o.userData.ocultar; });
+        const peor = Math.max(...Object.values(niveles)); sonrisa += ((peor === 0 ? 0.9 : peor === 1 ? 0.25 : 0) - sonrisa) * (1 - Math.exp(-3 * dt));   // el avatar masculino sonríe según su estado
+        (ch.caras || []).forEach((o) => { o.morphTargetInfluences[o.morphTargetDictionary.mouthSmile] = sonrisa; });
+      }
+      const vel = (PASO[sexo][estado.actividad] || 0) * (ch ? ch.raiz.scale.x : 1);
+      texCinta.offset.y -= vel * dt / (3.6 / 5);
+      if (viaje.on) { viaje.t = Math.min(1, viaje.t + dt / 0.9); const e = 1 - Math.pow(1 - viaje.t, 3); camara.position.lerpVectors(viaje.p0, viaje.p1, e); controles.target.lerpVectors(viaje.a0, viaje.a1, e); if (viaje.t >= 1) viaje.on = false; }
+      controles.update();
+
+      const elegida = mallaElegida(), act = {}, adentro = estado.vista !== 'person';
+      Object.keys(monitores).forEach((id) => {
+        const mo = monitores[id], sp = mo.sprite; if (!sp) return;
+        const a = activacion(mo.malla, mo.lado, fase); mo.act += (a - mo.act) * (1 - Math.exp(-10 * dt)); act[id] = mo.act;
+        sp.visible = adentro && mo.sexo === sexo && capas.includes('muscles'); if (!sp.visible) return;
+        personajes[mo.sexo].huesos[mo.hueso].localToWorld(v1.copy(mo.local)); sp.position.copy(v1);
+        sp.material.color.copy(COLORES[niveles[mo.malla]]);
+        const sel = mo.malla === elegida; sp.scale.setScalar((sel ? 0.17 : 0.1) * (0.7 + 0.8 * mo.act)); sp.material.opacity = 0.4 + 0.5 * mo.act;
+      });
+      mallas.forEach((m) => {
+        if (!m.visible) return; const u = m.userData; let col = u.base, op = opacidadCapa(u.sis, capas), em = .1, pulso = 0;
+        if (u.mon) {
+          const nv = niveles[u.mon.malla], a = act[sexo + u.mon.malla + u.mon.lado] || 0, sel = u.mon.malla === elegida;
+          tmp.copy(COLORES[nv]); col = tmp;
+          em = .1 + .3 * a + (nv === 2 && !reducir ? .1 * Math.sin(estado.t * 6) : 0) + (sel ? .2 : 0); pulso = .006 * a + (sel ? .001 : 0);
+        }
+        u.col.lerp(col, k); u.op += (op - u.op) * k;
+        const mt = m.material; mt.color.copy(u.col); mt.emissive.copy(u.col); mt.emissiveIntensity = em; mt.opacity = u.op;
+        const tr = u.op < 0.98; if (mt.transparent !== tr) { mt.transparent = tr; mt.needsUpdate = true; } mt.depthWrite = u.op > 0.85; mt.userData.uPulse.value = pulso;
+      });
+      renderer.render(escena, camara);
+    }
+    requestAnimationFrame(cuadro);
+
+    return { ponerAstronauta, actualizarNiveles };
+  }
+
+  /* ============================================================
+     ARRANQUE: cuando se elige un astronauta
+     ============================================================ */
+  function mostrarError(texto) {
+    $('cuerpo-carga').hidden = false;
+    $('cuerpo-carga-texto').textContent = texto;
+  }
+  document.addEventListener('astronauta-elegido', async () => {
+    grupoActivo = null;
+    dibujarPanel();
+    if (!motor) {
+      $('cuerpo-carga').hidden = false;
+      $('cuerpo-carga-texto').textContent = 'Cargando modelos 3D…';
+      iniciando = iniciando || crearMotor(Sesion.astronauta && Sesion.astronauta.sexo);
+      try { motor = await iniciando; }
+      catch (err) {
+        console.error(err);
+        iniciando = null;
+        return mostrarError(location.protocol === 'file:'
+          ? 'El navegador no deja cargar los modelos con doble clic. Abre INICIAR-WINDOWS.bat.'
+          : 'No se pudieron cargar los modelos 3D. Recarga la página.');
+      }
+      $('cuerpo-carga').hidden = true;
+    }
+    if (Sesion.astronauta) await motor.ponerAstronauta(Sesion.astronauta);
+  });
+  /* Cuando Registro o Alertas guardan algo, cambian los estados: se redibuja el panel y los colores del cuerpo */
+  document.addEventListener('datos-actualizados', () => {
+    dibujarPanel();
+    if (motor && Sesion.astronauta) motor.actualizarNiveles(Sesion.astronauta);
+  });
+})();
+</script>
