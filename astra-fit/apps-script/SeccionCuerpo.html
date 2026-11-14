@@ -48,12 +48,15 @@
           <button type="button" data-valor="muscles" aria-pressed="true">Músculos</button>
         </div></div>
       <div><span class="nota">Actividad</span>
-        <div class="segmentado" data-segmentado id="ctl-actividad" role="group" aria-label="Actividad">
-          <button type="button" data-valor="run" aria-pressed="false">Correr</button>
+        <div class="segmentado segmentado--envuelve" data-segmentado id="ctl-actividad" role="group" aria-label="Actividad">
+          <button type="button" data-valor="run" aria-pressed="false">Carrera en cinta</button>
           <button type="button" data-valor="walk" aria-pressed="true">Caminar</button>
           <button type="button" data-valor="idle" aria-pressed="false">Reposo</button>
           <button type="button" data-valor="squat" aria-pressed="false">Sentadilla</button>
-          <button type="button" data-valor="calf" aria-pressed="false">Talones</button>
+          <button type="button" data-valor="calf" aria-pressed="false">Elevación de talones</button>
+          <button type="button" data-valor="deadlift" aria-pressed="false">Peso muerto</button>
+          <button type="button" data-valor="press" aria-pressed="false">Press de pecho</button>
+          <button type="button" data-valor="row" aria-pressed="false">Remo sentado</button>
         </div></div>
     </div>
     <p class="nota" style="margin-top: var(--e-5); color: var(--tinta-clara-2)">
@@ -213,6 +216,8 @@
     const banda = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.06, 3.6), new THREE.MeshStandardMaterial({ map: texCinta, roughness: .8 })); banda.position.y = -0.03; cinta.add(banda);
     [-0.56, 0.56].forEach((x) => { const r = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.09, 3.7), new THREE.MeshStandardMaterial({ color: 0x55565c, roughness: .5, metalness: .3 })); r.position.set(x, -0.025, 0); cinta.add(r); });
     escena.add(cinta);
+    // Asiento del remo sentado: aparece solo con ese ejercicio y se coloca bajo la cadera del personaje
+    const asiento = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.07, 0.42), new THREE.MeshStandardMaterial({ color: 0x55565c, roughness: .6 })); asiento.visible = false; escena.add(asiento);
     const PASO = { M: { walk: 1.71, run: 3.75 }, F: { walk: 1.63, run: 3.54 } };   // m/s del pie apoyado (medido con las animaciones)
 
     /* Material de la anatomía. uPulse infla el músculo al contraerse; se aplica DESPUÉS del skinning. */
@@ -264,17 +269,30 @@
       const W0 = {}, pos = (b) => new THREE.Vector3().setFromMatrixPosition(b.matrixWorld); orden.forEach((n) => W0[n] = giroMundo(huesos[n]));
       const H0 = pos(huesos.Hips), L1 = pos(huesos.LeftUpLeg).distanceTo(pos(huesos.LeftLeg)), L2 = pos(huesos.LeftLeg).distanceTo(pos(huesos.LeftFoot)), Lf = pos(huesos.LeftFoot).distanceTo(pos(huesos.LeftToeBase));
       const padreInv = huesos.Hips.parent.matrixWorld.clone().invert(); mezcla.stopAllAction();
-      const dur = tipo === 'squat' ? 3.4 : 2.4, fps = 30, nF = Math.round(dur * fps), tiempos = new Float32Array(nF), qv = {}, pv = new Float32Array(nF * 3); orden.forEach((n) => qv[n] = new Float32Array(nF * 4));
-      const Wt = {}, q = new THREE.Quaternion(), pw = new THREE.Quaternion(), rx = new THREE.Quaternion(), X = new THREE.Vector3(1, 0, 0);
+      const dur = { squat: 3.4, calf: 2.4, deadlift: 3.6, press: 3.0, row: 3.2 }[tipo], fps = 30, nF = Math.round(dur * fps), tiempos = new Float32Array(nF), qv = {}, pv = new Float32Array(nF * 3); orden.forEach((n) => qv[n] = new Float32Array(nF * 4));
+      const Wt = {}, q = new THREE.Quaternion(), pw = new THREE.Quaternion(), rx = new THREE.Quaternion(), X = new THREE.Vector3(1, 0, 0); let ult = null;
       for (let f = 0; f < nF; f++) {
         const t = f / fps; tiempos[f] = t; const s = 0.5 - 0.5 * Math.cos(2 * Math.PI * t / dur);
-        let a = 0, incl = 0, brazos = 0, pie = 0, dy = 0, dz = 0, b = 0;
+        // a: flexión de cadera · b: ángulo de la espinilla · incl: inclinación del tronco · pie: puntas · brazos: elevación (sentadilla)
+        // armA / foreA: ángulo absoluto de brazo y antebrazo en los ejercicios de empuje y tracción (null = usa "brazos")
+        let a = 0, incl = 0, brazos = 0, pie = 0, dy = 0, dz = 0, b = 0, armA = null, foreA = 0, neckF = 0.6, headF = 0.25;
+        const pata = (flex, atras) => { a = flex; dz = -atras * (L1 + L2) * Math.sin(a); b = Math.asin(clamp((dz + L1 * Math.sin(a)) / L2, -1, 1)); dy = L1 * Math.cos(a) + L2 * Math.cos(b) - (L1 + L2); };
         if (tipo === 'squat') { a = 1.15 * s; incl = 0.55 * a; brazos = 1.35 * s; dz = -0.20 * (L1 + L2) * Math.sin(a); b = Math.asin(clamp((dz + L1 * Math.sin(a)) / L2, -1, 1)); dy = L1 * Math.cos(a) + L2 * Math.cos(b) - (L1 + L2); }
-        else { pie = 0.75 * s; dy = Lf * Math.sin(pie) * 0.9; }
+        else if (tipo === 'calf') { pie = 0.75 * s; dy = Lf * Math.sin(pie) * 0.9; }
+        else if (tipo === 'deadlift') {   // bisagra de cadera: el tronco se inclina, la espalda recta y los brazos cuelgan con la barra
+          pata(0.8 * s, 0.5); incl = 1.7 * s; brazos = incl; neckF = 0.25; headF = 0.05;
+        } else if (tipo === 'press') {    // de pie: las manos salen del pecho hasta tener los brazos estirados al frente
+          armA = -(0.6 + 0.85 * s); foreA = -2.5 + 0.95 * s; incl = 0;
+        } else if (tipo === 'row') {      // sentado, piernas al frente: los brazos pasan de estirados a codos atrás
+          pata(1.57, 0.375); armA = -1.35 + 1.85 * s; foreA = -1.35 - 0.25 * s; incl = -0.14 * s; neckF = 0.2; headF = 0.1;
+          ult = { y: H0.y + dy, z: H0.z + dz };
+        }
         const ang = (n) => {
           if (/UpLeg/.test(n)) return -a; if (/Leg$/.test(n)) return b; if (/Foot|Toe/.test(n)) return pie;
           if (n === 'Spine') return incl * 0.35; if (n === 'Spine1') return incl * 0.7; if (n === 'Spine2') return incl;
-          if (/Neck/.test(n)) return incl * 0.6; if (/Head|Eye/.test(n)) return incl * 0.25; if (/Shoulder|Arm|Hand/.test(n)) return incl - brazos; return 0;
+          if (/Neck/.test(n)) return incl * neckF; if (/Head|Eye/.test(n)) return incl * headF;
+          if (armA !== null) { if (/ForeArm|Hand/.test(n)) return foreA; if (/Shoulder/.test(n)) return 0; if (/Arm/.test(n)) return armA; return 0; }
+          if (/Shoulder|Arm|Hand/.test(n)) return incl - brazos; return 0;
         };
         orden.forEach((n) => {
           const objetivo = rx.setFromAxisAngle(X, ang(n)).clone().multiply(W0[n]); Wt[n] = objetivo;
@@ -283,6 +301,7 @@
         });
         new THREE.Vector3(H0.x, H0.y + dy, H0.z + dz).applyMatrix4(padreInv).toArray(pv, f * 3);
       }
+      if (tipo === 'row' && ult) ch.asiento = { x: H0.x, y: ult.y, z: ult.z };
       const pistas = orden.map((n) => new THREE.QuaternionKeyframeTrack(huesos[n].name + '.quaternion', tiempos, qv[n])); pistas.push(new THREE.VectorKeyframeTrack(huesos.Hips.name + '.position', tiempos, pv));
       return new THREE.AnimationClip(tipo, dur, pistas);
     }
@@ -469,6 +488,7 @@
       ['idle', 'walk', 'run'].forEach((n) => { ch.acciones[n] = ch.mezclador.clipAction(clipsOrigen[n]); });
       ch.clipReposo = clipsOrigen.idle;
       ch.acciones.squat = ch.mezclador.clipAction(ejercicio(ch, 'squat')); ch.acciones.calf = ch.mezclador.clipAction(ejercicio(ch, 'calf'));
+      ch.acciones.deadlift = ch.mezclador.clipAction(ejercicio(ch, 'deadlift')); ch.acciones.press = ch.mezclador.clipAction(ejercicio(ch, 'press')); ch.acciones.row = ch.mezclador.clipAction(ejercicio(ch, 'row'));
       ch.mezclador.stopAllAction(); ch.acciones.idle.play(); ch.mezclador.setTime(0); raiz.updateMatrixWorld(true);       // reposo: ahí se enlaza la anatomía
       const cab = new THREE.Vector3(); huesos.HeadTop_End.getWorldPosition(cab); ch.altura = cab.y * 100;
       escena.add(raiz); raiz.visible = false;
@@ -499,6 +519,7 @@
     const actual = () => personajes[estado.sexo];
     function fijarActividad(a, instantaneo) {
       estado.actividad = a; const ch = actual(); if (!ch) return; const sig = ch.acciones[a]; if (!sig) return;
+      asiento.visible = a === 'row' && !!ch.asiento; if (asiento.visible) asiento.position.set(ch.asiento.x, ch.asiento.y - 0.09 * ch.raiz.scale.x - 0.035, ch.asiento.z + 0.24 * ch.raiz.scale.x);
       sig.reset().play(); sig.enabled = true; if (ch.actual && ch.actual !== sig) ch.actual.crossFadeTo(sig, instantaneo ? 0 : 0.45, false); ch.actual = sig;
     }
     const CAMARAS = { side: [[3.6, 1.15, 0.3], [0, 0.92, 0]], three: [[3.3, 1.5, 4.0], [0, 0.95, 0]], front: [[0.4, 1.15, 3.9], [0, 0.92, 0]], back: [[-0.4, 1.15, -3.9], [0, 0.92, 0]] };
@@ -567,6 +588,9 @@
       const off = lado === 'L' ? 0 : .5, h = (x) => Math.max(0, Math.sin(2 * Math.PI * x)), act = estado.actividad;
       if (act === 'squat') return { quad: .3 + .7 * carga, glute: .3 + .7 * carga, back: .5, gastro: .3 }[malla];
       if (act === 'calf') return { gastro: .25 + .75 * carga, quad: .12, glute: .1, back: .25 }[malla];
+      if (act === 'deadlift') return { back: .35 + .65 * carga, glute: .3 + .7 * carga, quad: .3 + .3 * carga, gastro: .2 }[malla];
+      if (act === 'press') return { back: .15, quad: .08, glute: .08, gastro: .08 }[malla];
+      if (act === 'row') return { back: .3 + .7 * carga, quad: .12, glute: .12, gastro: .08 }[malla];
       const amp = { run: 1, walk: .55, idle: .1 }[act] ?? .1;
       const patron = { quad: .3 + .7 * h(p - off), gastro: .3 + .7 * h(p - off + .25), glute: .3 + .7 * h(p - off + .1), back: .55 + .15 * Math.sin(4 * Math.PI * p) }[malla];
       return clamp(amp * patron + (act === 'idle' ? .04 : 0), 0, 1);
@@ -582,7 +606,7 @@
       let fase = estado.t * 0.4;
       if (ch) {
         ch.mezclador.update(reducir ? dt * 0.3 : dt);
-        if (ch.actual) { fase = ch.actual.time / ch.actual.getClip().duration; carga = (estado.actividad === 'squat' || estado.actividad === 'calf') ? 0.5 - 0.5 * Math.cos(2 * Math.PI * fase) : 0; }
+        if (ch.actual) { fase = ch.actual.time / ch.actual.getClip().duration; carga = (['squat', 'calf', 'deadlift', 'press', 'row'].includes(estado.actividad)) ? 0.5 - 0.5 * Math.cos(2 * Math.PI * fase) : 0; }
         // «Persona» y «Corte»: ropa opaca. «Anatomía»: la persona queda como un contorno translúcido.
         const objetivo = estado.vista === 'person' ? 1 : 0.14; alfaPersona += (objetivo - alfaPersona) * (1 - Math.exp(-6 * dt));
         ch.materiales.forEach((m) => { const o = m.userData.orig, tr = o.transparent || alfaPersona < 0.995; if (m.transparent !== tr) { m.transparent = tr; m.needsUpdate = true; } m.opacity = o.opacity * alfaPersona; m.depthWrite = alfaPersona > 0.99 ? o.depthWrite : false; });
