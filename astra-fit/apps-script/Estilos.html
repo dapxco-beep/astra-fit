@@ -662,4 +662,10 @@ ol.lista--texto > li { display: list-item; padding: var(--e-2) 0; border-top: 0;
   .tabla--erdm th:nth-child(2), .tabla--erdm td:nth-child(2) { display: none; }
   form .boton[type="submit"] { width: 100%; }
 }
+
+/* ---- Carga del visor 3D: imagen de anatomía al instante y barra de progreso ---- */
+.visor-poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: .4; pointer-events: none; }
+.visor-carga .texto, .visor-barra { position: relative; z-index: 1; }
+.visor-barra { width: min(260px, 70%); height: 4px; border-radius: 2px; background: var(--linea-oscura); overflow: hidden; }
+.visor-barra i { display: block; height: 100%; width: 0; background: var(--azul-sobre-negro); transition: width .25s; }
 </style>
