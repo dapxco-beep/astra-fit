@@ -39,7 +39,7 @@
   --anillo-foco: rgba(0, 113, 227, .45);
 
   /* Semáforo: punto, texto legible y fondo suave */
-  --verde: #34c759;     --verde-texto: #248a3d;     --verde-fondo: #e9f8ee;
+  --verde: #34c759;     --verde-texto: #1e7a35;     --verde-fondo: #e9f8ee;
   --amarillo: #ff9f0a;  --amarillo-texto: #b25000;  --amarillo-fondo: #fff4e5;
   --rojo: #ff3b30;      --rojo-texto: #d70015;      --rojo-fondo: #ffeceb;
   --gris-estado: #aeaeb2;
@@ -52,7 +52,7 @@
   --t-tarjeta: 1.5rem;                            /* 24 px */
   --t-cuerpo: 1.0625rem;                          /* 17 px */
   --t-pequeno: .875rem;                           /* 14 px */
-  --t-nota: .75rem;                               /* 12 px */
+  --t-nota: .8125rem;                             /* 13 px */
 
   /* Espacios (múltiplos de 4) */
   --e-1: 4px; --e-2: 8px; --e-3: 12px; --e-4: 16px; --e-5: 20px; --e-6: 24px;
@@ -82,7 +82,8 @@ h1, h2, h3, h4, p, figure { margin: 0; }
 img, svg, canvas { display: block; max-width: 100%; }
 button, input, select, textarea { font: inherit; letter-spacing: inherit; color: inherit; }
 a { color: var(--azul-enlace); }
-:focus-visible { outline: 3px solid var(--anillo-foco); outline-offset: 2px; border-radius: 8px; }
+:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; border-radius: 8px; }
+.seccion--negra :focus-visible { outline-color: var(--azul-sobre-negro); }
 .contenedor { width: min(var(--ancho), 100% - 44px); margin-inline: auto; }
 .oculto, [hidden] { display: none !important; }
 .solo-lector { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -146,7 +147,7 @@ a { color: var(--azul-enlace); }
 .seccion--gris { background: var(--fondo); }
 .seccion--negra { background: var(--negro); color: var(--tinta-clara); }
 .seccion--negra .subtitulo, .seccion--negra .texto-2 { color: var(--tinta-clara-2); }
-.seccion-cabecera { max-width: 880px; margin: 0 auto var(--e-16); text-align: center; display: grid; gap: var(--e-4); justify-items: center; }
+.seccion-cabecera { max-width: 880px; margin: 0 auto var(--e-10); text-align: center; display: grid; gap: var(--e-4); justify-items: center; }
 
 /* Hero: lo primero que se ve */
 .hero { padding: clamp(64px, 9vw, 112px) 0 clamp(56px, 7vw, 88px); background: var(--blanco); text-align: center; }
@@ -351,7 +352,7 @@ a { color: var(--azul-enlace); }
 .emoji-opcion:active { transform: scale(.94); }
 .emoji-opcion input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
 .emoji-opcion:has(input:checked) { box-shadow: inset 0 0 0 2.5px var(--azul); background: var(--blanco); }
-.emoji-opcion:has(input:focus-visible) { outline: 3px solid var(--anillo-foco); outline-offset: 2px; }
+.emoji-opcion:has(input:focus-visible) { outline: 3px solid var(--azul); outline-offset: 2px; }
 .imc-vivo { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--e-3); min-height: 32px; }
 
 /* ================================================================ 16. RESUMEN (SeccionInicio.html) */
@@ -634,5 +635,33 @@ a { color: var(--azul-enlace); }
   :root { --tinta-2: #3a3a3c; --tinta-3: #48484a; --linea: #8e8e93; --linea-suave: rgba(0, 0, 0, .3); }
   .nav { background: var(--blanco); backdrop-filter: none; -webkit-backdrop-filter: none; }
   .tarjeta { box-shadow: inset 0 0 0 1px var(--linea); }
+}
+
+/* ================================================================ 99. AJUSTES DE UX/UI (auditoría del 14-nov) */
+details > summary { cursor: pointer; }
+/* Listas de texto corrido (no filas de etiqueta + valor) */
+.lista--texto > li { display: block; }
+ol.lista--texto { list-style: decimal; padding-left: 1.2em; }
+ol.lista--texto > li { display: list-item; padding: var(--e-2) 0; border-top: 0; }
+/* Tablas */
+.tabla-scroll { overflow-x: auto; margin-top: var(--e-4); }
+.tabla { width: 100%; border-collapse: collapse; text-align: left; }
+.tabla th { font-size: var(--t-pequeno); font-weight: 600; color: var(--tinta-2); padding: var(--e-2) var(--e-4) var(--e-3) 0; border-bottom: 1px solid var(--linea); text-align: left; }
+.tabla td { padding: var(--e-3) var(--e-4) var(--e-3) 0; border-bottom: 1px solid var(--linea-suave); vertical-align: top; }
+.tabla tr:last-child td { border-bottom: 0; }
+/* Contraste: notas sobre fondo negro y botón secundario sobre gris */
+.seccion--negra .nota, .seccion--negra .texto-3 { color: var(--tinta-clara-2); }
+.boton--secundario { color: var(--azul-enlace); }
+/* Selector 1 a 5 */
+.segmentado--5 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+/* Alertas: el nivel se ve de un vistazo */
+.tarjeta[data-nivel="rojo"] { border-left: 4px solid var(--rojo); }
+.tarjeta[data-nivel="amarillo"] { border-left: 4px solid var(--amarillo); }
+@media (max-width: 640px) {
+  .segmentado button { min-height: 44px; }
+  .boton--pequeno { min-height: 44px; padding: 10px 16px; }
+  .evo-controles .campo { min-width: 0; flex: 1 1 100%; }
+  .tabla--erdm th:nth-child(2), .tabla--erdm td:nth-child(2) { display: none; }
+  form .boton[type="submit"] { width: 100%; }
 }
 </style>
