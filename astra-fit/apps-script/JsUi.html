@@ -34,6 +34,20 @@ const UI = (() => {
     grupo.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b === boton)));
     grupo.dispatchEvent(new CustomEvent('cambio', { detail: boton.dataset.valor ?? boton.textContent.trim() }));
   });
+  /* Enlaces internos (#cuerpo, #monitoreo...): Apps Script obliga a usar <base target="_top">, que haría que el
+     enlace intente abrir la ventana de afuera. Aquí se intercepta el clic y se baja a la sección dentro de la página. */
+  document.addEventListener('click', (e) => {
+    const enlace = e.target.closest('a[href^="#"]');
+    if (!enlace) return;
+    const destino = document.getElementById(enlace.getAttribute('href').slice(1));
+    if (!destino) return;
+    e.preventDefault();
+    const quieto = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const barra = document.querySelector('.nav');
+    const arriba = destino.getBoundingClientRect().top + window.scrollY - (barra ? barra.offsetHeight : 0);
+    window.scrollTo({ top: destino.id === 'inicio' ? 0 : Math.max(0, arriba), behavior: quieto ? 'auto' : 'smooth' });
+  });
+
 
   /* Barra superior: marca la sección que se está viendo */
   function seguirSecciones() {

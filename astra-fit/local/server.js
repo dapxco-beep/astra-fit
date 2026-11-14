@@ -33,6 +33,15 @@ function ahora() {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+/* Igual que guardarOActualizar_ de Code.gs: si la fila existe cambia los campos enviados, si no la agrega */
+function guardarOActualizar(bd, tabla, clave, obj, t) {
+  const filas = (bd[tabla] = bd[tabla] || []);
+  const fila = filas.find((f) => String(f[clave]) === String(obj[clave]));
+  if (!fila) { const nueva = { ...obj, registrado_en: obj.registrado_en || t }; filas.push(nueva); return nueva; }
+  Object.keys(obj).forEach((k) => { if (k !== 'registrado_en' && obj[k] !== undefined) fila[k] = obj[k]; });
+  return fila;
+}
+
 /* Mismas funciones y mismos nombres que Code.gs */
 const funciones = {
   obtenerDatos() { return leerBD(); },
@@ -73,13 +82,21 @@ const funciones = {
     escribirBD(bd);
     return { ok: true, registro };
   },
-  guardarSesion(sesion, filasEmg) {
+  guardarEvaluaciones(filas) {
     const bd = leerBD();
-    sesion.registrado_en = ahora();
-    bd.Sesiones.push(sesion);
-    (filasEmg || []).forEach((f) => bd.EMG.push(f));
+    const t = ahora();
+    const guardadas = (filas || []).map((f) => guardarOActualizar(bd, 'Evaluaciones', 'id_evaluacion', { ...f, actualizado_en: t }, t));
     escribirBD(bd);
-    return { ok: true, sesion };
+    return { ok: true, evaluaciones: guardadas };
+  },
+  guardarMedicion(medicion, evaluacion) {
+    const bd = leerBD();
+    const t = ahora();
+    medicion.registrado_en = t;
+    (bd.Monitoreo = bd.Monitoreo || []).push(medicion);
+    const fila = guardarOActualizar(bd, 'Evaluaciones', 'id_evaluacion', { ...evaluacion, actualizado_en: t }, t);
+    escribirBD(bd);
+    return { ok: true, medicion, evaluacion: fila };
   },
   actualizarAlerta(idAlerta, cambios) {
     const bd = leerBD();

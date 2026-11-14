@@ -1,6 +1,6 @@
 // Regenera las imágenes de anatomía (assets/anatomia2d/) a partir del modelo 3D. Requiere el servidor local en :3000 (INICIAR-WINDOWS.bat) y Chrome.
 // Uso: node astra-fit/publicar/herramientas/render-anatomia.js [M,F]
-// Dibuja la anatomía (capa base y una máscara por grupo) y guarda PNG + JSON en NASA/assets/anatomia2d/
+// Dibuja la anatomía (capa base, una máscara por grupo y una por músculo de la ERDM-A) y guarda PNG + JSON en NASA/assets/anatomia2d/
 const { spawn } = require('child_process'); const fs = require('fs'); const path = require('path');
 const S = __dirname, SALIDA = 'c:/Users/danie/DANIEL/NASA/assets/anatomia2d', PUERTO = 9388;
 const sexos = (process.argv[2] || 'M,F').split(','), solo = process.argv[3] || '';
@@ -24,7 +24,9 @@ const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
     const centros = {};
     for (const sx of sexos) {
       centros[sx] = { front: {}, back: {} };
-      const plan = [['front', 'base'], ['front', 'quad'], ['back', 'base'], ['back', 'glute'], ['back', 'back'], ['back', 'gastro']];
+      const plan = [['front', 'base'], ['front', 'quad'], ['back', 'base'], ['back', 'glute'], ['back', 'back'], ['back', 'gastro'],
+        // los 6 músculos de la escala ERDM-A (SeccionMonitoreo): bíceps y antebrazo de frente, tríceps y pantorrilla partida de espalda
+        ['front', 'cuadriceps'], ['front', 'biceps'], ['front', 'antebrazo'], ['back', 'triceps'], ['back', 'gastrocnemio'], ['back', 'soleo']];
       for (const [vista, modo] of plan) {
         if (solo && modo !== solo) continue;
         const r = await ev(`dibujar('${sx}', '${vista}', '${modo}')`);

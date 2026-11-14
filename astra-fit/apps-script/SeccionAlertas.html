@@ -1,121 +1,178 @@
-<!-- SeccionAlertas.html — Alertas y recomendaciones.  Fondo: blanco.  Responsable: Dashboard
-     Muestra las alertas del astronauta elegido (Sesion.datos.Alertas), con la recomendación de cada una.
-     Permite pasarlas a "en seguimiento" o cerrarlas (API.actualizarAlerta).
-     Se vuelve a dibujar con los eventos "astronauta-elegido" y "datos-actualizados". -->
+<!-- SeccionAlertas.html — Lo que requiere atención.  Fondo: blanco.  Responsable: Dashboard
+     Contenido del documento ASTRA-FIT (pestaña ESCALA):
+       · Alertas abiertas de la pestaña Alertas, con los niveles del prototipo: amarillo = vigilancia, repetir medición
+         o evaluación; rojo = evaluación médica inmediata. Se pueden pasar a seguimiento o marcar como atendidas.
+       · Plan de intervención y fortalecimiento (sección 6): para cada músculo, según su riesgo ERDM-A actual,
+         las acciones del nivel (6.1), el ejercicio y la dosificación (6.2, pestaña PlanFortalecimiento).
+       · Regla de alerta prioritaria (sección 5) y protocolo de aplicación (sección 7).
+       · Intervenciones registradas (pestaña Intervenciones).
+     Escucha "astronauta-elegido" y "datos-actualizados". Las alertas son indicadores de seguimiento, no diagnósticos. -->
 <section class="seccion seccion--blanca" id="alertas">
   <div class="contenedor">
     <div class="seccion-cabecera">
       <h2 class="titulo">Lo que requiere atención.</h2>
-      <p class="subtitulo">Cambios que cruzaron un umbral, con la recomendación para cada uno.</p>
+      <p class="subtitulo">Alertas abiertas y el plan de fortalecimiento de cada músculo según su riesgo en la escala ERDM-A.</p>
     </div>
 
-    <div class="rejilla rejilla-3" id="alertas-resumen" aria-live="polite"></div>
+    <!-- ---------- Alertas abiertas ---------- -->
+    <div class="alr-bloque">
+      <div class="alr-bloque-cabecera">
+        <h3 class="titulo-tarjeta">Alertas abiertas</h3>
+        <p class="pequeno texto-2" id="alr-conteo"></p>
+      </div>
+      <div class="alr-lista" id="alr-lista"></div>
+    </div>
 
-    <div style="display:flex; justify-content:center; margin: var(--e-8) 0">
-      <div class="segmentado" data-segmentado id="ctl-alertas" role="group" aria-label="Qué alertas ver">
-        <button type="button" data-valor="abiertas" aria-pressed="true">Abiertas</button>
-        <button type="button" data-valor="todas" aria-pressed="false">Todas</button>
+    <!-- ---------- Plan de intervención ---------- -->
+    <div class="alr-bloque">
+      <div class="alr-bloque-cabecera">
+        <h3 class="titulo-tarjeta">Plan de intervención y fortalecimiento</h3>
+        <p class="pequeno texto-2">Resistencia progresiva adaptada a microgravedad, con los equipos de la misión (resistencia mecánica y bandas elásticas). Cada músculo sigue el plan de su nivel de riesgo actual.</p>
+      </div>
+      <div class="alr-planes" id="alr-planes"></div>
+    </div>
+
+    <div class="alr-pie">
+      <div class="alr-prioritaria">
+        <h4 class="alr-subtitulo">Evaluación prioritaria</h4>
+        <p class="pequeno texto-2">Sin importar el puntaje total, se activa cuando aparece cualquiera de estos hallazgos, para que un deterioro marcado en una sola dimensión no quede oculto en la suma:</p>
+        <ul class="alr-puntos pequeno">
+          <li>Pérdida de fuerza superior al <span id="alr-p-fuerza">20</span> %.</li>
+          <li>Pérdida de circunferencia superior al <span id="alr-p-circ">15</span> %.</li>
+          <li>Deterioro funcional importante o progresivo.</li>
+          <li>Hallazgos clínicos que sugieran lesión muscular o neurológica.</li>
+        </ul>
+      </div>
+      <div class="alr-protocolo">
+        <h4 class="alr-subtitulo">Cómo se aplica la escala</h4>
+        <ol class="alr-pasos pequeno">
+          <li><strong>Evaluación basal</strong> antes del vuelo: dinamometría, IMU, circunferencia, EMG y VO₂pico.</li>
+          <li><strong>Seguimiento</strong> durante la misión, con los mismos protocolos y condiciones.</li>
+          <li><strong>Cálculo del riesgo</strong>: cambio de cada variable frente a la basal.</li>
+          <li><strong>Clasificación</strong> de cada músculo: bajo, moderado o alto.</li>
+          <li><strong>Intervención</strong> según el músculo y su nivel.</li>
+          <li><strong>Reevaluación</strong> para ver si la intervención funciona.</li>
+        </ol>
       </div>
     </div>
 
-    <div class="pila" id="alertas-lista" style="gap: var(--e-4)" aria-live="polite"></div>
-    <p class="nota" style="margin-top: var(--e-8); text-align:center">Las alertas son indicadores de seguimiento, no diagnósticos médicos. Los umbrales siguen el documento ASTRA-FIT (escala ERDM-A y Prototipo) y son provisionales: no están validados clínicamente.</p>
+    <!-- ---------- Intervenciones registradas ---------- -->
+    <div class="alr-bloque" id="alr-intervenciones-bloque" hidden>
+      <div class="alr-bloque-cabecera"><h3 class="titulo-tarjeta">Intervenciones registradas</h3></div>
+      <ul class="alr-intervenciones" id="alr-intervenciones"></ul>
+    </div>
+
+    <p class="nota alr-aviso">Las alertas son indicadores de seguimiento, no diagnósticos médicos. Planes y cortes del documento ASTRA-FIT (escala ERDM-A), propuesta del equipo no validada clínicamente.</p>
   </div>
 </section>
 
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const ORDEN = { rojo: 0, amarillo: 1 };
-  const TEXTO_NIVEL = { rojo: 'Alerta', amarillo: 'Precaución', verde: 'Estable' };
-  const TEXTO_ESTADO = { abierta: 'Abierta', en_seguimiento: 'En seguimiento', cerrada: 'Cerrada' };
-  let filtro = 'abiertas';
+  const esc = (t) => UI.esc(t);
 
-  const num = (n, d = 1) => Number(n).toLocaleString('es', { maximumFractionDigits: d });
-  const cerrada = (a) => a.estado === 'cerrada';
-  const propias = () => Sesion.astronauta ? Sesion.datos.Alertas.filter((a) => a.id_astronauta === Sesion.astronauta.id_astronauta) : [];
-  const regla = (indicador) => (Sesion.datos.Umbrales || []).find((u) => u.indicador === indicador);
-  const grupo = (valor) => { if (!valor) return ''; const c = Sesion.datos.Catalogos.find((x) => x.lista === 'grupo_muscular' && x.valor === valor); return c ? c.etiqueta : valor; };
-  const con = (valor, r) => valor === null || valor === undefined ? '—' : `${num(valor, 2)} ${r ? r.unidad : ''}`.trim();
+  // Documento ASTRA-FIT, ERDM-A sección 6.1: intervenciones según el nivel de riesgo
+  const ACCIONES = {
+    bajo: ['Mantener el programa preventivo de ejercicio.', 'Continuar con ejercicios de resistencia muscular.', 'Seguimiento periódico de fuerza y función.'],
+    moderado: ['Incrementar el entrenamiento específico del músculo.', 'Aumentar progresivamente la resistencia.', 'Incorporar ejercicios aislados y multiarticulares.', 'Reevaluar la respuesta muscular con mayor frecuencia.'],
+    alto: ['Valoración individualizada antes de intensificar el entrenamiento.', 'Iniciar con cargas bajas y movimientos controlados.', 'Priorizar la recuperación de fuerza y la correcta ejecución.', 'Incrementar la resistencia de forma progresiva según tolerancia.', 'Seguimiento estrecho con dinamometría y las demás variables de la escala.']
+  };
+  // Niveles de alerta del prototipo (documento ASTRA-FIT, pestaña PROTOTIPO)
+  const NIVEL = {
+    rojo: { texto: 'Evaluación médica', ayuda: 'Requiere evaluación médica inmediata y activar el protocolo correspondiente.' },
+    amarillo: { texto: 'Vigilancia', ayuda: 'Requiere vigilancia, repetir la medición o una evaluación.' }
+  };
+  const ESTADO = { abierta: 'Abierta', en_seguimiento: 'En seguimiento', atendida: 'Atendida' };
+  const ORDEN_NIVEL = { rojo: 0, amarillo: 1, verde: 2 };
+  const RIESGO = { bajo: 'Riesgo bajo', moderado: 'Riesgo moderado', alto: 'Riesgo alto' };
 
-  /* ---------------- Resumen: tres cifras ---------------- */
-  function dibujarResumen(todas) {
-    const abiertas = todas.filter((a) => !cerrada(a)), n = (nivel) => abiertas.filter((a) => a.nivel === nivel).length;
-    const tarjeta = (cifra, clase, texto, nota) => `<div class="tarjeta pila"><span class="cifra">${cifra}</span><span class="estado ${clase}">${texto}</span><p class="nota">${nota}</p></div>`;
-    $('alertas-resumen').innerHTML =
-      tarjeta(n('rojo'), 'estado--rojo', 'Alerta', 'Abiertas: requieren valoración del médico de vuelo') +
-      tarjeta(n('amarillo'), 'estado--amarillo', 'Precaución', 'Abiertas: vigilar o repetir la medición') +
-      tarjeta(todas.filter(cerrada).length, 'estado--gris', 'Cerradas', 'Ya atendidas');
+  const astronauta = () => Sesion.astronauta;
+  const fechaHora = (t) => { const f = String(t || '').slice(0, 10); return f ? Calc.fechaCorta(f) : ''; };
+
+  /* ---------------- Alertas abiertas ---------------- */
+  function pintarAlertas() {
+    const a = astronauta();
+    const todas = (Sesion.datos.Alertas || []).filter((x) => x.id_astronauta === a.id_astronauta);
+    const abiertas = todas.filter((x) => x.estado !== 'atendida')
+      .sort((p, q) => (ORDEN_NIVEL[p.nivel] - ORDEN_NIVEL[q.nivel]) || String(q.creada_en).localeCompare(String(p.creada_en)));
+    const atendidas = todas.length - abiertas.length;
+    $('alr-conteo').textContent = abiertas.length
+      ? `${abiertas.length === 1 ? '1 alerta abierta' : `${abiertas.length} alertas abiertas`}${atendidas ? `, ${atendidas === 1 ? '1 atendida' : `${atendidas} atendidas`}` : ''}.`
+      : `${a.nombre} no tiene alertas abiertas.${atendidas ? ` ${atendidas === 1 ? '1 atendida' : `${atendidas} atendidas`}.` : ''}`;
+    $('alr-lista').innerHTML = abiertas.map((x) => {
+      const n = NIVEL[x.nivel] || NIVEL.amarillo;
+      return `<article class="alr-alerta alr-alerta--${x.nivel === 'rojo' ? 'rojo' : 'amarillo'}" data-id="${esc(x.id_alerta)}">
+        <div class="alr-alerta-cabeza">
+          <span class="estado estado--${x.nivel === 'rojo' ? 'rojo' : 'amarillo'}">${n.texto}</span>
+          <span class="nota">${fechaHora(x.creada_en)} · ${ESTADO[x.estado] || 'Abierta'}</span>
+        </div>
+        <p class="texto alr-mensaje">${esc(x.mensaje)}</p>
+        ${x.recomendacion ? `<p class="pequeno texto-2"><strong>Recomendación.</strong> ${esc(x.recomendacion)}</p>` : ''}
+        <p class="nota">${n.ayuda}</p>
+        <div class="alr-acciones">
+          ${x.estado !== 'en_seguimiento' ? '<button type="button" class="boton boton--secundario boton--pequeno" data-estado="en_seguimiento">Pasar a seguimiento</button>' : ''}
+          <button type="button" class="boton boton--pequeno" data-estado="atendida">Marcar atendida</button>
+        </div>
+      </article>`;
+    }).join('') || '<p class="alr-vacio texto-2">Todo en orden. Las alertas aparecen cuando un músculo sube de nivel de riesgo o cumple la regla de evaluación prioritaria.</p>';
   }
-
-  /* ---------------- Una alerta ---------------- */
-  function tarjetaAlerta(a) {
-    const r = regla(a.indicador), estado = a.estado || 'abierta', id = UI.esc(a.id_alerta);
-    const gestion = cerrada(a)
-      ? `<p class="pequeno texto-2">${a.nota_cierre ? UI.esc(a.nota_cierre) : 'Cerrada sin nota.'}${a.atendida_por ? ` Atendida por ${UI.esc(a.atendida_por)}.` : ''}</p>`
-      : `<div class="acciones" style="justify-content:flex-start">
-           ${estado === 'abierta' ? `<button type="button" class="boton boton--pequeno boton--secundario" data-accion="seguimiento" data-id="${id}">Pasar a seguimiento</button>` : ''}
-           <button type="button" class="boton boton--pequeno" data-accion="cerrar" data-id="${id}">Cerrar alerta</button>
-         </div>
-         <form class="formulario" data-cierre="${id}" novalidate hidden>
-           <div class="formulario-filas">
-             <div class="campo"><label for="c-por-${id}">Atendida por</label><input id="c-por-${id}" name="atendida_por" type="text" autocomplete="off" placeholder="Médico de vuelo"></div>
-             <div class="campo" data-campo="nota"><label for="c-nota-${id}">Qué se hizo</label><input id="c-nota-${id}" name="nota_cierre" type="text" autocomplete="off"><span class="error" hidden></span></div>
-           </div>
-           <div class="acciones" style="justify-content:flex-start"><button type="submit" class="boton boton--pequeno">Guardar cierre</button><button type="button" class="enlace enlace--simple pequeno" data-accion="cancelar" data-id="${id}">Cancelar</button></div>
-         </form>`;
-    return `<article class="tarjeta pila" style="${cerrada(a) ? 'opacity:.7' : ''}" data-alerta="${id}">
-      <div style="display:flex; flex-wrap:wrap; gap:var(--e-2) var(--e-4); align-items:center; justify-content:space-between">
-        <span class="estado estado--${a.nivel === 'rojo' ? 'rojo' : 'amarillo'}">${TEXTO_NIVEL[a.nivel] || a.nivel}</span>
-        <span class="nota">${UI.esc(String(a.creada_en || '').slice(0, 10))} · ${TEXTO_ESTADO[estado] || UI.esc(estado)}</span>
-      </div>
-      <h3 class="titulo-tarjeta">${UI.esc(a.mensaje)}</h3>
-      <p class="nota">${a.grupo_muscular ? `${UI.esc(grupo(a.grupo_muscular))} · ` : ''}Actual ${con(a.valor_actual, r)} · Basal ${con(a.valor_basal, r)}</p>
-      ${a.recomendacion ? `<p class="pequeno texto-2">${UI.esc(a.recomendacion)}</p>` : ''}
-      ${gestion}
-    </article>`;
-  }
-
-  function dibujar() {
-    if (!Sesion.astronauta) return;
-    const todas = propias();
-    dibujarResumen(todas);
-    const visibles = todas.filter((a) => filtro === 'todas' || !cerrada(a))
-      .sort((p, q) => (cerrada(p) - cerrada(q)) || ((ORDEN[p.nivel] ?? 2) - (ORDEN[q.nivel] ?? 2)) || String(q.creada_en).localeCompare(String(p.creada_en)));
-    $('alertas-lista').innerHTML = visibles.length ? visibles.map(tarjetaAlerta).join('')
-      : `<div class="tarjeta pila" style="text-align:center"><h3 class="titulo-tarjeta">Todo dentro de lo esperado.</h3><p class="pequeno texto-2">${filtro === 'todas' ? 'Este astronauta no tiene alertas.' : 'No hay alertas abiertas para este astronauta.'}</p></div>`;
-  }
-
-  $('ctl-alertas').addEventListener('cambio', (e) => { filtro = e.detail; dibujar(); });
-  document.addEventListener('astronauta-elegido', dibujar);
-  document.addEventListener('datos-actualizados', dibujar);
-
-  /* ---------------- Acciones ---------------- */
-  function guardarCambios(id, cambios, texto) {
-    return API.actualizarAlerta(id, cambios)
-      .then(() => { Object.assign(Sesion.datos.Alertas.find((a) => a.id_alerta === id), cambios); UI.aviso(texto, 'completado'); dibujar(); document.dispatchEvent(new CustomEvent('datos-actualizados')); })
-      .catch((err) => UI.aviso('No se pudo guardar: ' + err.message, 'error'));
-  }
-
-  $('alertas-lista').addEventListener('click', (e) => {
-    const b = e.target.closest('[data-accion]'); if (!b) return;
-    const id = b.dataset.id, form = $('alertas-lista').querySelector(`form[data-cierre="${id}"]`);
-    if (b.dataset.accion === 'seguimiento') { b.disabled = true; guardarCambios(id, { estado: 'en_seguimiento' }, 'Alerta en seguimiento.'); }
-    if (b.dataset.accion === 'cerrar' && form) { form.hidden = false; form.elements.atendida_por.focus(); }
-    if (b.dataset.accion === 'cancelar' && form) { form.reset(); form.hidden = true; }
+  $('alr-lista').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-estado]'); if (!b) return;
+    const id = b.closest('[data-id]').dataset.id, estado = b.dataset.estado;
+    b.disabled = true;
+    try {
+      await API.actualizarAlerta(id, { estado });
+      const x = Sesion.datos.Alertas.find((y) => y.id_alerta === id); if (x) x.estado = estado;
+      UI.aviso(estado === 'atendida' ? 'Alerta atendida.' : 'Alerta en seguimiento.', 'completado');
+      document.dispatchEvent(new CustomEvent('datos-actualizados'));
+    } catch (err) { UI.aviso('No se pudo actualizar la alerta: ' + err.message, 'error'); b.disabled = false; }
   });
 
-  $('alertas-lista').addEventListener('submit', (e) => {
-    const form = e.target.closest('form[data-cierre]'); if (!form) return;
-    e.preventDefault();
-    const nota = form.elements.nota_cierre.value.trim(), campo = form.querySelector('[data-campo="nota"]');
-    if (!nota) { campo.setAttribute('data-error', ''); const er = campo.querySelector('.error'); er.textContent = 'Escribe qué se hizo para cerrarla.'; er.hidden = false; return; }
-    const boton = form.querySelector('button[type="submit"]'); boton.disabled = true;
-    guardarCambios(form.dataset.cierre, { estado: 'cerrada', atendida_por: form.elements.atendida_por.value.trim(), nota_cierre: nota }, 'Alerta cerrada.')
-      .finally(() => { boton.disabled = false; });
-  });
-  $('alertas-lista').addEventListener('input', (e) => {
-    const c = e.target.closest('.campo[data-error]'); if (c) { c.removeAttribute('data-error'); c.querySelector('.error').hidden = true; }
-  });
+  /* ---------------- Plan por músculo ---------------- */
+  function pintarPlanes() {
+    const a = astronauta();
+    const filas = Erdm.GRUPOS.map((g) => ({ g, u: Erdm.ultima(a.id_astronauta, g) }))
+      .sort((p, q) => (q.u ? Number(q.u.puntaje_erdm) : -1) - (p.u ? Number(p.u.puntaje_erdm) : -1));
+    $('alr-planes').innerHTML = filas.map(({ g, u }) => {
+      if (!u) return `<article class="alr-plan"><div class="alr-plan-cabeza"><h4 class="alr-plan-nombre">${esc(Erdm.etiqueta(g))}</h4><span class="estado estado--gris">Sin evaluar</span></div>
+        <p class="pequeno texto-2">Falta la evaluación basal. Mídelo en Monitoreo para empezar.</p></article>`;
+      const riesgo = u.fase === 'basal' ? 'bajo' : u.riesgo;
+      const p = Erdm.plan(g, riesgo) || {};
+      return `<article class="alr-plan alr-plan--${Erdm.nivel(riesgo)}">
+        <div class="alr-plan-cabeza">
+          <h4 class="alr-plan-nombre">${esc(Erdm.etiqueta(g))}</h4>
+          <span class="estado estado--${Erdm.nivel(riesgo)}">${RIESGO[riesgo]} · ${u.puntaje_erdm}/10</span>
+        </div>
+        ${u.alerta_prioritaria === 'SI' ? '<p class="estado estado--rojo pequeno">Evaluación prioritaria</p>' : ''}
+        <div class="alr-ejercicio">
+          <p class="nota">Ejercicio</p>
+          <p class="texto"><strong>${esc(p.ejercicio || '—')}</strong></p>
+          <p class="pequeno texto-2">${esc(p.dosificacion || '')}</p>
+        </div>
+        <ul class="alr-puntos pequeno">${ACCIONES[riesgo].map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
+        <p class="nota">Evaluación del ${Calc.fechaCorta(u.fecha)}${u.fase === 'basal' ? ', basal' : ''}.</p>
+      </article>`;
+    }).join('');
+    const cf = Erdm.corte('fuerza'), cc = Erdm.corte('circunferencia');
+    if (cf.prioritaria) $('alr-p-fuerza').textContent = cf.prioritaria;
+    if (cc.prioritaria) $('alr-p-circ').textContent = cc.prioritaria;
+  }
+
+  /* ---------------- Intervenciones ---------------- */
+  function pintarIntervenciones() {
+    const a = astronauta();
+    const tipos = Object.fromEntries((Sesion.datos.Catalogos || []).filter((c) => c.lista === 'tipo_intervencion').map((c) => [c.valor, c.etiqueta]));
+    const lista = (Sesion.datos.Intervenciones || []).filter((i) => i.id_astronauta === a.id_astronauta)
+      .sort((p, q) => String(q.fecha).localeCompare(String(p.fecha)));
+    $('alr-intervenciones-bloque').hidden = !lista.length;
+    $('alr-intervenciones').innerHTML = lista.map((i) => `<li>
+      <div><p class="texto"><strong>${esc(tipos[i.tipo] || i.tipo)}</strong> · ${Calc.fechaCorta(i.fecha)}</p>
+      <p class="pequeno texto-2">${esc(i.descripcion)}</p></div>
+      <p class="nota">${esc(i.responsable || '')}${i.fecha_reevaluacion ? ` · reevaluación ${Calc.fechaCorta(i.fecha_reevaluacion)}` : ''}${i.resultado ? ` · ${esc(String(i.resultado).replace('mejoro', 'mejoró'))}` : ''}</p></li>`).join('');
+  }
+
+  function pintar() { if (!astronauta()) return; pintarAlertas(); pintarPlanes(); pintarIntervenciones(); }
+  document.addEventListener('astronauta-elegido', pintar);
+  document.addEventListener('datos-actualizados', pintar);
 })();
 </script>

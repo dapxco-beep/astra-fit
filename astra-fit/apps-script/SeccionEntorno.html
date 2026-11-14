@@ -1,65 +1,6 @@
-<!-- SeccionEntorno.html — Condiciones afuera de la nave: días desde el despegue, gravedad, temperatura y duración del día.
-     Fondo: blanco, con una escena oscura animada.  Escucha "astronauta-elegido" y "astronauta-actualizado".
-     Datos de cada entorno en Calc.ENTORNOS (JsCalculos.html), con sus fuentes. -->
-<section class="seccion seccion--blanca" id="entorno">
-  <div class="contenedor">
-    <div class="seccion-cabecera">
-      <h2 class="titulo" id="entorno-titulo">Afuera de la nave.</h2>
-      <p class="subtitulo">Las condiciones del lugar donde vive el astronauta y lo que significan para sus músculos.</p>
-      <div class="segmentado" data-segmentado id="entorno-selector" role="group" aria-label="Ver entorno">
-        <button type="button" data-valor="orbita" aria-pressed="true">Órbita</button>
-        <button type="button" data-valor="luna" aria-pressed="false">Luna</button>
-        <button type="button" data-valor="marte" aria-pressed="false">Marte</button>
-      </div>
-    </div>
-
-    <div class="escena" id="entorno-escena" data-entorno="orbita">
-      <svg class="escena-dibujo" viewBox="0 0 1000 420" preserveAspectRatio="xMidYMid slice" role="img" aria-labelledby="entorno-lugar">
-        <defs>
-          <radialGradient id="g-tierra" cx="40%" cy="30%" r="75%"><stop offset="0" stop-color="#3a7bff"/><stop offset=".6" stop-color="#1b4fbf"/><stop offset="1" stop-color="#0a2462"/></radialGradient>
-          <radialGradient id="g-luna" cx="50%" cy="10%" r="80%"><stop offset="0" stop-color="#d1d1d6"/><stop offset="1" stop-color="#6e6e73"/></radialGradient>
-          <radialGradient id="g-marte" cx="50%" cy="10%" r="80%"><stop offset="0" stop-color="#d9784a"/><stop offset="1" stop-color="#7a2f16"/></radialGradient>
-        </defs>
-        <g id="escena-estrellas"></g>
-        <g id="escena-contenido"></g>
-      </svg>
-      <div class="escena-datos">
-        <p class="nota">Días desde el despegue</p>
-        <p class="cifra cifra--grande" id="entorno-dias">0</p>
-        <p class="pequeno" id="entorno-lugar">Estación en órbita baja</p>
-      </div>
-    </div>
-
-    <div class="rejilla rejilla-3 entorno-metricas">
-      <article class="tarjeta pila">
-        <p class="pequeno texto-2">Gravedad</p>
-        <p class="cifra" id="entorno-gravedad">≈ 0 g</p>
-        <div class="medidor" aria-hidden="true"><span class="medidor-relleno" id="entorno-gravedad-barra"></span></div>
-        <div class="medidor-etiquetas nota" aria-hidden="true"><span>0</span><span>Tierra, 1 g</span></div>
-        <p class="nota" id="entorno-gravedad-nota"></p>
-      </article>
-      <article class="tarjeta pila">
-        <p class="pequeno texto-2">Temperatura exterior</p>
-        <p class="cifra" id="entorno-temp"><span></span><small>°C</small></p>
-        <div class="termometro" aria-hidden="true">
-          <span class="termometro-rango" id="entorno-temp-rango"></span>
-          <span class="termometro-cabina" id="entorno-temp-cabina"><span class="nota">Cabina</span></span>
-        </div>
-        <div class="medidor-etiquetas nota" aria-hidden="true"><span>−200 °C</span><span>0 °C</span><span>150 °C</span></div>
-        <p class="nota" id="entorno-temp-nota"></p>
-      </article>
-      <article class="tarjeta pila">
-        <p class="pequeno texto-2">Duración del día</p>
-        <p class="cifra" id="entorno-dia"><span></span><small></small></p>
-        <p class="nota" id="entorno-dia-nota"></p>
-      </article>
-    </div>
-
-    <p class="texto entorno-musculo" id="entorno-musculo"></p>
-    <p class="nota" style="text-align:center">Fuentes: NASA, Agencia Espacial Canadiense y The Planetary Society. Valores redondeados.</p>
-  </div>
-</section>
-
+<!-- SeccionEntorno.html — Lógica del exterior que se ve en el encabezado oscuro de SeccionInicio.html:
+     escena animada (órbita, Luna o Marte), días desde el despegue, gravedad, temperatura y duración del día.
+     Escucha "astronauta-elegido" y "astronauta-actualizado".  Datos de cada entorno en Calc.ENTORNOS (JsCalculos.html), con sus fuentes. -->
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -69,8 +10,8 @@
   /* ---------- Estrellas fijas (siempre las mismas posiciones) ---------- */
   let semilla = 7;
   const azar = () => ((semilla = (semilla * 9301 + 49297) % 233280) / 233280);
-  $('escena-estrellas').innerHTML = Array.from({ length: 70 }, () =>
-    `<circle cx="${(azar() * 1000).toFixed(0)}" cy="${(azar() * 300).toFixed(0)}" r="${(azar() * 1.3 + 0.3).toFixed(1)}" fill="#fff" opacity="${(azar() * 0.6 + 0.2).toFixed(2)}"/>`).join('');
+  $('escena-estrellas').innerHTML = Array.from({ length: 110 }, () =>
+    `<circle cx="${(azar() * 1000).toFixed(0)}" cy="${(azar() * 600 - 280).toFixed(0)}" r="${(azar() * 1.3 + 0.3).toFixed(1)}" fill="#fff" opacity="${(azar() * 0.6 + 0.2).toFixed(2)}"/>`).join('');
 
   /* ---------- Una escena por entorno ---------- */
   const ESCENAS = {
@@ -116,7 +57,7 @@
     const propio = (a && a.entorno) || 'orbita';
     entornoVisto = clave;
 
-    $('entorno-escena').dataset.entorno = clave;
+    document.getElementById('inicio').dataset.entorno = clave;   // cambia el color del cielo del encabezado
     $('escena-contenido').innerHTML = ESCENAS[clave];
     $('entorno-titulo').textContent = `Afuera de ${e.enFrase}.`;
     $('entorno-lugar').textContent = clave === propio ? `${e.nombre}, donde está ${a ? a.nombre : 'el astronauta'}` : `${e.nombre}, para comparar`;
@@ -153,8 +94,8 @@
     if ('IntersectionObserver' in window && !sinMovimiento) {
       const obs = new IntersectionObserver((ent) => {
         if (ent.some((x) => x.isIntersecting)) { contar(el, dias); obs.disconnect(); }
-      }, { threshold: 0.4 });
-      obs.observe($('entorno-escena'));
+      }, { threshold: 1 });
+      obs.observe(el);   // arranca cuando la cifra de días se ve en pantalla
     } else {
       contar(el, dias);
     }

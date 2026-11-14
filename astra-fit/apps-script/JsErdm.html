@@ -1,96 +1,199 @@
 <!--
-  JsErdm.html — Escala ERDM-A (Escala de Riesgo de Desacondicionamiento Muscular en Astronautas). Sin nada visual.
-  Reglas tomadas del documento ASTRA-FIT (pestaña ESCALA): 5 dimensiones de 0 a 2 puntos, máximo 10 por músculo.
-    Erdm.MUSCULOS                      → los 6 músculos de la escala
-    Erdm.puntuar(cambios)              → { puntos: {fuerza, coord, circ, emg, vo2}, total, nivel, prioritaria, motivos }
-    Erdm.simular(astronauta, semana)   → { musculo: cambios } con datos SIMULADOS (no hay mediciones reales)
-    Erdm.serie(astronauta, musculo)    → puntaje por semana 0..12
-  "cambios" = { fuerza, coord, circ, emg, vo2 }: porcentajes frente al valor basal del propio astronauta
-  (fuerza, circ y vo2 = pérdida %; coord y emg = cambio % en cualquier dirección).
-  Los puntos de corte son provisionales (el documento dice que la escala no está validada).
+  JsErdm.html — Escala ERDM-A (Escala de Riesgo de Desacondicionamiento Muscular en Astronautas).
+  Fuente: documento ASTRA-FIT, pestaña ESCALA. Propuesta del equipo, no es una escala clínica validada.
+
+  6 grupos musculares × 5 dimensiones, cada una de 0 a 2 puntos frente a la evaluación basal del mismo músculo:
+    fuerza (dinamometría) · coordinación (IMU, CV entre repeticiones) · circunferencia (cinta)
+    EMG (mayor cambio entre RMS y frecuencia mediana) · VO2pico (sistémico, igual para los 6 músculos)
+  Total 0–10: 0–3 bajo, 4–6 moderado, 7–10 alto. Alerta prioritaria si la fuerza cae más de 20 % o la circunferencia más de 15 %.
+  Los cortes se leen de la pestaña EscalaERDM (si falta, se usan los del documento).
+
+  Funciones:
+    Erdm.calcular(fila)                 → la fila con cambios, puntajes, puntaje_erdm, riesgo y alerta_prioritaria.
+                                          Si a la fila le falta una dimensión (p. ej. el sensor midió hoy EMG y coordinación,
+                                          pero la fuerza se midió hace una semana), usa el último valor de misión de esa
+                                          dimensión y lo anota en `arrastre`. Nunca arrastra valores de la basal.
+    Erdm.ultima(idAstronauta, grupo)    → última evaluación del músculo, ya calculada (o null)
+    Erdm.historial(idAstronauta, grupo) → todas sus evaluaciones, de la más antigua a la más reciente
+    Erdm.basal(idAstronauta, grupo)     → evaluación basal del músculo (o null)
+    Erdm.alertas(filas)                 → alertas nuevas si el riesgo subió (para API.guardarAlertas)
+    Erdm.plan(grupo, riesgo)            → { ejercicio, dosificacion } de la pestaña PlanFortalecimiento
+    Erdm.DIMENSIONES / Erdm.GRUPOS / Erdm.nivel(riesgo) / Erdm.idEvaluacion(id, fecha, grupo)
+  Usa Sesion.datos (lo carga SeccionAcceso.html).
 -->
 <script>
 const Erdm = (() => {
-  const MUSCULOS = [
-    { clave: 'soleo', nombre: 'Sóleo', region: 'inferior' },
-    { clave: 'gastrocnemio', nombre: 'Gastrocnemio', region: 'inferior' },
-    { clave: 'cuadriceps', nombre: 'Cuádriceps', region: 'inferior' },
-    { clave: 'biceps', nombre: 'Bíceps braquial', region: 'superior' },
-    { clave: 'triceps', nombre: 'Tríceps braquial', region: 'superior' },
-    { clave: 'antebrazo', nombre: 'Flexores del antebrazo', region: 'superior' }
-  ];
+  const GRUPOS = ['soleo', 'gastrocnemio', 'cuadriceps', 'biceps_braquial', 'triceps_braquial', 'flexores_antebrazo'];
+
+  // Orden, columnas y textos de cada dimensión. `signo`: cómo se muestra el cambio (pérdida = −, aumento = +).
   const DIMENSIONES = [
-    { clave: 'fuerza', nombre: 'Fuerza', metodo: 'Dinamometría', detalle: 'Pérdida de fuerza' },
-    { clave: 'coord', nombre: 'Coordinación', metodo: 'IMU (CV entre repeticiones)', detalle: 'Cambio de variabilidad' },
-    { clave: 'circ', nombre: 'Circunferencia', metodo: 'Cinta métrica', detalle: 'Pérdida de circunferencia' },
-    { clave: 'emg', nombre: 'Función neuromuscular', metodo: 'EMG (RMS y frecuencia mediana)', detalle: 'Cambio frente al basal' },
-    { clave: 'vo2', nombre: 'Capacidad funcional', metodo: 'VO₂pico (sistémico)', detalle: 'Disminución de VO₂pico' }
+    { clave: 'fuerza', nombre: 'Fuerza', metodo: 'Dinamometría', campos: ['fuerza_kg'], unidad: 'kg', cambio: 'cambio_fuerza_pct', puntos: 'p_fuerza', signo: -1, manual: false },
+    { clave: 'coordinacion', nombre: 'Coordinación', metodo: 'IMU', campos: ['coordinacion_cv_pct'], unidad: '% CV', cambio: 'cambio_coordinacion_pct', puntos: 'p_coordinacion', signo: 1, manual: false },
+    { clave: 'circunferencia', nombre: 'Circunferencia', metodo: 'Cinta métrica', campos: ['circunferencia_cm'], unidad: 'cm', cambio: 'cambio_circunferencia_pct', puntos: 'p_circunferencia', signo: -1, manual: true },
+    { clave: 'emg', nombre: 'EMG', metodo: 'Electromiografía', campos: ['emg_rms_uv', 'emg_frec_mediana_hz'], unidad: '', cambio: 'cambio_emg_pct', puntos: 'p_emg', signo: 0, manual: false },
+    { clave: 'vo2pico', nombre: 'VO₂pico', metodo: 'Capacidad funcional', campos: ['vo2pico_ml_kg_min'], unidad: 'mL/kg/min', cambio: 'cambio_vo2_pct', puntos: 'p_vo2', signo: -1, manual: true }
   ];
 
-  /* Tablas del documento. Cada una da [corte para 1 punto, corte para 2 puntos] */
-  const CORTES = {
-    fuerza: { uno: 0, dos: 10 },    // 0 → 0 pts; >0 y ≤10 → 1; >10 → 2
-    coord:  { uno: 10, dos: 20 },   // <10 → 0; 10–20 → 1; >20 → 2
-    circ:   { uno: 5, dos: 10 },    // <5 → 0; 5–10 → 1; >10 → 2
-    emg:    { uno: 10, dos: 20 },   // <10 → 0; 10–20 → 1; >20 → 2
-    vo2:    { uno: 5, dos: 10 }     // <5 → 0; 5–10 → 1; >10 → 2
+  // Cortes del documento, por si la pestaña EscalaERDM no existe o le falta una fila
+  const POR_DEFECTO = {
+    fuerza: { moderado_desde: 0, alto_desde: 10, prioritaria_desde: 20 },
+    coordinacion: { moderado_desde: 10, alto_desde: 20 },
+    circunferencia: { moderado_desde: 5, alto_desde: 10, prioritaria_desde: 15 },
+    emg: { moderado_desde: 10, alto_desde: 20 },
+    vo2pico: { moderado_desde: 5, alto_desde: 10 },
+    total: { moderado_desde: 4, alto_desde: 7 }
   };
-  function puntosDe(clave, valor) {
-    if (!Number.isFinite(valor)) return 0;
-    const v = clave === 'coord' || clave === 'emg' ? Math.abs(valor) : valor;
-    const c = CORTES[clave];
-    if (clave === 'fuerza') return v <= 0 ? 0 : v <= c.dos ? 1 : 2;
-    return v < c.uno ? 0 : v <= c.dos ? 1 : 2;
-  }
-  function nivelDe(total) { return total <= 3 ? 'verde' : total <= 6 ? 'amarillo' : 'rojo'; }
-
-  function puntuar(c) {
-    const puntos = {};
-    DIMENSIONES.forEach((d) => { puntos[d.clave] = puntosDe(d.clave, c[d.clave]); });
-    const total = DIMENSIONES.reduce((s, d) => s + puntos[d.clave], 0);
-    // Regla de alerta prioritaria: un deterioro marcado en una sola dimensión no debe quedar oculto por la suma
-    const motivos = [];
-    if (c.fuerza > 20) motivos.push('Pérdida de fuerza superior al 20 %');
-    if (c.circ > 15) motivos.push('Pérdida de circunferencia superior al 15 %');
-    return { puntos, total, nivel: nivelDe(total), prioritaria: motivos.length > 0, motivos };
+  function corte(dimension) {
+    const fila = ((Sesion.datos && Sesion.datos.EscalaERDM) || []).find((e) => e.dimension === dimension) || {};
+    const def = POR_DEFECTO[dimension] || {};
+    const n = (v, d) => (v === null || v === undefined || v === '' ? d : Number(v));
+    return { moderado: n(fila.moderado_desde, def.moderado_desde), alto: n(fila.alto_desde, def.alto_desde), prioritaria: n(fila.prioritaria_desde, def.prioritaria_desde) };
   }
 
-  /* ---------------- Simulación determinista (misma semilla = mismos números) ---------------- */
-  function semilla(texto) { let h = 2166136261; for (const ch of texto) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
-  function azar(s) { let t = s + 0x6D2B79F5; return () => { t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  const num = (v) => (v === null || v === undefined || v === '' || isNaN(Number(v)) ? null : Number(v));
+  const r1 = (v) => (v === null ? null : Math.round(v * 10) / 10);
+  const evaluaciones = () => (Sesion.datos && Sesion.datos.Evaluaciones) || [];
+  const delMusculo = (id, grupo) => evaluaciones().filter((e) => e.id_astronauta === id && e.grupo_muscular === grupo)
+    .sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
 
-  // Cambio final (semana 12) por escenario; las piernas se deterioran más que los brazos (antigravitatorios)
-  const FINAL = {
-    estable:        { fuerza: 2,  coord: 4,  circ: 1.5, emg: 5,  vo2: 2 },
-    perdida_fuerza: { fuerza: 19, coord: 9,  circ: 8,   emg: 14, vo2: 8 },
-    asimetria:      { fuerza: 7,  coord: 24, circ: 4,   emg: 17, vo2: 4 }
-  };
-  const PESO_REGION = { inferior: 1, superior: 0.55 };
+  function basal(id, grupo, antesDe) {
+    const b = delMusculo(id, grupo).filter((e) => e.fase === 'basal' && (!antesDe || String(e.fecha) <= String(antesDe)));
+    return b.length ? b[b.length - 1] : null;
+  }
 
-  function simular(astronauta, semana = 12) {
-    const base = FINAL[astronauta.escenario] || FINAL.estable;
-    const avance = Math.max(0, Math.min(1, semana / 12));
-    const salida = {};
-    MUSCULOS.forEach((m) => {
-      const az = azar(semilla(astronauta.id_astronauta + m.clave));
-      const peso = PESO_REGION[m.region] * (0.85 + az() * 0.3);
-      const ruido = () => (az() - 0.5) * 2;
-      const c = {};
-      ['fuerza', 'circ'].forEach((k) => { c[k] = Math.max(0, base[k] * peso * avance + ruido() * 0.8 * avance); });
-      ['coord', 'emg'].forEach((k) => { c[k] = (base[k] * (0.8 + peso * 0.2) * avance + ruido() * 1.2 * avance) * (az() > 0.25 ? 1 : -1); });
-      salida[m.clave] = c;
+  /** Cambio en %, positivo = empeora. null si falta el dato actual o el basal. */
+  function cambioDe(dim, fila, b) {
+    if (!b) return null;
+    if (dim.clave === 'emg') {
+      const cambios = dim.campos.map((c) => { const a = num(fila[c]), x = num(b[c]); return a === null || !x ? null : Math.abs(a / x - 1) * 100; }).filter((v) => v !== null);
+      return cambios.length ? Math.max(...cambios) : null;
+    }
+    const a = num(fila[dim.campos[0]]), x = num(b[dim.campos[0]]);
+    if (a === null || !x) return null;
+    return dim.clave === 'coordinacion' ? (a - x) / x * 100 : (x - a) / x * 100;
+  }
+
+  function puntos(clave, cambio) {
+    if (cambio === null) return null;
+    const c = corte(clave);
+    if (cambio > c.alto) return 2;
+    if (c.moderado === 0 ? cambio > 0 : cambio >= c.moderado) return 1;
+    return 0;
+  }
+
+  function riesgoDe(total) {
+    const c = corte('total');
+    return total >= c.alto ? 'alto' : total >= c.moderado ? 'moderado' : 'bajo';
+  }
+
+  /** Últimos valores de misión (no basales) de cada dimensión, anteriores o iguales a la fecha, que le faltan a la fila. */
+  function completar(fila) {
+    const previas = delMusculo(fila.id_astronauta, fila.grupo_muscular)
+      .filter((e) => e.fase !== 'basal' && String(e.fecha) <= String(fila.fecha) && e.id_evaluacion !== fila.id_evaluacion);
+    const valores = { ...fila }, arrastre = [];
+    DIMENSIONES.forEach((dim) => {
+      if (dim.campos.some((c) => num(fila[c]) !== null)) return;
+      for (let i = previas.length - 1; i >= 0; i--) {
+        if (dim.campos.some((c) => num(previas[i][c]) !== null)) {
+          dim.campos.forEach((c) => { valores[c] = previas[i][c]; });
+          arrastre.push({ clave: dim.clave, fecha: previas[i].fecha });
+          break;
+        }
+      }
     });
-    // VO₂pico es sistémico: un solo valor para todos los músculos
-    const az2 = azar(semilla(astronauta.id_astronauta + 'vo2'));
-    const vo2 = Math.max(0, base.vo2 * avance + (az2() - 0.5) * 1.2 * avance);
-    MUSCULOS.forEach((m) => { salida[m.clave].vo2 = vo2; });
+    return { valores, arrastre };
+  }
+
+  /** Devuelve una copia de la fila con todos los campos calculados de la escala. */
+  function calcular(original) {
+    const esBasal = original.fase === 'basal';
+    const { valores: fila, arrastre } = esBasal ? { valores: original, arrastre: [] } : completar(original);
+    const salida = { ...original };
+    const b = esBasal ? null : basal(fila.id_astronauta, fila.grupo_muscular, fila.fecha);
+    let total = 0, medidas = 0;
+    DIMENSIONES.forEach((dim) => {
+      const cambio = esBasal ? null : cambioDe(dim, fila, b);
+      const p = esBasal ? (dim.campos.some((c) => num(fila[c]) !== null) ? 0 : null) : puntos(dim.clave, cambio);
+      salida[dim.cambio] = r1(cambio);
+      salida[dim.puntos] = p;
+      if (p !== null) { total += p; medidas += 1; }
+    });
+    const cf = salida.cambio_fuerza_pct, cc = salida.cambio_circunferencia_pct;
+    const prioritaria = !esBasal && ((cf !== null && cf > corte('fuerza').prioritaria) || (cc !== null && cc > corte('circunferencia').prioritaria));
+    salida.puntaje_erdm = total;
+    salida.riesgo = riesgoDe(total);
+    salida.alerta_prioritaria = prioritaria ? 'SI' : 'NO';
+    salida.dimensiones_medidas = medidas;   // solo en memoria: cuántas de las 5 tienen dato
+    salida.sin_basal = !esBasal && !b;
+    salida.arrastre = arrastre;              // solo en memoria: dimensiones tomadas de una evaluación anterior
+    salida.valores = fila;                   // solo en memoria: valores usados (con lo arrastrado)
     return salida;
   }
 
-  function serie(astronauta, musculo) {
-    return Array.from({ length: 13 }, (_, w) => puntuar(simular(astronauta, w)[musculo]).total);
+  const historial = (id, grupo) => delMusculo(id, grupo).map(calcular);
+  function ultima(id, grupo) {
+    const h = delMusculo(id, grupo);
+    return h.length ? calcular(h[h.length - 1]) : null;
   }
 
-  return { MUSCULOS, DIMENSIONES, CORTES, puntuar, simular, serie, nivelDe };
+  const NIVEL = { bajo: 'verde', moderado: 'amarillo', alto: 'rojo' };
+  const ORDEN = { bajo: 0, moderado: 1, alto: 2 };
+  const nivel = (riesgo) => NIVEL[riesgo] || 'verde';
+
+  function etiqueta(grupo) {
+    const c = ((Sesion.datos && Sesion.datos.Catalogos) || []).find((x) => x.lista === 'grupo_muscular' && x.valor === grupo);
+    return c ? c.etiqueta : grupo;
+  }
+
+  function plan(grupo, riesgo) {
+    return ((Sesion.datos && Sesion.datos.PlanFortalecimiento) || []).find((p) => p.grupo_muscular === grupo && p.riesgo === riesgo) || null;
+  }
+
+  function resumenCambios(f) {
+    const partes = [];
+    DIMENSIONES.forEach((d) => {
+      const v = f[d.cambio];
+      if (v === null || v === undefined) return;
+      if (d.clave === 'emg') partes.push(`EMG cambió ${Math.round(v)} %`);
+      else { const x = d.signo * v; partes.push(`${d.nombre.toLowerCase().replace('vo₂pico', 'VO₂pico')} ${x < 0 ? '−' : '+'}${Math.abs(Math.round(x))} %`); }
+    });
+    const t = partes.join(', ');
+    return t ? t[0].toUpperCase() + t.slice(1) : '';
+  }
+
+  /** Alertas para filas recién guardadas: si el riesgo subió frente a la evaluación anterior, o hay alerta prioritaria nueva. */
+  function alertas(filas) {
+    const ahora = (() => { const d = new Date(), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; })();
+    const nuevas = [];
+    filas.forEach((fila) => {
+      const f = calcular(fila);
+      if (f.fase === 'basal' || f.sin_basal) return;
+      const previas = delMusculo(f.id_astronauta, f.grupo_muscular).filter((e) => String(e.fecha) < String(f.fecha) && e.fase !== 'basal').map(calcular);
+      const peorPrevio = previas.reduce((m, e) => Math.max(m, ORDEN[e.riesgo]), 0);
+      const priorPrevia = previas.some((e) => e.alerta_prioritaria === 'SI');
+      const prior = f.alerta_prioritaria === 'SI';
+      if (!(ORDEN[f.riesgo] > peorPrevio || (prior && !priorPrevia))) return;
+      const p = plan(f.grupo_muscular, f.riesgo);
+      nuevas.push({
+        creada_en: ahora, id_astronauta: f.id_astronauta, origen: f.id_evaluacion, grupo_muscular: f.grupo_muscular,
+        indicador: 'puntaje_erdm', valor_actual: f.puntaje_erdm, valor_basal: 0, cambio_pct: null,
+        nivel: prior ? 'rojo' : nivel(f.riesgo),
+        mensaje: `${etiqueta(f.grupo_muscular)}: riesgo ${f.riesgo} en la ERDM-A (${f.puntaje_erdm} de 10)${prior ? '. Alerta prioritaria' : ''}. ${resumenCambios(f)}.`,
+        recomendacion: p ? `${p.ejercicio}. ${p.dosificacion}` : 'Repetir la evaluación y revisar el plan de ejercicio.',
+        estado: 'abierta', atendida_por: '', nota_cierre: ''
+      });
+    });
+    return nuevas;
+  }
+
+  const idEvaluacion = (id, fecha, grupo) => `EVA-${String(id).replace('-', '')}-${String(fecha).replace(/-/g, '')}-${grupo}`;
+
+  /** Solo las columnas que se guardan en el Sheet (sin los campos de memoria). */
+  function paraGuardar(f) {
+    const { dimensiones_medidas, sin_basal, arrastre, valores, ...resto } = f;
+    return resto;
+  }
+
+  return { GRUPOS, DIMENSIONES, calcular, ultima, historial, basal, alertas, plan, nivel, etiqueta, idEvaluacion, paraGuardar, resumenCambios, corte };
 })();
 </script>

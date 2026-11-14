@@ -88,13 +88,15 @@
     ? '/assets/'
     : 'https://astra-fit-modelos.dapxco.workers.dev/assets/';   // Cloudflare: carpeta publicar-cloudflare/ (para actualizar: npx wrangler deploy)
 
-  // Grupo muscular de la base de datos -> malla del modelo 3D.
-  // El modelo junta erectores y dorsal en una sola malla ("back"), por eso se toma el peor de los dos.
+  // Músculo de la escala ERDM-A -> malla del modelo 3D. El modelo junta gastrocnemio y sóleo en una sola malla
+  // ("calf"), por eso se toma el peor de los dos. Glúteo y espalda ya no se miden (la escala usa 6 músculos).
+  // Pendiente para el equipo 3D: las mallas de los brazos (upper_arm_muscles y forearm_muscles) para bíceps,
+  // tríceps y flexores del antebrazo.
   const MALLAS = {
     quad:   { grupos: ['cuadriceps'] },
-    glute:  { grupos: ['gluteo_mayor'] },
-    gastro: { grupos: ['gastrocnemio_soleo'] },
-    back:   { grupos: ['erectores_espinales', 'dorsal_ancho'] }
+    glute:  { grupos: [] },
+    gastro: { grupos: ['gastrocnemio', 'soleo'] },
+    back:   { grupos: [] }
   };
   const MALLA_DE_PREFIJO = { quadriceps: 'quad', gluteal: 'glute', calf: 'gastro', back_muscles: 'back' };
   const NIVEL = { verde: 0, amarillo: 1, rojo: 2 };
@@ -114,31 +116,28 @@
   };
   const gruposCatalogo = () => Sesion.datos.Catalogos.filter((x) => x.lista === 'grupo_muscular');
 
-  /** Última alerta del astronauta para un grupo (la más reciente manda: refleja cómo va ahora). */
+  /** Última alerta del astronauta para un músculo (para mostrar su mensaje). */
   function ultimaAlerta(idAstronauta, grupo) {
     return Sesion.datos.Alertas
       .filter((a) => a.id_astronauta === idAstronauta && a.grupo_muscular === grupo)
       .sort((p, q) => String(q.creada_en).localeCompare(String(p.creada_en)))[0] || null;
   }
+  /** Nivel del músculo: el riesgo de su última evaluación en la escala ERDM-A (bajo = 0, moderado = 1, alto = 2). */
   const nivelGrupo = (idAstronauta, grupo) => {
-    const a = ultimaAlerta(idAstronauta, grupo);
-    return a ? (NIVEL[a.nivel] ?? 0) : 0;
+    const u = Erdm.ultima(idAstronauta, grupo);
+    return u ? (NIVEL[Erdm.nivel(u.riesgo)] ?? 0) : 0;
   };
-  const nivelMalla = (idAstronauta, malla) => Math.max(...MALLAS[malla].grupos.map((g) => nivelGrupo(idAstronauta, g)));
+  const nivelMalla = (idAstronauta, malla) => Math.max(0, ...MALLAS[malla].grupos.map((g) => nivelGrupo(idAstronauta, g)));
 
-  /** EMG más reciente de un grupo frente a la media basal del mismo astronauta. */
+  /** EMG de la última evaluación del músculo frente a su basal (pestaña Evaluaciones; lo mide el sensor en Monitoreo). */
   function resumenEmg(idAstronauta, grupo) {
-    const sesiones = new Map(Sesion.datos.Sesiones.filter((s) => s.id_astronauta === idAstronauta).map((s) => [s.id_sesion, s]));
-    const filas = Sesion.datos.EMG
-      .filter((e) => e.id_astronauta === idAstronauta && e.grupo_muscular === grupo && sesiones.has(e.id_sesion))
-      .map((e) => ({ ...e, fecha: sesiones.get(e.id_sesion).fecha, fase: sesiones.get(e.id_sesion).fase }));
+    const filas = (Sesion.datos.Evaluaciones || [])
+      .filter((e) => e.id_astronauta === idAstronauta && e.grupo_muscular === grupo && e.emg_rms_uv !== null && e.emg_rms_uv !== undefined && e.emg_rms_uv !== '')
+      .sort((p, q) => String(p.fecha).localeCompare(String(q.fecha)));
     if (!filas.length) return null;
-    const media = (arr, k) => arr.reduce((t, x) => t + Number(x[k]), 0) / arr.length;
-    const fecha = filas.map((f) => f.fecha).sort().pop();
-    const ult = filas.filter((f) => f.fecha === fecha);
-    const basal = filas.filter((f) => f.fase === 'basal');
-    const cambio = (k) => basal.length ? (media(ult, k) / media(basal, k) - 1) * 100 : null;
-    return { fecha, rms: media(ult, 'rms_uv'), frec: media(ult, 'frec_mediana_hz'), cambioRms: cambio('rms_uv'), cambioFrec: cambio('frec_mediana_hz') };
+    const ult = filas[filas.length - 1], basal = filas.find((f) => f.fase === 'basal');
+    const cambio = (k) => basal ? (Number(ult[k]) / Number(basal[k]) - 1) * 100 : null;
+    return { fecha: ult.fecha, rms: Number(ult.emg_rms_uv), frec: Number(ult.emg_frec_mediana_hz), cambioRms: cambio('emg_rms_uv'), cambioFrec: cambio('emg_frec_mediana_hz') };
   }
 
   const num = (n, d = 0) => Number(n).toLocaleString('es', { maximumFractionDigits: d, minimumFractionDigits: d });
@@ -174,9 +173,9 @@
       ${emg ? `<div class="cuerpo-datos">
         <div><p class="nota">Amplitud (RMS)</p><p class="titulo-tarjeta">${num(emg.rms)} µV</p><p class="pequeno texto-2">${pct(emg.cambioRms)} vs. basal</p></div>
         <div><p class="nota">Frecuencia mediana</p><p class="titulo-tarjeta">${num(emg.frec, 1)} Hz</p><p class="pequeno texto-2">${pct(emg.cambioFrec)} vs. basal</p></div>
-      </div><p class="nota">EMG de la sesión del ${UI.esc(emg.fecha)}, promedio de ambos lados.</p>`
+      </div><p class="nota">EMG de la evaluación del ${UI.esc(Calc.fechaCorta(emg.fecha))}, medido por la banda del sensor.</p>`
         : '<p class="pequeno texto-2">Todavía no hay registros de EMG para este grupo.</p>'}
-      <p class="estado estado--${n}" style="margin-top: var(--e-4)">${alerta ? UI.esc(alerta.mensaje) : 'Sin alertas para este grupo.'}</p>
+      <p class="estado estado--${n}" style="margin-top: var(--e-4)">${alerta && n !== 'verde' ? UI.esc(alerta.mensaje) : n === 'verde' ? 'Riesgo bajo en la escala ERDM-A.' : 'Sin alertas para este músculo.'}</p>
       ${alerta && n !== 'verde' ? `<p class="pequeno texto-2" style="margin-top: var(--e-2)">${UI.esc(alerta.recomendacion)}</p>` : ''}`;
   }
 
