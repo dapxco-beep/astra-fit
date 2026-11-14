@@ -17,7 +17,7 @@
     <div class="rejilla rejilla-2">
       <article class="tarjeta pila" aria-labelledby="sen-t-emg">
         <h3 class="titulo-tarjeta" id="sen-t-emg">Qué se calcula de la señal EMG</h3>
-        <ul class="lista pila">
+        <ul class="lista lista--texto pila">
           <li><strong>RMS:</strong> amplitud de la señal en ventanas móviles de 250 ms, actualizadas cada 50 ms. Así se ve cómo cambia durante la repetición y no solo el promedio de toda la sesión.</li>
           <li><strong>RMS normalizado:</strong> RMS actual dividido entre el RMS de una contracción de referencia del mismo músculo, en %. Sirve para comparar sesiones si se mantienen las mismas condiciones.</li>
           <li><strong>Frecuencia mediana:</strong> divide el espectro de potencia en dos mitades iguales. Su caída durante una contracción sostenida se relaciona con fatiga, pero no debe usarse sola para diagnosticar.</li>
@@ -26,7 +26,7 @@
       </article>
       <article class="tarjeta pila" aria-labelledby="sen-t-imu">
         <h3 class="titulo-tarjeta" id="sen-t-imu">Qué aporta la unidad inercial (IMU)</h3>
-        <ul class="lista pila">
+        <ul class="lista lista--texto pila">
           <li><strong>Acelerómetro</strong> (ax, ay, az): cambios de aceleración del segmento donde está fijado, y regularidad de los ejercicios.</li>
           <li><strong>Giroscopio</strong> (gx, gy, gz): velocidad angular máxima y media, duración de cada repetición y cambios entre repeticiones.</li>
           <li><strong>Juntos con la EMG:</strong> se sincronizan para relacionar la activación del músculo con el movimiento que produce.</li>
@@ -46,7 +46,7 @@
 
     <article class="tarjeta pila" aria-labelledby="sen-t-flujo">
       <h3 class="titulo-tarjeta" id="sen-t-flujo">Cómo es una evaluación</h3>
-      <ol class="lista pila" style="padding-left:1.2em">
+      <ol class="lista lista--texto pila">
         <li><strong>Colocar las bandas</strong> sobre los segmentos del protocolo, con buen contacto de la piel y sensores firmes.</li>
         <li><strong>Conectar y comprobar:</strong> ASTRA-FIT identifica cada banda, revisa la calidad de la señal y calibra.</li>
         <li><strong>Ejercicios estandarizados</strong> de los músculos elegidos, con las seis bandas adquiriendo a la vez.</li>
@@ -56,10 +56,10 @@
     </article>
 
     <details class="tarjeta" id="sen-espec">
-      <summary class="titulo-tarjeta" style="cursor:pointer">Especificaciones técnicas propuestas</summary>
-      <div style="overflow-x:auto; margin-top:var(--e-4)">
-        <table class="tabla" style="width:100%">
-          <thead><tr style="text-align:left"><th style="text-align:left">Componente</th><th style="text-align:left">Configuración propuesta</th></tr></thead>
+      <summary class="titulo-tarjeta">Especificaciones técnicas propuestas</summary>
+      <div class="tabla-scroll" tabindex="0" role="region" aria-label="Especificaciones técnicas">
+        <table class="tabla">
+          <thead><tr><th>Componente</th><th>Configuración propuesta</th></tr></thead>
           <tbody>
             <tr><td>Grupos musculares</td><td>6, con 6 canales EMG y 6 módulos IMU (configuración conceptual inicial)</td></tr>
             <tr><td>EMG</td><td>2.000 muestras/s por canal, banda de análisis 20–450 Hz, 16 bits o más, electrodos bipolares según protocolo</td></tr>
@@ -76,7 +76,7 @@
     </details>
 
     <details class="tarjeta" id="sen-limites">
-      <summary class="titulo-tarjeta" style="cursor:pointer">Alcance y limitaciones</summary>
+      <summary class="titulo-tarjeta">Alcance y limitaciones</summary>
       <ul class="lista pila" style="margin-top:var(--e-4)">
         <li>ASTRA-FIT es un prototipo de monitoreo y apoyo al seguimiento neuromuscular. No es un dispositivo médico validado.</li>
         <li>La EMG no determina la fuerza de un músculo, y las IMU no miden fuerza, masa muscular ni activación eléctrica.</li>

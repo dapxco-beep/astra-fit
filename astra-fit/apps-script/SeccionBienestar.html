@@ -28,7 +28,7 @@
           </div>
           <fieldset class="campo" style="border:0; padding:0; margin:0">
             <legend style="font-size:var(--t-pequeno); font-weight:500; margin-bottom:6px">Estado de ánimo <span class="texto-2">(1 muy bajo · 5 muy bueno)</span></legend>
-            <div class="segmentado" data-segmentado id="b-animo" role="group" aria-label="Estado de ánimo del 1 al 5">
+            <div class="segmentado segmentado--5" data-segmentado id="b-animo" role="group" aria-label="Estado de ánimo del 1 al 5">
               <button type="button" data-valor="1" aria-pressed="false">1</button><button type="button" data-valor="2" aria-pressed="false">2</button>
               <button type="button" data-valor="3" aria-pressed="false">3</button><button type="button" data-valor="4" aria-pressed="false">4</button>
               <button type="button" data-valor="5" aria-pressed="false">5</button>
@@ -168,7 +168,8 @@
         <span class="estado estado--${e.nivel}">${TEXTO[e.nivel]}</span>
         ${sparkline(e.serie.map((x) => x[c]), e.nivel)}
         <p class="texto-2">${UI.esc(d.rec[e.nivel])}${e.tendencia ? ' <strong>Tres registros seguidos fuera de lo ideal.</strong>' : ''}</p>
-        <p class="nota">${cuando}${e.ultimo.simulado ? ' · simulado' : ''} · ${UI.esc(d.rango)}</p>
+        <p class="nota">${cuando}${e.ultimo.simulado ? ' · simulado' : ''}</p>
+        <details><summary class="nota">Ver rangos</summary><p class="nota">${UI.esc(d.rango)}</p></details>
       </article>`;
     }).join('');
   }

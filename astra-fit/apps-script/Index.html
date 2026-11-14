@@ -4,6 +4,7 @@
   <base target="_top">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <title>ASTRA-FIT</title>
   <link rel="icon" href="data:,">
   <?!= include('Estilos'); ?>
@@ -87,6 +88,9 @@
       const calentados = new Set();
       const calentar = (url) => { if (calentados.has(url)) return; calentados.add(url); fetch(url, { mode: 'cors', credentials: 'omit', priority: 'low' }).catch(() => calentados.delete(url)); };
       const idle = window.requestIdleCallback || ((f) => setTimeout(f, 1200));
+      // En móvil, con ahorro de datos o conexión lenta no se precarga nada: cada visor baja lo suyo cuando se necesita
+      const cn = navigator.connection || {};
+      if (cn.saveData || /2g|3g/.test(cn.effectiveType || '') || matchMedia('(max-width: 820px)').matches || (navigator.deviceMemory && navigator.deviceMemory <= 4)) return;
       idle(() => LIBS.forEach((l) => calentar(CDN + l)));
       const base = () => (typeof API !== 'undefined' && API.modo === 'local') ? '/assets/' : 'https://astra-fit-modelos.dapxco.workers.dev/assets/';
       const porSexo = { M: ['avatar-male.glb', 'anatomy-male.glb'], F: ['Michelle.glb', 'anatomy-female.glb'] };
@@ -104,6 +108,7 @@
     function pintarNav(a) {
       document.getElementById('nav-avatar').innerHTML = UI.avatar(a);
       document.getElementById('nav-nombre').textContent = a.nombre;
+      document.title = a.nombre + ' · ASTRA-FIT';
     }
     document.addEventListener('astronauta-elegido', (e) => pintarNav(e.detail));
     document.addEventListener('astronauta-actualizado', (e) => {
