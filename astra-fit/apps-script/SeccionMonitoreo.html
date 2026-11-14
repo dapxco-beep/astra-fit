@@ -1,343 +1,736 @@
-<!-- SeccionMonitoreo.html — Pantalla de monitoreo neuromuscular.  Fondo: gris.  Responsable: Dashboard
-     Tres columnas: la figura (vista de frente y de espalda, con una zona por grupo muscular), el estado de cada sensor
-     y el detalle del músculo elegido: señal EMG, RMS, acelerómetro, giroscopio y cuatro indicadores.
-     SIMULADO: no hay sensores físicos. Las señales se generan en el navegador a partir de los valores guardados de la
-     última sesión (RMS, frecuencia mediana, velocidad y simetría), así que el RMS de la gráfica coincide con el de la base de datos.
-     Se vuelve a dibujar con "astronauta-elegido", "datos-actualizados" y "astronauta-actualizado". -->
-<section class="seccion seccion--gris seccion--compacta" id="monitoreo">
-  <div class="contenedor contenedor--ancho pila-grande">
+<!-- SeccionMonitoreo.html — Monitoreo neuromuscular.  Fondo: gris.  Responsable: Dashboard
+     Pantalla del sensor (documento ASTRA-FIT, Módulo 2 y Fase 6): los datos de EMG e IMU no los escribe nadie,
+     los "mide" el sensor. Mientras no haya sensores reales, el sensor se simula aquí mismo.
+
+     Vista general: cuerpo en vista anterior y posterior con los 6 músculos de la escala ERDM-A (el color es su riesgo y
+     la luz del sensor dice si está conectado o midiendo) y, al lado, una gráfica pequeña por músculo con su puntaje
+     ERDM-A en cada evaluación. Al tocar un músculo se abre el detalle: señales en vivo (EMG, RMS, aceleración y
+     giroscopio), indicadores y la escala ERDM-A del músculo.
+
+     "Iniciar medición" graba 10 s (6 repeticiones de la tarea del músculo). Con esa señal se calcula, como en el
+     documento: RMS, frecuencia mediana (FFT), fatiga (caída de la frecuencia mediana), coordinación (coeficiente de
+     variación entre repeticiones, IMU), velocidad y rango de movimiento. La banda trae también el dinamómetro
+     ("EMG + IMU + fuerza durante el ejercicio", documento ASTRA-FIT), así que la medición deja la fuerza. Se guarda en la pestaña Monitoreo y el EMG y la
+     coordinación y la fuerza pasan a la fila del día en Evaluaciones (API.guardarMedicion). Si el riesgo sube, se guarda la alerta.
+     Avisa con el evento "datos-actualizados". -->
+<section class="seccion seccion--gris" id="monitoreo">
+  <div class="contenedor contenedor--ancho">
     <div class="seccion-cabecera">
       <h2 class="titulo">Monitoreo neuromuscular.</h2>
-      <p class="subtitulo">Elige un músculo para ver su señal y cómo va frente a la evaluación basal.</p>
+      <p class="subtitulo">Cada músculo lleva una banda con EMG, IMU y dinamómetro. Mira los seis de un vistazo y toca el que necesite atención.</p>
     </div>
 
-    <div class="tarjeta monitor-barra" id="monitor-barra"></div>
-
-    <article class="tarjeta monitor-orientacion" id="monitor-orientacion" aria-labelledby="mon-t-orient" aria-live="polite"></article>
-
-    <div class="monitor-rejilla">
-      <article class="tarjeta monitor-cuerpo" aria-labelledby="mon-t-cuerpo">
-        <h3 class="titulo-tarjeta" id="mon-t-cuerpo">Dónde se mide</h3>
-        <div class="monitor-figuras" id="monitor-figuras"></div>
-        <div class="segmentado" data-segmentado id="ctl-anat" role="group" aria-label="Vista del cuerpo" style="justify-self:center">
-          <button type="button" data-valor="front" aria-pressed="true">De frente</button>
-          <button type="button" data-valor="back" aria-pressed="false">De espalda</button>
+    <div class="mon-rejilla">
+      <!-- ---------- Cuerpo ---------- -->
+      <div class="tarjeta mon-tarjeta-cuerpo">
+        <div class="mon-cuerpo" id="mon-cuerpo">
+          <svg id="mon-svg" viewBox="0 0 760 580" aria-hidden="true"></svg>
+          <div id="mon-chips"></div>
         </div>
-        <p class="nota" id="monitor-pista" aria-live="polite"></p>
-      </article>
-
-      <article class="tarjeta" aria-labelledby="mon-t-sensores">
-        <h3 class="titulo-tarjeta" id="mon-t-sensores">Estado de sensores</h3>
-        <ul class="lista monitor-sensores" id="monitor-sensores"></ul>
-      </article>
-
-      <div class="monitor-detalle" aria-live="polite">
-        <article class="tarjeta pila" id="monitor-cabecera"></article>
-        <div class="rejilla rejilla-2">
-          <article class="tarjeta pila"><div class="tarjeta-cabecera"><h3 class="titulo-tarjeta">Señal EMG</h3><span class="nota">µV</span></div><canvas class="grafica" id="g-emg" role="img" aria-label="Señal electromiográfica simulada de los últimos 10 segundos"></canvas></article>
-          <article class="tarjeta pila"><div class="tarjeta-cabecera"><h3 class="titulo-tarjeta">RMS / activación</h3><span class="nota">µV</span></div><canvas class="grafica" id="g-rms" role="img" aria-label="Valor RMS de la señal en los últimos 10 segundos"></canvas></article>
-          <article class="tarjeta pila"><div class="tarjeta-cabecera"><h3 class="titulo-tarjeta">Acelerómetro</h3><span class="nota monitor-leyenda"><i data-s="0"></i>ax <i data-s="1"></i>ay <i data-s="2"></i>az · g</span></div><canvas class="grafica" id="g-acc" role="img" aria-label="Aceleración simulada en los tres ejes"></canvas></article>
-          <article class="tarjeta pila"><div class="tarjeta-cabecera"><h3 class="titulo-tarjeta">Giroscopio</h3><span class="nota monitor-leyenda"><i data-s="0"></i>gx <i data-s="1"></i>gy <i data-s="2"></i>gz · °/s</span></div><canvas class="grafica" id="g-gir" role="img" aria-label="Velocidad angular simulada en los tres ejes"></canvas></article>
+        <div class="mon-leyenda nota" aria-hidden="true">
+          <span class="estado estado--verde">Riesgo bajo</span>
+          <span class="estado estado--amarillo">Moderado</span>
+          <span class="estado estado--rojo">Alto</span>
+          <span class="estado estado--gris">Sin evaluar</span>
         </div>
-        <div class="rejilla rejilla-4" id="monitor-kpis"></div>
+        <ul class="mon-lista" id="mon-lista" aria-label="Músculos con sensor"></ul>
+      </div>
+
+      <!-- ---------- Los 6 músculos ---------- -->
+      <div class="tarjeta mon-resumen">
+        <div class="mon-resumen-cabecera">
+          <h3 class="titulo-tarjeta">Los 6 músculos</h3>
+          <p class="pequeno texto-2">Puntaje ERDM-A de 0 a 10 en cada evaluación, desde la basal. Las líneas punteadas marcan riesgo moderado (4) y alto (7).</p>
+        </div>
+        <div class="mon-minis" id="mon-minis"></div>
       </div>
     </div>
 
-    <p class="nota" style="text-align:center" id="monitor-nota"></p>
+    <!-- ---------- Detalle del músculo (se abre al tocar uno) ---------- -->
+    <div class="mon-detalle" id="mon-detalle" hidden>
+      <div class="mon-detalle-barra">
+        <button type="button" class="enlace mon-volver" id="mon-volver">Todos los músculos</button>
+      </div>
+      <!-- ---------- Panel del músculo ---------- -->
+      <div class="mon-panel">
+        <div class="tarjeta mon-cabecera">
+          <div class="mon-cabecera-fila">
+            <div>
+              <h3 class="titulo-tarjeta" id="mon-titulo">Cuádriceps</h3>
+              <p class="pequeno texto-2" id="mon-tarea"></p>
+            </div>
+            <div class="mon-control">
+              <div class="campo mon-fase">
+                <label for="mon-fase">Fase</label>
+                <select id="mon-fase"></select>
+              </div>
+              <button type="button" class="boton" id="mon-medir">Iniciar medición</button>
+            </div>
+          </div>
+          <div class="mon-estado-sensor pequeno" id="mon-sensor" role="status" aria-live="polite"></div>
+        </div>
+
+        <div class="mon-graficas">
+          <figure class="tarjeta mon-grafica"><figcaption class="mon-grafica-titulo">Señal EMG <span class="nota">mV</span></figcaption><canvas id="mon-c-emg" aria-label="Señal EMG en vivo" role="img"></canvas></figure>
+          <figure class="tarjeta mon-grafica"><figcaption class="mon-grafica-titulo">RMS, activación <span class="nota">mV</span></figcaption><canvas id="mon-c-rms" aria-label="RMS de la señal EMG" role="img"></canvas></figure>
+          <figure class="tarjeta mon-grafica"><figcaption class="mon-grafica-titulo">Aceleración IMU <span class="nota">g</span><span class="mon-series"><i style="--c:#0071e3">ax</i><i style="--c:#34c759">ay</i><i style="--c:#ff9f0a">az</i></span></figcaption><canvas id="mon-c-acc" aria-label="Aceleración de la IMU en tres ejes" role="img"></canvas></figure>
+          <figure class="tarjeta mon-grafica"><figcaption class="mon-grafica-titulo">Giroscopio <span class="nota">°/s</span><span class="mon-series"><i style="--c:#0071e3">gx</i><i style="--c:#34c759">gy</i><i style="--c:#ff9f0a">gz</i></span></figcaption><canvas id="mon-c-gyr" aria-label="Velocidad angular de la IMU en tres ejes" role="img"></canvas></figure>
+        </div>
+
+        <div class="mon-kpis" id="mon-kpis"></div>
+        <p class="nota" id="mon-kpis-nota"></p>
+      </div>
+
+      <!-- ---------- Escala ERDM-A del músculo ---------- -->
+      <div class="tarjeta mon-erdm" id="mon-erdm"></div>
+    </div>
+    <p class="nota mon-aviso">Señales simuladas que representan el funcionamiento de los sensores EMG e IMU. ASTRA-FIT es un prototipo y no es un dispositivo médico validado. Anatomía: BodyParts3D © DBCLS (CC BY 4.0).</p>
   </div>
 </section>
 
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const NIVEL = { verde: 0, amarillo: 1, rojo: 2 }, NOMBRE_NIVEL = ['verde', 'amarillo', 'rojo'];
-  const TEXTO_NIVEL = { verde: 'Estable', amarillo: 'Vigilar', rojo: 'Atender' };
-  // Qué ejercicio carga cada grupo (para tomar su velocidad y su simetría)
-  const EJERCICIO_DE = { cuadriceps: 'sentadilla', gluteo_mayor: 'sentadilla', gastrocnemio_soleo: 'elevacion_talones', erectores_espinales: 'peso_muerto', dorsal_ancho: 'remo_sentado' };
-  const GRUPOS = ['cuadriceps', 'gluteo_mayor', 'gastrocnemio_soleo', 'erectores_espinales', 'dorsal_ancho'];
-  const REDUCIR = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const VENTANA = 10;           // segundos que se ven en cada gráfica
-  let grupoActivo = 'cuadriceps', serie = null, visible = false, t0 = performance.now(), series = {}, nivelesPorGrupo = {};
+  const esc = (t) => UI.esc(t);
+  const NS = 'http://www.w3.org/2000/svg';
 
-  const num = (n, d = 0) => Number(n).toLocaleString('es', { maximumFractionDigits: d, minimumFractionDigits: d });
-  const pct = (v) => v === null ? 'sin basal' : `${v < 0 ? '−' : '+'}${num(Math.abs(v), 1)} %`;
-  const etiquetaGrupo = (v) => { const c = Sesion.datos.Catalogos.find((x) => x.lista === 'grupo_muscular' && x.valor === v); return c ? c.etiqueta : v; };
-  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-
-  /* ============================================================
-     FIGURA: una zona por grupo, en vista de frente y de espalda
-     Cada zona lleva data-grupo; el número es el del sensor (1 a 5).
-     ============================================================ */
-  // Anatomía real del modelo 3D (músculos), dibujada con luz de estudio de frente y de espalda: assets/anatomia2d/.
-  // Cada grupo es una máscara que se tiñe con su estado. El modelo trae erectores y dorsal juntos en una sola pieza ("back").
+  /* ======================================================== CUERPO
+     Anatomía real del modelo 3D (BodyParts3D © DBCLS, CC BY 4.0), de frente y de espalda: assets/anatomia2d/.
+     Cada músculo es una máscara de la misma imagen que se tiñe con su riesgo. El modelo junta bíceps y tríceps en una
+     pieza (el bíceps se ve de frente y el tríceps de espalda) y la pantorrilla en otra: se parte a media altura, arriba
+     gastrocnemio y abajo sóleo (aproximación visual). Para regenerar: publicar/herramientas/render-anatomia.js.
+     La vista anterior lleva los sensores del lado izquierdo de la pantalla y la posterior del derecho. */
   const BASE_IMG = (typeof API !== 'undefined' && API.modo === 'local') ? '/assets/anatomia2d/' : 'https://astra-fit-modelos.dapxco.workers.dev/assets/anatomia2d/';
-  const ZONAS = {"M":{"front":{"quad":{"x0":0.3648792938775991,"y0":0.4340569322623258,"x1":0.6364696833699164,"y1":0.7784007634591723}},"back":{"glute":{"x0":0.3616933993998699,"y0":0.40711131135008916,"x1":0.637651570547983,"y1":0.7564019338765351},"back":{"x0":0.41173647122026524,"y0":0.10589440187989996,"x1":0.5871130005069273,"y1":0.47341342728744684},"gastro":{"x0":0.35731553172048625,"y0":0.6814347287122767,"x1":0.6415655421726777,"y1":0.9683351087017433}}},"F":{"front":{"quad":{"x0":0.30246802048423405,"y0":0.41013433558179924,"x1":0.676537513804452,"y1":0.7559460995740364}},"back":{"glute":{"x0":0.29693416111547827,"y0":0.3899068684023096,"x1":0.6997490569832568,"y1":0.7300607208606266},"back":{"x0":0.39459402378303704,"y0":0.09728076058358881,"x1":0.589923242377549,"y1":0.44468753542410033},"gastro":{"x0":0.3434973540914128,"y0":0.6521867077380108,"x1":0.6548978978652928,"y1":0.9681416598465709}}}};   // caja de cada pieza en la imagen (0 a 1), para colocar las marcas
-  const MALLA = { cuadriceps: 'quad', gluteo_mayor: 'glute', gastrocnemio_soleo: 'gastro', erectores_espinales: 'back', dorsal_ancho: 'back' };
-  const VISTA = { quad: 'front', glute: 'back', gastro: 'back', back: 'back' };
-  const LADO = { cuadriceps: 'd', gluteo_mayor: 'i', gastrocnemio_soleo: 'd', erectores_espinales: 'd', dorsal_ancho: 'i' };   // de qué lado va la marca
-  const ANCLA = { cuadriceps: [.3, .45], gluteo_mayor: [.26, .4], gastrocnemio_soleo: [.26, .5], erectores_espinales: [.5, .66], dorsal_ancho: [.3, .22] };   // punto de la pieza (fracción de su caja)
-  let vistaActual = 'front', sexoImg = null;
+  const CX = { anterior: 250, posterior: 510 };
+  const IMG_H = 560, IMG_W = IMG_H * 0.64, IMG_Y = 4;                 // las imágenes son de 640 × 1000
+  const ARCHIVO_VISTA = { anterior: 'front', posterior: 'back' };
+  // Músculo: vista, máscara y lado de su banda (-1 izquierda / 1 derecha de la pantalla)
+  const MUSCULOS = {
+    biceps_braquial:    { vista: 'anterior',  mascara: 'biceps',       lado: -1 },
+    flexores_antebrazo: { vista: 'anterior',  mascara: 'antebrazo',    lado: -1 },
+    cuadriceps:         { vista: 'anterior',  mascara: 'cuadriceps',   lado: -1 },
+    triceps_braquial:   { vista: 'posterior', mascara: 'triceps',      lado: 1 },
+    gastrocnemio:       { vista: 'posterior', mascara: 'gastrocnemio', lado: 1 },
+    soleo:              { vista: 'posterior', mascara: 'soleo',        lado: 1 }
+  };
+  // Dónde va la banda en la imagen (0 a 1): fila y bordes del músculo en esa fila. Se midió sobre cada máscara.
+  const BANDAS = {"M": {"biceps": {"y": 0.297, "x0": 0.3047, "x1": 0.3578}, "antebrazo": {"y": 0.398, "x0": 0.2688, "x1": 0.3422}, "cuadriceps": {"y": 0.618, "x0": 0.3656, "x1": 0.4703}, "triceps": {"y": 0.29, "x0": 0.6391, "x1": 0.6922}, "gastrocnemio": {"y": 0.757, "x0": 0.5281, "x1": 0.5969}, "soleo": {"y": 0.867, "x0": 0.5375, "x1": 0.5812}}, "F": {"biceps": {"y": 0.3, "x0": 0.3203, "x1": 0.3625}, "antebrazo": {"y": 0.382, "x0": 0.2984, "x1": 0.3516}, "cuadriceps": {"y": 0.579, "x0": 0.3375, "x1": 0.4656}, "triceps": {"y": 0.294, "x0": 0.6344, "x1": 0.6781}, "gastrocnemio": {"y": 0.736, "x0": 0.5719, "x1": 0.6422}, "soleo": {"y": 0.849, "x0": 0.5953, "x1": 0.6453}}};
+  const NOMBRE = { soleo: 'Sóleo', gastrocnemio: 'Gastrocnemio', cuadriceps: 'Cuádriceps', biceps_braquial: 'Bíceps braquial', triceps_braquial: 'Tríceps braquial', flexores_antebrazo: 'Flexores del antebrazo' };
+  const ORDEN_LISTA = ['soleo', 'gastrocnemio', 'cuadriceps', 'biceps_braquial', 'triceps_braquial', 'flexores_antebrazo'];
+  const ANCLA_CHIP = { anterior: 132, posterior: 628 };   // borde de la columna de etiquetas, en unidades del SVG
+  const COLOR_RIESGO = { verde: '#34c759', amarillo: '#ff9f0a', rojo: '#ff3b30', gris: '#c7c7cc' };
 
-  function construirFiguras(sexo) {
-    const sx = sexo === 'F' ? 'F' : 'M', p = sx.toLowerCase(); sexoImg = sx;
-    const capa = (vista) => {
-      const mallas = vista === 'front' ? ['quad'] : ['back', 'glute', 'gastro'];
-      const zonas = mallas.map((m) => `<span class="anat-zona" data-malla="${m}" style="--mascara:url(${BASE_IMG}${p}-${vista}-${m}.png)"></span>`).join('');
-      let lineas = '', marcas = '';
-      GRUPOS.filter((g) => VISTA[MALLA[g]] === vista).forEach((g) => {
-        const bb = ZONAS[sx][vista][MALLA[g]]; if (!bb) return;
-        const ax = bb.x0 + (bb.x1 - bb.x0) * (LADO[g] === 'd' ? 1 - ANCLA[g][0] : ANCLA[g][0]), ay = bb.y0 + (bb.y1 - bb.y0) * ANCLA[g][1], mx = LADO[g] === 'd' ? .94 : .06;
-        lineas += `<line data-grupo="${g}" x1="${(ax * 100).toFixed(2)}" y1="${(ay * 156.25).toFixed(2)}" x2="${mx * 100}" y2="${(ay * 156.25).toFixed(2)}"/><circle data-grupo="${g}" cx="${(ax * 100).toFixed(2)}" cy="${(ay * 156.25).toFixed(2)}" r="1.1"/>`;
-        marcas += `<button type="button" class="anat-marca" data-grupo="${g}" style="left:${mx * 100}%;top:${(ay * 100).toFixed(2)}%" aria-label="${UI.esc(etiquetaGrupo(g))}">${GRUPOS.indexOf(g) + 1}</button>`;
-      });
-      return `<div class="anat-capa" data-vista="${vista}"><img class="anat-base" src="${BASE_IMG}${p}-${vista}-base.png" alt="Anatomía muscular, vista ${vista === 'front' ? 'de frente' : 'de espalda'}" width="640" height="1000" decoding="async">${zonas}<svg class="anat-lineas" viewBox="0 0 100 156.25" aria-hidden="true">${lineas}</svg>${marcas}</div>`;
-    };
-    $('monitor-figuras').innerHTML = capa('front') + capa('back');
-    mostrarVista(vistaActual);
-  }
-  function mostrarVista(v) {
-    vistaActual = v;
-    document.querySelectorAll('#monitor-figuras .anat-capa').forEach((c) => c.classList.toggle('visible', c.dataset.vista === v));
-    document.querySelectorAll('#ctl-anat button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.valor === v)));
-  }
+  const el = (tag, attrs) => { const n = document.createElementNS(NS, tag); Object.entries(attrs).forEach(([k, v]) => n.setAttribute(k, v)); return n; };
+  const linea = (x1, y1, x2, y2, w, color, extra = {}) => el('line', { x1, y1, x2, y2, stroke: color, 'stroke-width': w, 'stroke-linecap': 'round', ...extra });
+  const imgX = (vista) => CX[vista] - IMG_W / 2;
+  const aX = (vista, f) => imgX(vista) + f * IMG_W, aY = (f) => IMG_Y + f * IMG_H;
+  let sexoFigura = null;
+  let chipsY = {};
 
-  /* ============================================================
-     DATOS: de la base de datos a lo que muestra cada músculo
-     ============================================================ */
-  const ultimaAlerta = (id, g) => Sesion.datos.Alertas.filter((a) => a.id_astronauta === id && a.grupo_muscular === g)
-    .sort((p, q) => String(q.creada_en).localeCompare(String(p.creada_en)))[0] || null;
-  const nivelGrupo = (id, g) => { const a = ultimaAlerta(id, g); return a ? (NIVEL[a.nivel] ?? 0) : 0; };
-  const media = (l) => l.length ? l.reduce((t, x) => t + x, 0) / l.length : null;
-
-  /** Lo último que se sabe de un grupo: EMG de su sesión más reciente frente a su basal, y velocidad y simetría de esa sesión. */
-  function resumen(id, g) {
-    const D = Sesion.datos, sesiones = D.Sesiones.filter((s) => s.id_astronauta === id), porId = new Map(sesiones.map((s) => [s.id_sesion, s]));
-    const filas = D.EMG.filter((e) => e.id_astronauta === id && e.grupo_muscular === g && porId.has(e.id_sesion)).map((e) => ({ ...e, ses: porId.get(e.id_sesion) }));
-    if (!filas.length) return null;
-    const fecha = filas.map((f) => f.ses.fecha).sort().pop(), ult = filas.filter((f) => f.ses.fecha === fecha), basal = filas.filter((f) => f.ses.fase === 'basal');
-    const m = (arr, k) => media(arr.map((x) => Number(x[k])));
-    const sesUlt = ult[0].ses, ej = EJERCICIO_DE[g];
-    const basalSes = sesiones.filter((s) => s.fase === 'basal' && s.ejercicio === sesUlt.ejercicio);
-    return {
-      fecha, rms: m(ult, 'rms_uv'), frec: m(ult, 'frec_mediana_hz'),
-      rmsBasal: basal.length ? m(basal, 'rms_uv') : null, frecBasal: basal.length ? m(basal, 'frec_mediana_hz') : null,
-      vel: Number(sesUlt.velocidad_media_ms), velBasal: media(basalSes.map((s) => Number(s.velocidad_media_ms))), sim: Number(sesUlt.simetria_pct), ejercicio: sesUlt.ejercicio || ej
-    };
-  }
-
-  /* ============================================================
-     SEÑALES SIMULADAS (deterministas: la misma semilla da la misma señal)
-     ============================================================ */
-  function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-  const semilla = (s) => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
-
-  function crearSerie(id, g, r) {
-    const R = mulberry(semilla(id + g)), rms = r.rms, frec = r.frec;
-    const T = Math.min(5, Math.max(2, 2.2 / (r.vel || .7)));                   // segundos por repetición: más lento = más largo
-    // Señal EMG: 12 sinusoides alrededor de la frecuencia mediana, con fases al azar, moduladas por la contracción
-    const comp = Array.from({ length: 12 }, (_, k) => ({ f: frec * (.55 + .09 * k), p: R() * 6.283 }));
-    const env = (t) => { const x = ((t % T) + T) % T / T; return .12 + .88 * Math.pow(Math.max(0, Math.sin(Math.PI * Math.min(1, x * 1.35))), 2); };
-    let m2 = 0; for (let i = 0; i < 400; i++) m2 += env(i / 400 * T) ** 2; m2 /= 400;
-    const A = rms / Math.sqrt(6 * m2);              // 12 sinusoides de amplitud 1 tienen RMS √6; así el RMS total es el guardado
-    const emg = (t) => { let s = 0; for (const c of comp) s += Math.sin(6.283 * c.f * t + c.p); return A * env(t) * s; };
-    // Movimiento: mismo ritmo que la repetición. La velocidad escala la amplitud; la simetría reparte la carga entre ejes.
-    const w = 6.283 / T, v = (r.vel || .7) / .7, s = Math.max(.5, Math.min(1, (r.sim || 96) / 100));
-    const ph = [R() * 6.283, R() * 6.283, R() * 6.283];
-    const acc = [(t) => .9 + .30 * v * Math.sin(w * t + ph[0]), (t) => .12 * v * Math.sin(2 * w * t + ph[1]) + .05 * (1 - s) * Math.sin(9 * w * t), (t) => -.2 + .25 * v * Math.sin(w * t + ph[2])];
-    const gir = [(t) => 70 * v * Math.sin(w * t + ph[0]), (t) => 45 * v * Math.sin(2 * w * t + ph[1]) + 30 * (1 - s) * Math.sin(7 * w * t), (t) => 55 * v * Math.sin(w * t + ph[2] + 1)];
-    return { emg, acc, gir, T, act: env };
-  }
-
-  /* ============================================================
-     GRÁFICAS (canvas)
-     ============================================================ */
-  function preparar(c) {
-    const r = c.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2);
-    if (c.width !== Math.round(r.width * d) || c.height !== Math.round(r.height * d)) { c.width = Math.round(r.width * d); c.height = Math.round(r.height * d); }
-    const x = c.getContext('2d'); x.setTransform(d, 0, 0, d, 0, 0); return { x, w: r.width, h: r.height };
-  }
-  function ejes(x, w, h, lo, hi, paso, fmt) {
-    const ml = 38, mb = 18, mt = 6, mr = 6, pw = w - ml - mr, ph = h - mb - mt;
-    x.clearRect(0, 0, w, h); x.font = '10px ' + css('--fuente'); x.fillStyle = css('--tinta-3'); x.strokeStyle = css('--linea-suave'); x.lineWidth = 1;
-    x.textAlign = 'right'; x.textBaseline = 'middle';
-    for (let v = lo; v <= hi + 1e-9; v += paso) { const yy = mt + ph - (v - lo) / (hi - lo) * ph; x.beginPath(); x.moveTo(ml, yy); x.lineTo(w - mr, yy); x.stroke(); x.fillText(fmt(v), ml - 5, yy); }
-    x.textAlign = 'center'; x.textBaseline = 'top';
-    for (let s = 0; s <= VENTANA; s += 2) x.fillText(String(s), ml + s / VENTANA * pw, h - mb + 4);
-    return { ml, mt, pw, ph, X: (s) => ml + s / VENTANA * pw, Y: (v) => mt + ph - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo) * ph };
-  }
-  function trazar(x, P, f, t, color, ancho = 1.4) {
-    const n = Math.floor(P.pw); x.strokeStyle = color; x.lineWidth = ancho; x.lineJoin = 'round'; x.beginPath();
-    for (let i = 0; i <= n; i++) { const s = i / n * VENTANA, px = P.ml + i, py = P.Y(f(t - VENTANA + s)); i ? x.lineTo(px, py) : x.moveTo(px, py); }
-    x.stroke();
-  }
-  const rango = (v) => { const m = Math.max(1e-6, v), e = Math.pow(10, Math.floor(Math.log10(m))), n = m / e, paso = (n <= 1.2 ? .2 : n <= 2.4 ? .5 : n <= 6 ? 1 : 2) * e; return { hi: Math.ceil(m / paso) * paso, paso }; };
-
-  function dibujar(t) {
-    if (!serie) return;
-    const azul = css('--marca-azul'), turq = css('--marca-turquesa'), mor = css('--marca-morado'), pico = serie.pico;
-    // EMG
-    { const { x, w, h } = preparar($('g-emg')), q = rango(pico * .8), P = ejes(x, w, h, -q.hi, q.hi, q.hi / 2, (v) => num(v, v % 1 ? 1 : 0));
-      x.save(); x.shadowColor = azul; x.shadowBlur = REDUCIR ? 0 : 7; trazar(x, P, serie.emg, t, azul, 1.1); x.restore();
-      punto(x, P, serie.emg(t), azul); }
-    // RMS (ventana de 0,5 s sobre la señal)
-    { const { x, w, h } = preparar($('g-rms')), q = rango(serie.rmsMax * 1.15), P = ejes(x, w, h, 0, q.hi, q.hi / 4, (v) => num(v, v % 1 ? 1 : 0));
-      const rms = (tt) => { let s = 0; const N = 40; for (let i = 0; i < N; i++) { const e = serie.emg(tt - .5 + i / N * .5); s += e * e; } return Math.sqrt(s / N); };
-      x.beginPath(); const n = Math.floor(P.pw); for (let i = 0; i <= n; i++) { const px = P.ml + i, py = P.Y(rms(t - VENTANA + i / n * VENTANA)); i ? x.lineTo(px, py) : x.moveTo(px, py); }
-      x.lineTo(P.ml + n, P.Y(0)); x.lineTo(P.ml, P.Y(0)); x.closePath(); x.fillStyle = azul + '26'; x.fill();
-      trazar(x, P, rms, t, azul, 1.8); punto(x, P, rms(t), azul); }
-    // Acelerómetro y giroscopio
-    { const { x, w, h } = preparar($('g-acc')), P = ejes(x, w, h, -1, 1.5, .5, (v) => num(v, 1)); [azul, turq, mor].forEach((c, i) => trazar(x, P, serie.acc[i], t, c)); }
-    { const { x, w, h } = preparar($('g-gir')), P = ejes(x, w, h, -150, 150, 100, (v) => num(v)); [azul, turq, mor].forEach((c, i) => trazar(x, P, serie.gir[i], t, c)); }
-  }
-  // La leyenda de colores usa las mismas variables que las líneas
-  document.querySelectorAll('.monitor-leyenda i').forEach((i) => { i.style.background = css(['--marca-azul', '--marca-turquesa', '--marca-morado'][i.dataset.s]); });
-
-  function bucle(now) {
-    requestAnimationFrame(bucle);
-    if (!visible || document.hidden || !serie) return;
-    const t = REDUCIR ? serie.T * 1.2 : (now - t0) / 1000;
-    dibujar(t); latir(t);
-  }
-  requestAnimationFrame(bucle);
-  new IntersectionObserver((en) => { visible = en[0].isIntersecting; if (visible && serie) dibujar(REDUCIR ? serie.T * 1.2 : (performance.now() - t0) / 1000); }).observe($('monitoreo'));
-  new ResizeObserver(() => { if (serie) dibujar(REDUCIR ? serie.T * 1.2 : (performance.now() - t0) / 1000); }).observe($('g-emg'));
-
-
-  /* ============================================================
-     ANIMACIÓN: punto al frente de la señal, latido de las zonas, ondas por sensor y cifras que suben
-     ============================================================ */
-  function punto(x, P, valor, color) {
-    const px = P.X(VENTANA), py = P.Y(valor);
-    x.save(); x.fillStyle = color + '33'; x.beginPath(); x.arc(px, py, 7, 0, 6.283); x.fill();
-    x.fillStyle = color; x.beginPath(); x.arc(px, py, 3.2, 0, 6.283); x.fill(); x.restore();
-  }
-  /** Cada zona del cuerpo late con su propia contracción; la elegida, con más fuerza. */
-  function latir(t) {
-    document.querySelectorAll('#monitor-figuras .anat-zona').forEach((z) => {
-      const activa = z.classList.contains('activa'), g = activa ? grupoActivo : GRUPOS.find((x) => MALLA[x] === z.dataset.malla), s = series[g];
-      if (!s) { z.style.opacity = ''; return; }
-      const a = s.act(t + GRUPOS.indexOf(g) * .35);
-      z.style.opacity = String(activa ? .5 + .5 * a : .62 + .3 * a);
+  function dibujarCuerpo(sexo) {
+    const sx = String(sexo).toUpperCase() === 'F' ? 'F' : 'M', p = sx.toLowerCase();
+    sexoFigura = sx;
+    const svg = $('mon-svg');
+    svg.innerHTML = '';
+    const defs = el('defs', {}); svg.appendChild(defs);
+    Object.entries(CX).forEach(([vista]) => {
+      const g = el('g', { class: 'mon-figura' });
+      const img = el('image', { x: imgX(vista), y: IMG_Y, width: IMG_W, height: IMG_H, preserveAspectRatio: 'xMidYMid meet' });
+      img.setAttribute('href', `${BASE_IMG}${p}-${ARCHIVO_VISTA[vista]}-base.png`);
+      g.appendChild(img);
+      g.appendChild(el('text', { x: CX[vista], y: 574, 'text-anchor': 'middle', class: 'mon-vista' })).textContent = vista === 'anterior' ? 'Vista anterior' : 'Vista posterior';
+      svg.appendChild(g);
     });
-    document.querySelectorAll('.sensor-onda').forEach((c) => {
-      const s = series[c.dataset.g]; if (!s) return;
-      const { x, w, h } = preparar(c), n = Math.max(2, Math.floor(w)), activa = c.dataset.g === grupoActivo;
-      x.clearRect(0, 0, w, h); x.beginPath();
-      for (let i = 0; i <= n; i++) { const tt = t - 6 + i / n * 6, v = s.act(tt); const px = i / n * w, py = h - 2 - v * (h - 5); i ? x.lineTo(px, py) : x.moveTo(px, py); }
-      x.strokeStyle = activa ? css('--marca-azul') : css('--tinta-3'); x.lineWidth = 1.4; x.stroke();
-      x.lineTo(w, h); x.lineTo(0, h); x.closePath(); x.fillStyle = (activa ? css('--marca-azul') : css('--tinta-3')) + '22'; x.fill();
+    // Separa las etiquetas para que no se pisen (mínimo 90 unidades entre una y otra)
+    chipsY = {};
+    ['anterior', 'posterior'].forEach((vista) => {
+      const lista = Object.entries(MUSCULOS).filter(([, m]) => m.vista === vista).map(([g]) => [g, aY(BANDAS[sx][MUSCULOS[g].mascara].y)]).sort((x, y) => x[1] - y[1]);
+      let ultimo = -Infinity;
+      lista.forEach(([g, y]) => { const yy = Math.max(y, ultimo + 90); chipsY[g] = Math.min(yy, 532); ultimo = yy; });
     });
+    Object.entries(MUSCULOS).forEach(([grupo, m]) => {
+      const vista = m.vista, b = BANDAS[sx][m.mascara];
+      const g = el('g', { class: 'mon-musculo', 'data-grupo': grupo });
+      // Máscara del músculo, teñida con su riesgo (relleno) y con el azul de selección (halo)
+      const mask = el('mask', { id: `mon-mascara-${grupo}`, maskUnits: 'userSpaceOnUse', x: imgX(vista), y: IMG_Y, width: IMG_W, height: IMG_H });
+      const mimg = el('image', { x: imgX(vista), y: IMG_Y, width: IMG_W, height: IMG_H, preserveAspectRatio: 'xMidYMid meet' });
+      mimg.setAttribute('href', `${BASE_IMG}${p}-${ARCHIVO_VISTA[vista]}-${m.mascara}.png`);
+      mask.appendChild(mimg); defs.appendChild(mask);
+      g.appendChild(el('rect', { x: imgX(vista), y: IMG_Y, width: IMG_W, height: IMG_H, fill: 'var(--azul)', mask: `url(#mon-mascara-${grupo})`, class: 'mon-halo' }));
+      g.appendChild(el('rect', { x: imgX(vista), y: IMG_Y, width: IMG_W, height: IMG_H, fill: COLOR_RIESGO.gris, mask: `url(#mon-mascara-${grupo})`, class: 'mon-relleno' }));
+      // Zona para tocar el músculo en los dos lados del cuerpo
+      const yb = aY(b.y), r = Math.max(14, (b.x1 - b.x0) * IMG_W * 0.9);
+      [b.x0 + (b.x1 - b.x0) / 2, 1 - (b.x0 + (b.x1 - b.x0) / 2)].forEach((fx) => g.appendChild(el('circle', { cx: aX(vista, fx), cy: yb, r, class: 'mon-toque' })));
+      // Banda del sensor: cruza el músculo a la altura medida, con la luz en el extremo de la etiqueta
+      const xa = aX(vista, b.x0) - 3, xb = aX(vista, b.x1) + 3;
+      g.appendChild(linea(xa, yb, xb, yb, 7, '#1d1d1f', { class: 'mon-banda' }));
+      const ext = m.lado < 0 ? [xa, yb] : [xb, yb];
+      const ancla = ANCLA_CHIP[vista], cy = chipsY[grupo];
+      g.appendChild(el('path', { d: `M${ext[0]} ${ext[1]} L${ancla + (m.lado === -1 ? 14 : -14)} ${cy} L${ancla} ${cy}`, class: 'mon-guia', fill: 'none' }));
+      g.appendChild(el('circle', { cx: ext[0], cy: ext[1], r: 4.5, class: 'mon-led-pulso' }));
+      g.appendChild(el('circle', { cx: ext[0], cy: ext[1], r: 4.5, class: 'mon-led' }));
+      g.addEventListener('click', () => elegir(grupo));
+      svg.appendChild(g);
+    });
+    // Etiquetas (HTML encima del SVG, para que el texto se lea nítido)
+    $('mon-chips').innerHTML = Object.entries(MUSCULOS).map(([grupo, m]) =>
+      `<button type="button" class="mon-chip mon-chip--${m.vista}" data-grupo="${grupo}" style="top:${(chipsY[grupo] / 580 * 100).toFixed(2)}%">
+         <span class="mon-chip-nombre">${esc(NOMBRE[grupo])}</span><span class="mon-chip-estado"></span></button>`).join('');
   }
-  function subirCifras() {
-    const els = [...document.querySelectorAll('#monitor-kpis .n[data-v]')]; if (!els.length) return;
-    if (REDUCIR) return;
-    const inicio = performance.now(), dur = 750;
-    const paso = (ahora) => {
-      const k = Math.min(1, (ahora - inicio) / dur), e = 1 - Math.pow(1 - k, 3);
-      els.forEach((el) => { el.textContent = num(Number(el.dataset.v) * e, Number(el.dataset.d)); });
-      if (k < 1) requestAnimationFrame(paso); else els.forEach((el) => { el.textContent = num(Number(el.dataset.v), Number(el.dataset.d)); });
-    };
-    requestAnimationFrame(paso);
-  }
-  function recalcularSeries(a) {
-    series = {};
-    GRUPOS.forEach((g) => { const r = resumen(a.id_astronauta, g); if (r) series[g] = crearSerie(a.id_astronauta, g, r); });
-  }
+  $('mon-chips').addEventListener('click', (e) => { const b = e.target.closest('[data-grupo]'); if (b) elegir(b.dataset.grupo); });
 
-  /* ============================================================
-     PANTALLA
-     ============================================================ */
-  function dibujarBarra(a) {
-    $('monitor-barra').innerHTML = `
-      <div class="monitor-barra-id">${UI.avatar(a)}<div><p class="texto" style="font-weight:600">${UI.esc(a.nombre)}</p><p class="nota">${UI.esc(a.id_astronauta)} · Sesión de monitoreo activa</p></div></div>
-      <ul class="monitor-barra-estado" aria-label="Estado del equipo, simulado">
-        <li><span class="estado estado--verde">Enlace BLE conectado</span></li>
-        <li><span class="estado estado--verde">Batería 92 %</span></li>
-        <li><span class="estado estado--verde">Unidad ASTRA-FIT operativa</span></li>
-      </ul>`;
-  }
+  /* ======================================================== ESTADO */
+  let grupo = 'cuadriceps';
+  let abierto = false;          // ¿se ve el detalle de un músculo?
+  let midiendo = null;          // { grupo, inicio, ... } mientras se graba
+  const bateria = {};           // simulada por músculo
 
-  /** Lo primero que ve el astronauta: cómo está hoy y qué hacer. Sale de las alertas abiertas y sus recomendaciones. */
-  function dibujarOrientacion(a) {
-    const abiertas = Sesion.datos.Alertas.filter((x) => x.id_astronauta === a.id_astronauta && x.estado !== 'cerrada');
-    const peor = typeof Alertas !== 'undefined' ? Alertas.peorNivel(abiertas) : 'verde';
-    const titulo = { rojo: 'Hoy hay algo que atender.', amarillo: 'Hoy conviene vigilar.', verde: 'Hoy todo va dentro de lo esperado.' }[peor];
-    // Una recomendación por grupo y por tipo de indicador, las más graves primero, máximo tres
-    const vistos = new Set(), acciones = abiertas.slice().sort((p, q) => (NIVEL[q.nivel] ?? 0) - (NIVEL[p.nivel] ?? 0) || String(q.creada_en).localeCompare(String(p.creada_en)))
-      .filter((x) => { if (!x.recomendacion || vistos.has(x.recomendacion)) return false; vistos.add(x.recomendacion); return true; }).slice(0, 3);
-    const rojas = abiertas.filter((x) => x.nivel === 'rojo').length, amarillas = abiertas.filter((x) => x.nivel === 'amarillo').length;
-    $('monitor-orientacion').innerHTML = `
-      <div class="orientacion-cabecera">
-        <div><p class="nota">Orientación de hoy</p><h3 class="titulo-tarjeta" id="mon-t-orient">${titulo}</h3>
-          <p class="pequeno texto-2">${abiertas.length ? `${rojas} ${rojas === 1 ? 'alerta' : 'alertas'} y ${amarillas} de precaución abiertas.` : 'No hay alertas abiertas. Sigue con tu entrenamiento habitual.'}</p></div>
-        <span class="estado estado--${peor}">${TEXTO_NIVEL[peor]}</span>
-      </div>
-      ${acciones.length ? `<ol class="orientacion-lista">${acciones.map((x) => `<li><span class="estado estado--${x.nivel}" aria-label="${TEXTO_NIVEL[x.nivel]}"></span><span class="pequeno"><strong>${UI.esc(etiquetaGrupo(x.grupo_muscular) || 'General')}.</strong> ${UI.esc(x.recomendacion)}</span></li>`).join('')}</ol>` : ''}
-      <div class="acciones" style="justify-content:flex-start"><a class="boton boton--pequeno" href="#registro">Registrar una evaluación</a><a class="enlace pequeno" href="#alertas">Ver las alertas</a></div>
-      <p class="nota">Son indicadores de seguimiento, no diagnósticos. Ante una alerta roja, consulta al médico de vuelo.</p>`;
-  }
+  const astronauta = () => Sesion.astronauta;
+  const tareaDe = (g) => ((Sesion.datos.Catalogos || []).find((c) => c.lista === 'tarea' && c.musculos === g) || {});
+  const medicionesDe = (g) => (Sesion.datos.Monitoreo || []).filter((m) => m.id_astronauta === astronauta().id_astronauta && m.grupo_muscular === g)
+    .sort((a, b) => String(a.registrado_en || a.fecha).localeCompare(String(b.registrado_en || b.fecha)));
+  const ultimaMedicion = (g) => { const m = medicionesDe(g); return m.length ? m[m.length - 1] : null; };
 
-  function dibujarSensores(a) {
-    $('monitor-sensores').innerHTML = GRUPOS.map((g, i) => {
-      const n = NOMBRE_NIVEL[nivelGrupo(a.id_astronauta, g)], r = resumen(a.id_astronauta, g), cambio = r && r.rmsBasal ? (r.rms / r.rmsBasal - 1) * 100 : null;
-      return `<li aria-current="${g === grupoActivo}"><button type="button" class="sensor-fila" data-grupo="${g}">
-        <span class="sensor-num" aria-hidden="true">${i + 1}</span>
-        <span class="sensor-texto"><span class="texto" style="font-weight:600">${UI.esc(etiquetaGrupo(g))}</span><span class="nota">Conectado · RMS ${r ? pct(cambio) : 'sin registros'}</span></span>
-        <span class="estado estado--${n}">${TEXTO_NIVEL[n]}</span>
-        <canvas class="sensor-onda" data-g="${g}" aria-hidden="true"></canvas></button></li>`;
+  function nivelDe(g) {
+    const u = Erdm.ultima(astronauta().id_astronauta, g);
+    return u ? { nivel: Erdm.nivel(u.riesgo), riesgo: u.riesgo, fila: u } : { nivel: 'gris', riesgo: null, fila: null };
+  }
+  const TEXTO_RIESGO = { bajo: 'Riesgo bajo', moderado: 'Riesgo moderado', alto: 'Riesgo alto' };
+  const CORTO = { bajo: 'Bajo', moderado: 'Moderado', alto: 'Alto' };
+
+  function pintarCuerpo() {
+    if (!astronauta()) return;
+    Erdm.GRUPOS.forEach((g) => {
+      const n = nivelDe(g);
+      const nodo = document.querySelector(`.mon-musculo[data-grupo="${g}"]`);
+      nodo.querySelectorAll('.mon-relleno').forEach((l) => l.setAttribute('fill', COLOR_RIESGO[n.nivel]));
+      nodo.classList.toggle('es-activo', abierto && g === grupo);
+      nodo.classList.toggle('esta-midiendo', !!midiendo && midiendo.grupo === g);
+      const chip = document.querySelector(`.mon-chip[data-grupo="${g}"]`);
+      chip.setAttribute('aria-pressed', String(abierto && g === grupo));
+      chip.querySelector('.mon-chip-estado').innerHTML = midiendo && midiendo.grupo === g
+        ? '<span class="estado estado--azul">Midiendo</span>'
+        : `<span class="estado estado--${n.nivel}">${n.riesgo ? CORTO[n.riesgo] : 'Sin evaluar'}</span>`;
+    });
+    $('mon-lista').innerHTML = ORDEN_LISTA.map((g) => {
+      const n = nivelDe(g);
+      return `<li><button type="button" data-grupo="${g}" aria-pressed="${abierto && g === grupo}">
+        <span>${esc(Erdm.etiqueta(g))}</span><span class="estado estado--${n.nivel}">${n.riesgo ? TEXTO_RIESGO[n.riesgo] : 'Sin evaluar'}</span></button></li>`;
     }).join('');
   }
+  $('mon-lista').addEventListener('click', (e) => { const b = e.target.closest('[data-grupo]'); if (b) elegir(b.dataset.grupo); });
 
-  function marcarZonas(a) {
-    const nivelDeMalla = (m) => Math.max(...GRUPOS.filter((g) => MALLA[g] === m).map((g) => nivelGrupo(a.id_astronauta, g)));
-    document.querySelectorAll('#monitor-figuras .anat-zona').forEach((z) => { z.dataset.nivel = NOMBRE_NIVEL[nivelDeMalla(z.dataset.malla)]; z.classList.toggle('activa', MALLA[grupoActivo] === z.dataset.malla); });
-    document.querySelectorAll('#monitor-figuras [data-grupo]').forEach((el) => {
-      const activa = el.dataset.grupo === grupoActivo; el.classList.toggle('activa', activa);
-      if (el.classList.contains('anat-marca')) el.setAttribute('aria-pressed', String(activa));
-    });
+  function elegir(g) {
+    if (midiendo) { UI.aviso('Espera a que termine la medición en curso.', 'advertencia'); return; }
+    grupo = g;
+    abierto = true;
+    $('mon-detalle').hidden = false;
+    pintarTodo();
+    reiniciarReposo();
+    const quietoYa = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    $('mon-detalle').scrollIntoView({ behavior: quietoYa ? 'auto' : 'smooth', block: 'start' });
+  }
+  function cerrar() {
+    if (midiendo) { UI.aviso('Espera a que termine la medición en curso.', 'advertencia'); return; }
+    abierto = false;
+    $('mon-detalle').hidden = true;
+    pintarCuerpo(); pintarMinis();
+  }
+  $('mon-volver').addEventListener('click', () => {
+    cerrar();
+    const quietoYa = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    $('monitoreo').scrollIntoView({ behavior: quietoYa ? 'auto' : 'smooth', block: 'start' });
+  });
+
+  /* ======================================================== LOS 6 MÚSCULOS
+     Una gráfica pequeña por músculo: puntaje ERDM-A (0–10) en cada evaluación, por semana desde la basal.
+     Una sola serie por gráfica (el título la nombra); las líneas punteadas son los cortes de la escala. */
+  const CORTES = () => Erdm.corte('total');   // { moderado: 4, alto: 7 } desde la pestaña EscalaERDM
+  function sparkline(filas, basalFecha) {
+    const W = 260, H = 70, iz = 4, de = 22, ar = 6, ab = 6;
+    const sem = (f) => (Date.parse(f) - Date.parse(basalFecha)) / (7 * 864e5);
+    const pts = filas.map((f) => ({ x: sem(f.fecha), y: Number(f.puntaje_erdm), f }));
+    const xmax = Math.max(12, ...pts.map((p) => p.x));
+    const X = (x) => iz + x / xmax * (W - iz - de), Y = (y) => ar + (1 - y / 10) * (H - ar - ab);
+    const c = CORTES();
+    const guia = (v) => `<line x1="${iz}" x2="${W - de}" y1="${Y(v)}" y2="${Y(v)}" class="mon-mini-corte"/><text x="${W - de + 4}" y="${Y(v) + 3.5}" class="mon-mini-eje">${v}</text>`;
+    const d = pts.map((p, i) => `${i ? 'L' : 'M'}${X(p.x).toFixed(1)} ${Y(p.y).toFixed(1)}`).join(' ');
+    const ult = pts[pts.length - 1];
+    const puntos = pts.map((p) => `<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="7" class="mon-mini-blanco"><title>Semana ${Math.round(p.x)}: ${p.y} de 10</title></circle>`).join('');
+    return `<svg class="mon-mini-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Puntaje ERDM-A por semana, último ${ult.y} de 10">
+      ${guia(c.moderado)}${guia(c.alto)}
+      <line x1="${iz}" x2="${W - de}" y1="${Y(0)}" y2="${Y(0)}" class="mon-mini-base"/>
+      <path d="${d}" class="mon-mini-linea"/>
+      <circle cx="${X(ult.x).toFixed(1)}" cy="${Y(ult.y).toFixed(1)}" r="4.5" class="mon-mini-ultimo mon-mini-ultimo--${Erdm.nivel(ult.f.riesgo)}"/>
+      ${puntos}</svg>`;
+  }
+  function resumenCambios(u) {
+    if (!u || u.fase === 'basal') return u ? 'Basal registrada' : 'Sin evaluación basal';
+    const malas = Erdm.DIMENSIONES.filter((d) => Number(u[d.puntos]) > 0)
+      .sort((p, q) => Number(u[q.puntos]) - Number(u[p.puntos]))
+      .map((d) => {
+        const v = Number(u[d.cambio]);
+        if (d.clave === 'emg') return `EMG cambió ${n0(v, 0)} %`;
+        const x = d.signo * v;
+        return `${d.nombre.replace(' muscular', '')} ${x < 0 ? '−' : '+'}${n0(Math.abs(x), 0)} %`;
+      });
+    return malas.length ? malas.slice(0, 3).join(' · ') : 'Estable frente a la basal';
+  }
+  function pintarMinis() {
+    const a = astronauta(); if (!a) return;
+    $('mon-minis').innerHTML = ORDEN_LISTA.map((g) => {
+      const hist = Erdm.historial(a.id_astronauta, g).filter((f) => f.puntaje_erdm !== null && f.puntaje_erdm !== undefined && f.puntaje_erdm !== '');
+      const u = hist[hist.length - 1], b = Erdm.basal(a.id_astronauta, g);
+      const n = nivelDe(g);
+      const estado = midiendo && midiendo.grupo === g ? '<span class="estado estado--azul">Midiendo</span>'
+        : `<span class="estado estado--${n.nivel}">${n.riesgo ? CORTO[n.riesgo] : 'Sin evaluar'}</span>`;
+      return `<button type="button" class="mon-mini${n.nivel === 'rojo' ? ' mon-mini--alerta' : ''}" data-grupo="${g}" aria-pressed="${abierto && g === grupo}">
+        <span class="mon-mini-cabeza"><span class="mon-mini-nombre">${esc(NOMBRE[g])}</span>${estado}</span>
+        <span class="mon-mini-valor">${u ? u.puntaje_erdm : '—'}<small>/10</small>${u && u.alerta_prioritaria === 'SI' ? '<span class="estado estado--rojo mon-mini-prioritaria">Prioritaria</span>' : ''}</span>
+        ${hist.length && b ? sparkline(hist, b.fecha) : '<span class="mon-mini-vacio nota">Mide la basal para empezar el seguimiento.</span>'}
+        <span class="nota mon-mini-nota">${esc(resumenCambios(u))}</span>
+      </button>`;
+    }).join('');
+  }
+  $('mon-minis').addEventListener('click', (e) => { const b = e.target.closest('[data-grupo]'); if (b) elegir(b.dataset.grupo); });
+
+  /* ======================================================== CABECERA DEL MÚSCULO */
+  const FASES = () => (Sesion.datos.Catalogos || []).filter((c) => c.lista === 'fase');
+  function pintarCabecera() {
+    const a = astronauta();
+    $('mon-titulo').textContent = Erdm.etiqueta(grupo);
+    const t = tareaDe(grupo);
+    $('mon-tarea').textContent = `Tarea estandarizada: ${t.etiqueta || 'contracción'}. 6 repeticiones en 10 segundos.`;
+    const tieneBasal = !!Erdm.basal(a.id_astronauta, grupo);
+    $('mon-fase').innerHTML = FASES().map((f) => `<option value="${esc(f.valor)}"${f.valor === (tieneBasal ? 'mision' : 'basal') ? ' selected' : ''}>${esc(f.etiqueta)}</option>`).join('');
+    pintarSensor();
+  }
+  function pintarSensor() {
+    const u = ultimaMedicion(grupo);
+    if (bateria[grupo] === undefined) bateria[grupo] = u && u.bateria_pct ? Number(u.bateria_pct) : 92;
+    const estado = midiendo
+      ? `<span class="estado estado--azul">Midiendo, ${Math.max(0, Math.ceil(10 - midiendo.t))} s</span>`
+      : '<span class="estado estado--verde">Conectado</span>';
+    $('mon-sensor').innerHTML = `${estado}
+      <span class="mon-dato">Batería ${bateria[grupo]} %</span>
+      <span class="mon-dato">Señal ${esc(u && u.calidad_senal ? u.calidad_senal : 'Excelente')}</span>
+      <span class="mon-etiqueta">EMG</span><span class="mon-etiqueta">IMU</span>`;
   }
 
-  function dibujarDetalle(a) {
-    const g = grupoActivo, r = resumen(a.id_astronauta, g), n = NOMBRE_NIVEL[nivelGrupo(a.id_astronauta, g)], alerta = ultimaAlerta(a.id_astronauta, g);
-    $('monitor-pista').textContent = `${GRUPOS.indexOf(g) + 1}. ${etiquetaGrupo(g)}, ambos lados`;
-    $('monitor-cabecera').innerHTML = `
-      <div class="tarjeta-cabecera"><h3 class="titulo-tarjeta">${UI.esc(etiquetaGrupo(g))} seleccionado</h3><span class="monitor-vivo"><i></i>En vivo · simulado</span><span class="estado estado--${n}">${TEXTO_NIVEL[n]}</span></div>
-      <p class="pequeno texto-2">${r ? `Sesión del ${UI.esc(r.fecha)}, ${UI.esc(String(r.ejercicio).replace(/_/g, ' '))}. ` : ''}${alerta ? UI.esc(alerta.mensaje) : 'Sin alertas para este grupo.'}</p>`;
-    if (!r) {
-      serie = null;
-      ['g-emg', 'g-rms', 'g-acc', 'g-gir'].forEach((id) => { const { x, w, h } = preparar($(id)); x.clearRect(0, 0, w, h); });
-      $('monitor-kpis').innerHTML = '<p class="pequeno texto-2" style="grid-column:1/-1">Todavía no hay registros de EMG para este grupo.</p>';
+  /* ======================================================== INDICADORES */
+  const n0 = (v, d = 0) => (v === null || v === undefined || isNaN(v) ? '—' : Number(v).toLocaleString('es', { minimumFractionDigits: d, maximumFractionDigits: d }));
+  function pintarKpis(r, nota) {
+    const k = [
+      { nombre: 'Activación muscular', valor: n0(r && r.activacion_pct), unidad: '%', ayuda: 'RMS frente a la basal' },
+      { nombre: 'Fuerza', valor: n0(r && r.fuerza_kg, 1), unidad: 'kg', ayuda: 'Dinamómetro de la banda' },
+      { nombre: 'Velocidad', valor: n0(r && r.velocidad_ms, 2), unidad: 'm/s', ayuda: 'IMU' },
+      { nombre: 'Coordinación', valor: n0(r && r.coordinacion_cv_pct, 1), unidad: '% CV', ayuda: 'Variación entre repeticiones' },
+      { nombre: 'Fatiga', valor: n0(r && r.fatiga_pct, 1), unidad: '%', ayuda: 'Caída de la frecuencia mediana' }
+    ];
+    $('mon-kpis').innerHTML = k.map((x) => `<div class="tarjeta mon-kpi"><p class="nota">${x.nombre}</p>
+      <p class="mon-kpi-valor">${x.valor}<small>${x.unidad}</small></p><p class="nota">${x.ayuda}</p></div>`).join('');
+    $('mon-kpis-nota').textContent = nota || '';
+  }
+  function kpisDeUltima() {
+    const u = ultimaMedicion(grupo);
+    const ev = u ? (Sesion.datos.Evaluaciones || []).find((e) => e.id_evaluacion === Erdm.idEvaluacion(u.id_astronauta, u.fecha, u.grupo_muscular)) : null;
+    pintarKpis(u ? { ...u, fuerza_kg: u.fuerza_kg !== undefined && u.fuerza_kg !== null && u.fuerza_kg !== '' ? Number(u.fuerza_kg) : ev && ev.fuerza_kg !== null && ev.fuerza_kg !== undefined ? Number(ev.fuerza_kg) : null, activacion_pct: Number(u.activacion_pct), velocidad_ms: Number(u.velocidad_ms), coordinacion_cv_pct: Number(u.coordinacion_cv_pct), fatiga_pct: Number(u.fatiga_pct) } : null,
+      u ? `Última medición: ${Calc.fechaCorta(u.fecha)}${u.hora ? `, ${u.hora}` : ''}. RMS ${n0(u.emg_rms_uv)} µV, frecuencia mediana ${n0(u.emg_frec_mediana_hz, 1)} Hz.` : 'Todavía no hay mediciones de este músculo. Mide la basal para empezar.');
+  }
+
+  /* ======================================================== ESCALA ERDM-A DEL MÚSCULO */
+  function pintarErdm() {
+    const a = astronauta();
+    const u = Erdm.ultima(a.id_astronauta, grupo);
+    const b = Erdm.basal(a.id_astronauta, grupo);
+    const nombre = Erdm.etiqueta(grupo).toLowerCase();
+    if (!u) {
+      $('mon-erdm').innerHTML = `<div class="tarjeta-cabecera"><h3 class="titulo-tarjeta">Escala ERDM-A del ${esc(nombre)}.</h3></div>
+        <p class="texto-2">Sin evaluación basal. Mide el músculo con la fase basal: el sensor deja el EMG, la coordinación y la fuerza.</p>`;
       return;
     }
-    serie = series[g] || (series[g] = crearSerie(a.id_astronauta, g, r));
-    // Escalas: el pico de la señal y el RMS máximo en una repetición
-    let pico = 0, rmsMax = 0; for (let i = 0; i < 1500; i++) { const tt = i / 1500 * serie.T * 2; pico = Math.max(pico, Math.abs(serie.emg(tt))); }
-    for (let i = 0; i < 150; i++) { const tt = i / 150 * serie.T * 2; let s = 0; for (let k = 0; k < 40; k++) { const e = serie.emg(tt - .5 + k / 40 * .5); s += e * e; } rmsMax = Math.max(rmsMax, Math.sqrt(s / 40)); }
-    serie.pico = pico; serie.rmsMax = rmsMax;
-    const activ = r.rmsBasal ? r.rms / r.rmsBasal * 100 : null, caida = r.frecBasal ? Math.max(0, (1 - r.frec / r.frecBasal) * 100) : null;
-    const kpi = (titulo, valor, dec, unidad, nota) => `<article class="tarjeta pila"><p class="nota">${titulo}</p><span class="cifra"><span class="n"${valor === null ? '' : ` data-v="${valor}" data-d="${dec}"`}>${valor === null ? '—' : num(valor, dec)}</span><small>${valor === null ? '' : unidad}</small></span><p class="nota">${nota}</p></article>`;
-    $('monitor-kpis').innerHTML =
-      kpi('Activación', activ, 0, '%', 'RMS frente a su basal') +
-      kpi('Velocidad', r.vel, 2, 'm/s', r.velBasal ? `Basal ${num(r.velBasal, 2)} m/s` : 'Sin basal') +
-      kpi('Simetría', r.sim, 1, '%', '100 % = lados iguales') +
-      kpi('Fatiga estimada', caida, 0, '%', 'Caída de la frecuencia mediana');
-    subirCifras();
+    const arr = Object.fromEntries((u.arrastre || []).map((x) => [x.clave, x.fecha]));
+    const fmt = (dim, fila) => {
+      if (!fila) return '—';
+      if (dim.clave === 'emg') return fila.emg_rms_uv === null || fila.emg_rms_uv === undefined ? '—' : `${n0(fila.emg_rms_uv)} µV · ${n0(fila.emg_frec_mediana_hz, 1)} Hz`;
+      const v = fila[dim.campos[0]];
+      return v === null || v === undefined ? '—' : `${n0(v, 1)} ${dim.unidad}`;
+    };
+    const cambio = (dim) => {
+      const v = u[dim.cambio];
+      if (u.fase === 'basal') return 'Basal';
+      if (v === null || v === undefined) return (u.valores || u)[dim.campos[0]] === null || (u.valores || u)[dim.campos[0]] === undefined ? 'Falta registrar' : 'Sin basal';
+      if (dim.clave === 'emg') return `cambió ${n0(v, 0)} %`;
+      const x = dim.signo * v;
+      return `${x < 0 ? '−' : '+'}${n0(Math.abs(x), 0)} %`;
+    };
+    const puntos = (p) => p === null || p === undefined ? '<span class="mon-puntos mon-puntos--vacio">—</span>'
+      : `<span class="mon-puntos" aria-label="${p} de 2">${[0, 1].map((i) => `<i class="${i < p ? 'lleno p' + p : ''}"></i>`).join('')}</span>`;
+    const filas = Erdm.DIMENSIONES.map((d) => `<tr>
+        <th scope="row"><span class="texto">${d.nombre}</span><span class="nota">${d.metodo}${d.manual ? '' : ', sensor'}</span></th>
+        <td>${fmt(d, b)}</td><td>${fmt(d, u.valores || u)}${arr[d.clave] ? `<span class="nota mon-arrastre">del ${Calc.fechaCorta(arr[d.clave])}</span>` : ''}</td><td>${cambio(d)}</td><td>${puntos(u[d.puntos])}</td></tr>`).join('');
+    const nivel = Erdm.nivel(u.riesgo);
+    const plan = Erdm.plan(grupo, u.riesgo);
+    const parcial = u.dimensiones_medidas < 5;
+    const faltan = Erdm.DIMENSIONES.filter((d) => u[d.puntos] === null || u[d.puntos] === undefined).map((d) => d.nombre.toLowerCase().replace('vo₂pico', 'VO₂pico'));
+    $('mon-erdm').innerHTML = `
+      <div class="tarjeta-cabecera">
+        <h3 class="titulo-tarjeta">Escala ERDM-A del ${esc(nombre)}.</h3>
+        <p class="pequeno texto-2">Evaluación del ${Calc.fechaCorta(u.fecha)}, fase ${esc((FASES().find((f) => f.valor === u.fase) || {}).etiqueta || u.fase).toLowerCase()}</p>
+      </div>
+      <div class="mon-erdm-rejilla">
+        <div class="mon-erdm-total">
+          <p class="mon-erdm-puntaje">${u.puntaje_erdm}<small>/10</small></p>
+          <p class="estado estado--${nivel}">${TEXTO_RIESGO[u.riesgo]}${parcial ? ' (parcial)' : ''}</p>
+          ${u.alerta_prioritaria === 'SI' ? '<p class="estado estado--rojo">Alerta prioritaria</p>' : ''}
+          ${parcial ? `<p class="nota">Faltan ${faltan.join(', ')}: se toman con cinta métrica y prueba de esfuerzo, fuera de la banda.</p>` : ''}
+          ${u.arrastre && u.arrastre.length ? '<p class="nota">Las dimensiones con fecha vienen de la evaluación anterior hasta que se vuelvan a medir.</p>' : ''}
+          ${plan && u.fase !== 'basal' ? `<div class="mon-plan"><p class="nota">Plan sugerido</p><p class="pequeno"><strong>${esc(plan.ejercicio)}.</strong> ${esc(plan.dosificacion)}</p></div>` : ''}
+        </div>
+        <div class="tabla-envoltura">
+          <table class="mon-tabla">
+            <thead><tr><th scope="col">Dimensión</th><th scope="col">Basal</th><th scope="col">Actual</th><th scope="col">Cambio</th><th scope="col">Puntos</th></tr></thead>
+            <tbody>${filas}</tbody>
+          </table>
+        </div>
+      </div>
+      <p class="nota">Cortes de la pestaña EscalaERDM (documento ASTRA-FIT). Propuesta del equipo, no validada clínicamente.</p>`;
   }
 
-  function dibujarTodo() {
-    const a = Sesion.astronauta; if (!a) return;
-    const sx = String(a.sexo).toUpperCase() === 'F' ? 'F' : 'M'; if (sexoImg !== sx) construirFiguras(sx);
-    recalcularSeries(a); dibujarBarra(a); dibujarOrientacion(a); dibujarSensores(a); marcarZonas(a); dibujarDetalle(a);
-    $('monitor-nota').textContent = 'Datos simulados: no hay sensores físicos. Las señales se generan a partir de la última sesión guardada y son indicadores de seguimiento, no diagnósticos. Anatomía: BodyParts3D © DBCLS (CC BY 4.0), adaptada por open-anatomy-3d.';
-    requestAnimationFrame(() => dibujar(REDUCIR ? (serie ? serie.T * 1.2 : 0) : (performance.now() - t0) / 1000));
+  function pintarTodo() {
+    if (!astronauta()) return;
+    pintarCuerpo();
+    pintarMinis();
+    pintarCabecera();
+    if (!midiendo) kpisDeUltima();
+    pintarErdm();
   }
-  function elegir(g) { if (!GRUPOS.includes(g)) return; grupoActivo = g; mostrarVista(VISTA[MALLA[g]]); dibujarTodo(); }
 
-  $('monitor-sensores').addEventListener('click', (e) => { const b = e.target.closest('[data-grupo]'); if (b) elegir(b.dataset.grupo); });
-  $('monitor-figuras').addEventListener('click', (e) => { const z = e.target.closest('[data-grupo]'); if (z) elegir(z.dataset.grupo); });
-  $('ctl-anat').addEventListener('cambio', (e) => mostrarVista(e.detail));
-  document.addEventListener('astronauta-elegido', () => { grupoActivo = 'cuadriceps'; vistaActual = 'front'; t0 = performance.now(); dibujarTodo(); });
-  document.addEventListener('datos-actualizados', dibujarTodo);
-  document.addEventListener('astronauta-actualizado', (e) => { if (Sesion.astronauta && e.detail.id_astronauta === Sesion.astronauta.id_astronauta) dibujarTodo(); });
+  /* ======================================================== SIMULADOR DEL SENSOR
+     500 muestras/s para EMG y 100 para la IMU. La gráfica barre de izquierda a derecha cada 10 s, como un monitor. */
+  const FS = 500, FS_IMU = 100, VENTANA = 10;
+  const buf = {
+    emg: new Float32Array(FS * VENTANA), rms: new Float32Array(FS * VENTANA),
+    ax: new Float32Array(FS_IMU * VENTANA), ay: new Float32Array(FS_IMU * VENTANA), az: new Float32Array(FS_IMU * VENTANA),
+    gx: new Float32Array(FS_IMU * VENTANA), gy: new Float32Array(FS_IMU * VENTANA), gz: new Float32Array(FS_IMU * VENTANA)
+  };
+  let tReloj = 0, nEmg = 0, nImu = 0;   // segundos simulados y muestras escritas
+  let fuente = null;                     // parámetros de la señal actual
+
+  const azar = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  const BASE = { // valores típicos por músculo para un astronauta sin historial (los mismos del generador de datos)
+    soleo: [180, 85, 7.5, 35], gastrocnemio: [200, 92, 7, 40], cuadriceps: [220, 82, 6.5, 90],
+    biceps_braquial: [260, 75, 6, 130], triceps_braquial: [230, 78, 6.5, 120], flexores_antebrazo: [190, 88, 8, 70]
+  };
+  const FUERZA_BASE = { soleo: 60, gastrocnemio: 65, cuadriceps: 48, biceps_braquial: 24, triceps_braquial: 20, flexores_antebrazo: 34 };   // kg
+  const gravedad = () => (Calc.ENTORNOS[(astronauta() && astronauta().entorno) || 'orbita'] || Calc.ENTORNOS.orbita).gravedad.g;
+
+  /** "Estado real" del músculo hoy: parte de su última evaluación y medición, con una pequeña variación. */
+  function objetivo(g) {
+    const a = astronauta();
+    const u = Erdm.historial(a.id_astronauta, g).filter((e) => e.emg_rms_uv !== null && e.emg_rms_uv !== undefined).pop();
+    const m = ultimaMedicion(g);
+    const fz = Erdm.historial(a.id_astronauta, g).filter((e) => e.fuerza_kg !== null && e.fuerza_kg !== undefined && e.fuerza_kg !== '').pop();
+    const [rms0, f0, cv0, rom0] = BASE[g];
+    const v = (x, s) => x * (1 + azar() * s);
+    return {
+      rms: v(u ? Number(u.emg_rms_uv) : rms0, u ? 0.02 : 0.08),
+      fmed: v(u ? Number(u.emg_frec_mediana_hz) : f0, u ? 0.012 : 0.05),
+      cv: Math.max(2, v(u ? Number(u.coordinacion_cv_pct) : cv0, u ? 0.04 : 0.1)),
+      fatiga: Math.max(1, v(m ? Number(m.fatiga_pct) : 5, 0.15)),
+      velocidad: v(m ? Number(m.velocidad_ms) : 0.8, 0.03),
+      rom: v(m ? Number(m.rom_grados) : rom0, 0.02),
+      fuerza: v(fz ? Number(fz.fuerza_kg) : FUERZA_BASE[g], fz ? 0.015 : 0.1)   // dinamómetro: mejor de las repeticiones
+    };
+  }
+
+  /** Prepara una señal: en reposo (tono bajo) o una medición de 6 repeticiones.
+   *  El EMG se arma con tonos cada 4 Hz (20–240 Hz) pesados con una campana alrededor de la frecuencia mediana buscada:
+   *  así el espectro se parece al de un EMG de superficie y su mediana es estable entre repeticiones. */
+  function prepararFuente(medir) {
+    const obj = objetivo(grupo);
+    const f = [], amp = [];
+    for (let fr = 22; fr <= 238; fr += 4) { f.push(fr); amp.push(Math.exp(-(Math.log(fr / obj.fmed) ** 2) / (2 * 0.38 ** 2))); }
+    // mediana del espectro de potencia (interpolada) y ajuste para que coincida con la buscada
+    const total = amp.reduce((t, x) => t + x * x, 0);
+    let acum = 0, mediana = obj.fmed;
+    for (let k = 0; k < f.length; k++) { const antes = acum; acum += amp[k] ** 2; if (acum >= total / 2) { mediana = f[k] - 4 + 4 * (total / 2 - antes) / (amp[k] ** 2) + 2; break; } }
+    const frecuencias = f.map((x) => x * obj.fmed / mediana);
+    // amplitudes de las 6 repeticiones con el coeficiente de variación buscado (coordinación)
+    const z = Array.from({ length: 6 }, azar), mz = z.reduce((t, x) => t + x, 0) / 6;
+    const sz = Math.sqrt(z.reduce((t, x) => t + (x - mz) ** 2, 0) / 6) || 1;
+    const reps = z.map((x) => 1 + (x - mz) / sz * obj.cv / 100);
+    return { medir, obj, f: frecuencias, peso: amp, norma: Math.sqrt(total / 2), fase: f.map(() => Math.random() * 2 * Math.PI), amp: reps, inicio: tReloj };
+  }
+
+  /** Envolvente de la contracción: 6 repeticiones de 1,1 s cada 1,65 s. Devuelve [nivel 0–1, repetición, avance 0–1]. */
+  function envolvente(t) {
+    const periodo = 10 / 6, activa = 1.1, rep = Math.floor(t / periodo), p = (t - rep * periodo) / activa;
+    if (rep > 5 || p > 1) return [0, rep, p];
+    return [Math.sin(Math.PI * p) ** 0.6, rep, p];
+  }
+
+  function generar(dt) {
+    const s = fuente; if (!s) return;
+    const g0 = gravedad();
+    const pasos = Math.round(dt * FS);
+    for (let i = 0; i < pasos; i++) {
+      const t = tReloj - s.inicio;
+      const [env, rep, p] = s.medir ? envolvente(t) : [0, 0, 0];
+      const deriva = s.medir ? 1 + s.obj.fatiga / 100 * (0.5 - Math.min(t, 10) / 10) : 1;   // la frecuencia baja con la fatiga
+      let x = 0;
+      for (let k = 0; k < s.f.length; k++) { s.fase[k] += 2 * Math.PI * s.f[k] * deriva / FS; x += s.peso[k] * Math.sin(s.fase[k]); }
+      x /= s.norma;                                                       // portadora con RMS ≈ 1
+      const nivel = s.medir ? env * (rep <= 5 ? s.amp[rep] : 1) : 0;
+      const tono = 0.06;                                                  // actividad de reposo
+      const uv = s.obj.rms * (nivel + tono) * x / 0.937 + azar() * 4;     // µV (0,937 = RMS medio de la envolvente activa)
+      const j = nEmg % (FS * VENTANA);
+      buf.emg[j] = uv / 1000;                                             // mV
+      // RMS en ventana móvil de 100 ms
+      let suma = 0; const W = FS / 10;
+      for (let w = 0; w < W; w++) { const v = buf.emg[(j - w + FS * VENTANA) % (FS * VENTANA)]; suma += v * v; }
+      buf.rms[j] = Math.sqrt(suma / W);
+      if (s.medir) (s.muestras = s.muestras || []).push([t, uv, rep, env]);
+      nEmg++;
+      // IMU a 100 muestras/s
+      if (nEmg % (FS / FS_IMU) === 0) {
+        const q = nImu % (FS_IMU * VENTANA);
+        const a = s.medir && env > 0 ? s.amp[Math.min(rep, 5)] : 0;
+        const w = 2 * Math.PI / 1.1;                                       // una repetición = media onda
+        const omega = s.medir && p <= 1 && rep <= 5 ? s.obj.rom * a * Math.PI / 1.1 * Math.sin(w * p * 1.1) : 0;   // °/s
+        buf.gx[q] = omega + azar();
+        buf.gy[q] = omega * 0.18 + azar() * 2;
+        buf.gz[q] = -omega * 0.1 + azar() * 2;
+        buf.ax[q] = (s.medir && rep <= 5 && p <= 1 ? 0.35 * a * Math.cos(w * p * 1.1) : 0) + azar() * 0.02;
+        buf.ay[q] = omega / 400 + azar() * 0.02;
+        buf.az[q] = g0 + azar() * 0.02;                                    // gravedad del entorno de la misión
+        if (s.medir) (s.imu = s.imu || []).push([t, buf.gx[q], rep]);
+        nImu++;
+      }
+      tReloj += 1 / FS;
+    }
+  }
+
+  /* ---------------- Procesamiento (documento, Fase 6) ---------------- */
+  function fft(re, im) {   // radix-2, en el sitio
+    const n = re.length;
+    for (let i = 1, j = 0; i < n; i++) { let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit; if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; } }
+    for (let len = 2; len <= n; len <<= 1) {
+      const ang = -2 * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+      for (let i = 0; i < n; i += len) {
+        let ur = 1, ui = 0;
+        for (let k = 0; k < len / 2; k++) {
+          const a = i + k, b = a + len / 2, tr = re[b] * ur - im[b] * ui, ti = re[b] * ui + im[b] * ur;
+          re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+          const t = ur * wr - ui * wi; ui = ur * wi + ui * wr; ur = t;
+        }
+      }
+    }
+  }
+  /** Frecuencia mediana por el método de Welch: segmentos de 256 muestras con 50 % de traslape y ventana de Hann. */
+  function frecuenciaMediana(x) {
+    const N = 256, paso = 128, pot = new Float64Array(N / 2);
+    for (let i = 0; i + N <= x.length; i += paso) {
+      const re = new Float64Array(N), im = new Float64Array(N);
+      let m = 0; for (let k = 0; k < N; k++) m += x[i + k]; m /= N;
+      for (let k = 0; k < N; k++) re[k] = (x[i + k] - m) * (0.5 - 0.5 * Math.cos(2 * Math.PI * k / (N - 1)));
+      fft(re, im);
+      for (let k = 1; k < N / 2; k++) pot[k] += re[k] ** 2 + im[k] ** 2;
+    }
+    let total = 0;
+    for (let k = 1; k < N / 2; k++) { if (k * FS / N < 20) pot[k] = 0; total += pot[k]; }   // filtro pasa altos de 20 Hz
+    let acum = 0;
+    for (let k = 1; k < N / 2; k++) { const antes = acum; acum += pot[k]; if (acum >= total / 2) return (k - 0.5 + (total / 2 - antes) / pot[k]) * FS / N; }
+    return 0;
+  }
+  function procesar(s) {
+    const activas = s.muestras.filter((m) => m[3] > 0.6);                       // tramos de contracción
+    const rms = Math.sqrt(activas.reduce((t, m) => t + m[1] * m[1], 0) / activas.length);
+    const pico = Math.max(...s.muestras.map((m) => Math.abs(m[1])));
+    const porRep = [0, 1, 2, 3, 4, 5].map((r) => s.muestras.filter((m) => m[2] === r && m[3] > 0.3).map((m) => m[1]));
+    const fmed = frecuenciaMediana(porRep.flat());
+    // Fatiga: caída de la frecuencia mediana entre las 3 primeras y las 3 últimas repeticiones (Welch sobre cada mitad),
+    // llevada a los 10 s de la prueba (los centros de cada mitad están a 5 s).
+    const f1 = frecuenciaMediana(porRep.slice(0, 3).flat()), f2 = frecuenciaMediana(porRep.slice(3).flat());
+    const fatiga = Math.max(0, (f1 - f2) / ((f1 + f2) / 2) * 100 * 2);
+    // Coordinación: coeficiente de variación del pico de velocidad angular entre repeticiones (IMU, suavizado de 30 ms)
+    const picos = [0, 1, 2, 3, 4, 5].map((r) => {
+      const g = s.imu.filter((m) => m[2] === r).map((m) => m[1]);
+      let mx = 0; for (let i = 1; i < g.length - 1; i++) mx = Math.max(mx, Math.abs((g[i - 1] + g[i] + g[i + 1]) / 3));
+      return mx;
+    });
+    const mp = picos.reduce((t, v) => t + v, 0) / picos.length;
+    const cv = Math.sqrt(picos.reduce((t, v) => t + (v - mp) ** 2, 0) / picos.length) / mp * 100;
+    return { rms, pico, fmed, fatiga, cv, velocidad: s.obj.velocidad, rom: s.obj.rom, fuerza: s.obj.fuerza };   // velocidad y ROM: los entrega la IMU simulada
+  }
+
+  /* ======================================================== GRÁFICAS */
+  const lienzos = { emg: $('mon-c-emg'), rms: $('mon-c-rms'), acc: $('mon-c-acc'), gyr: $('mon-c-gyr') };
+  const ESCALAS = { emg: [-1, 1, [-1, -0.5, 0, 0.5, 1]], rms: [0, 0.6, [0, 0.2, 0.4, 0.6]], acc: [-1.5, 1.5, [-1, 0, 1]], gyr: [-400, 400, [-300, 0, 300]] };
+  const COLORES = ['#0071e3', '#34c759', '#ff9f0a'];
+  function prepararLienzo(c) {
+    const dpr = Math.min(devicePixelRatio || 1, 2), w = c.clientWidth, h = c.clientHeight;
+    if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+    const ctx = c.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+    return { ctx, w, h };
+  }
+  function dibujarGrafica(nombre, series, fsSerie, relleno) {
+    const c = lienzos[nombre]; if (!c.clientWidth) return;
+    const { ctx, w, h } = prepararLienzo(c);
+    const [min, max, marcas] = ESCALAS[nombre];
+    const izq = 38, abajo = 18, ancho = w - izq - 6, alto = h - abajo - 6;
+    const y = (v) => 6 + (1 - (Math.max(min, Math.min(max, v)) - min) / (max - min)) * alto;
+    ctx.font = '11px -apple-system, BlinkMacSystemFont, "Inter", sans-serif'; ctx.fillStyle = '#86868b'; ctx.strokeStyle = 'rgba(0,0,0,.07)'; ctx.lineWidth = 1;
+    marcas.forEach((m) => { ctx.beginPath(); ctx.moveTo(izq, y(m)); ctx.lineTo(w - 6, y(m)); ctx.stroke(); ctx.textAlign = 'right'; ctx.fillText(String(m).replace('.', ','), izq - 6, y(m) + 4); });
+    ctx.textAlign = 'center';
+    for (let s = 0; s <= 10; s += 2) ctx.fillText(String(s), izq + s / 10 * ancho, h - 4);
+    const total = fsSerie * VENTANA, escritas = nombre === 'emg' || nombre === 'rms' ? nEmg : nImu;
+    const cabeza = escritas % total;
+    series.forEach((serie, i) => {
+      ctx.strokeStyle = COLORES[i]; ctx.lineWidth = nombre === 'emg' ? 1 : 1.6; ctx.lineJoin = 'round';
+      // por cada columna de píxeles, mínimo y máximo de las muestras que caen ahí
+      const porPx = total / ancho;
+      ctx.beginPath();
+      let empezado = false;
+      for (let px = 0; px < ancho; px++) {
+        const a = Math.floor(px * porPx), b = Math.max(a + 1, Math.floor((px + 1) * porPx));
+        if (escritas < total && a >= cabeza) break;                       // aún no hay datos aquí
+        if (Math.abs(a - cabeza) < fsSerie * 0.15 && escritas >= total && a > cabeza) { empezado = false; continue; }   // hueco del barrido
+        let lo = Infinity, hi = -Infinity;
+        for (let k = a; k < b; k++) { const v = serie[k]; if (v < lo) lo = v; if (v > hi) hi = v; }
+        const xpx = izq + px;
+        if (!empezado) { ctx.moveTo(xpx, y(hi)); empezado = true; } else ctx.lineTo(xpx, y(hi));
+        if (porPx > 1.5 && nombre === 'emg') ctx.lineTo(xpx, y(lo));
+      }
+      ctx.stroke();
+      if (relleno) {   // área bajo la curva RMS
+        ctx.lineTo(izq + Math.min(ancho, cabeza / porPx), y(0)); ctx.lineTo(izq, y(0)); ctx.closePath();
+        ctx.fillStyle = 'rgba(0,113,227,.10)'; ctx.fill();
+      }
+    });
+    // cabeza del barrido
+    ctx.fillStyle = 'rgba(0,113,227,.5)';
+    ctx.fillRect(izq + (cabeza / total) * ancho - 1, 6, 2, alto);
+  }
+  function dibujarGraficas() {
+    dibujarGrafica('emg', [buf.emg], FS);
+    dibujarGrafica('rms', [buf.rms], FS, true);
+    dibujarGrafica('acc', [buf.ax, buf.ay, buf.az], FS_IMU);
+    dibujarGrafica('gyr', [buf.gx, buf.gy, buf.gz], FS_IMU);
+  }
+
+  /* ======================================================== CICLO */
+  let animando = false, ultimoCuadro = 0, visible = false;
+  const quieto = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function cuadro(ahora) {
+    if (!animando) return;
+    const dt = Math.min(0.05, (ahora - ultimoCuadro) / 1000 || 0.016);
+    ultimoCuadro = ahora;
+    generar(dt);
+    if (midiendo) {
+      midiendo.t = tReloj - fuente.inicio;
+      pintarSensor();
+      if (midiendo.t >= VENTANA) terminarMedicion();
+    }
+    dibujarGraficas();
+    requestAnimationFrame(cuadro);
+  }
+  function arrancar() {
+    if (animando || !astronauta()) return;
+    if (!midiendo && (!visible || quieto() || document.hidden)) { dibujarGraficas(); return; }
+    animando = true; ultimoCuadro = performance.now(); requestAnimationFrame(cuadro);
+  }
+  function parar() { if (!midiendo) animando = false; }
+  function limpiar() { Object.values(buf).forEach((b) => b.fill(0)); nEmg = 0; nImu = 0; }
+  function reiniciarReposo() {
+    if (!astronauta()) return;
+    limpiar(); fuente = prepararFuente(false);
+    if (quieto()) { generar(VENTANA); }   // sin animación: una ventana fija de reposo
+    dibujarGraficas();
+  }
+  new IntersectionObserver((e) => { visible = e[0].isIntersecting; if (visible) arrancar(); else parar(); }, { threshold: 0.15 }).observe($('mon-detalle'));
+  document.addEventListener('visibilitychange', () => { if (document.hidden) parar(); else arrancar(); });
+  window.addEventListener('resize', () => dibujarGraficas());
+
+  /* ======================================================== MEDIR Y GUARDAR */
+  $('mon-medir').addEventListener('click', () => {
+    if (midiendo || !astronauta()) return;
+    limpiar();
+    fuente = prepararFuente(true);
+    midiendo = { grupo, t: 0, fase: $('mon-fase').value };
+    $('mon-medir').disabled = true; $('mon-medir').textContent = 'Midiendo…'; $('mon-fase').disabled = true;
+    pintarCuerpo(); pintarMinis(); pintarSensor();
+    pintarKpis(null, 'Midiendo 6 repeticiones…');
+    animando = false; arrancar();
+    if (!animando) { animando = true; ultimoCuadro = performance.now(); requestAnimationFrame(cuadro); }   // aunque no esté en pantalla o pida menos movimiento
+  });
+
+  async function terminarMedicion() {
+    const s = fuente, m = midiendo, a = astronauta();
+    const r = procesar(s);
+    midiendo = null;
+    fuente = prepararFuente(false);
+    bateria[m.grupo] = Math.max(5, (bateria[m.grupo] || 92) - 1);
+    const pad = (n) => String(n).padStart(2, '0'), d = new Date();
+    const fecha = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, hora = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const basal = Erdm.basal(a.id_astronauta, m.grupo);
+    const rmsBasal = m.fase === 'basal' || !basal || !basal.emg_rms_uv ? r.rms : Number(basal.emg_rms_uv);
+    const medicion = {
+      id_medicion: `MON-${a.id_astronauta.replace('-', '')}-${fecha.replace(/-/g, '')}-${hora.replace(':', '')}-${m.grupo}`,
+      id_astronauta: a.id_astronauta, fecha, hora, fase: m.fase, grupo_muscular: m.grupo, tarea: tareaDe(m.grupo).valor || '',
+      duracion_s: 10, repeticiones: 6,
+      emg_rms_uv: +r.rms.toFixed(1), emg_frec_mediana_hz: +r.fmed.toFixed(1), emg_amplitud_pico_uv: Math.round(r.pico),
+      activacion_pct: Math.round(r.rms / rmsBasal * 100), velocidad_ms: +r.velocidad.toFixed(2), rom_grados: Math.round(r.rom),
+      coordinacion_cv_pct: +r.cv.toFixed(1), fatiga_pct: +r.fatiga.toFixed(1), fuerza_kg: +r.fuerza.toFixed(1),
+      bateria_pct: bateria[m.grupo], calidad_senal: 'Excelente', origen: 'simulador'
+    };
+    // Fila del día en Evaluaciones: se conserva lo que ya tenga (circunferencia, VO2pico) y se agregan EMG, coordinación y fuerza
+    const idEval = Erdm.idEvaluacion(a.id_astronauta, fecha, m.grupo);
+    const previa = (Sesion.datos.Evaluaciones || []).find((e) => e.id_evaluacion === idEval);
+    const fila = Erdm.calcular({ ...(previa || { id_evaluacion: idEval, id_astronauta: a.id_astronauta, fecha, grupo_muscular: m.grupo, registrado_por: 'sensor' }),
+      fase: previa ? previa.fase : m.fase, emg_rms_uv: medicion.emg_rms_uv, emg_frec_mediana_hz: medicion.emg_frec_mediana_hz, coordinacion_cv_pct: medicion.coordinacion_cv_pct, fuerza_kg: medicion.fuerza_kg });
+    pintarKpis(medicion, `Medición de hoy, ${hora}. RMS ${n0(medicion.emg_rms_uv)} µV, frecuencia mediana ${n0(medicion.emg_frec_mediana_hz, 1)} Hz. Guardando…`);
+    $('mon-medir').textContent = 'Guardando…';
+    try {
+      const nuevas = Erdm.alertas([fila]);
+      const res = await API.guardarMedicion(medicion, Erdm.paraGuardar(fila));
+      (Sesion.datos.Monitoreo = Sesion.datos.Monitoreo || []).push(res.medicion || medicion);
+      const lista = (Sesion.datos.Evaluaciones = Sesion.datos.Evaluaciones || []);
+      const i = lista.findIndex((e) => e.id_evaluacion === idEval);
+      if (i >= 0) lista[i] = { ...lista[i], ...(res.evaluacion || fila) }; else lista.push(res.evaluacion || fila);
+      let guardadas = [];
+      if (nuevas.length) {
+        try { const ra = await API.guardarAlertas(nuevas); guardadas = ra.alertas; guardadas.forEach((x) => Sesion.datos.Alertas.push(x)); }
+        catch (err) { UI.aviso('La medición se guardó, pero no se pudieron guardar las alertas: ' + err.message, 'error'); }
+      }
+      document.dispatchEvent(new CustomEvent('datos-actualizados'));
+      UI.aviso(guardadas.length ? `Medición guardada. ${guardadas.length === 1 ? 'Se generó 1 alerta.' : `Se generaron ${guardadas.length} alertas.`}` : `Medición de ${Erdm.etiqueta(m.grupo).toLowerCase()} guardada.`, guardadas.length ? 'advertencia' : 'completado');
+      pintarKpis(medicion, `Medición de hoy, ${hora}. RMS ${n0(medicion.emg_rms_uv)} µV, frecuencia mediana ${n0(medicion.emg_frec_mediana_hz, 1)} Hz.`);
+    } catch (err) {
+      UI.aviso('No se pudo guardar la medición: ' + err.message, 'error');
+    } finally {
+      $('mon-medir').disabled = false; $('mon-medir').textContent = 'Iniciar medición'; $('mon-fase').disabled = false;
+      pintarCuerpo(); pintarMinis(); pintarSensor(); pintarErdm();
+      if (!visible || quieto()) animando = false;
+    }
+  }
+
+  /* ======================================================== EVENTOS */
+  document.addEventListener('astronauta-elegido', () => {
+    if (sexoFigura !== (String(astronauta().sexo).toUpperCase() === 'F' ? 'F' : 'M')) dibujarCuerpo(astronauta().sexo);
+    midiendo = null; Object.keys(bateria).forEach((k) => delete bateria[k]);
+    // empieza por el músculo con más riesgo (o cuádriceps)
+    const a = astronauta();
+    const peor = Erdm.GRUPOS.map((g) => Erdm.ultima(a.id_astronauta, g)).filter(Boolean).sort((p, q) => q.puntaje_erdm - p.puntaje_erdm)[0];
+    grupo = peor && peor.puntaje_erdm > 0 ? peor.grupo_muscular : 'cuadriceps';
+    abierto = false; $('mon-detalle').hidden = true;
+    pintarTodo(); reiniciarReposo();
+  });
+  document.addEventListener('datos-actualizados', () => { if (astronauta() && !midiendo) { pintarCuerpo(); pintarMinis(); pintarCabecera(); pintarErdm(); } });
+  document.addEventListener('astronauta-actualizado', () => {
+    if (!astronauta() || midiendo) return;
+    if (sexoFigura !== (String(astronauta().sexo).toUpperCase() === 'F' ? 'F' : 'M')) { dibujarCuerpo(astronauta().sexo); pintarCuerpo(); }
+    pintarCabecera();
+  });
 })();
 </script>

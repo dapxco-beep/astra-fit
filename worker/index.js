@@ -18,26 +18,46 @@ import SEMILLA from '../astra-fit/local/datos-ejemplo.json';
 const CLAVE = 'bd';
 const MAX_CUERPO = 1_000_000;   // 1 MB por petición
 const MAX_ALERTAS = 100;
-const MAX_FILAS_EMG = 100;
+const MAX_FILAS = 50;           // filas de Evaluaciones por petición (6 músculos por evaluación)
+
+// Versión de la estructura de datos. Al cambiarla, el documento guardado en KV se migra una sola vez (ver migrar()).
+//   erdm-a-1 (14-nov): la escala ERDM-A con 6 músculos reemplaza Sesiones y EMG. Pestañas nuevas: Evaluaciones
+//   (basal y seguimiento por músculo), Monitoreo (mediciones del sensor), EscalaERDM y PlanFortalecimiento.
+const VERSION = 'erdm-a-1';
+// Configuración del equipo (no datos de la gente): siempre igual a la semilla
+const CONFIGURACION = ['Umbrales', 'Catalogos', 'EscalaERDM', 'PlanFortalecimiento'];
+
+/** Pone al día un documento guardado con otra estructura. Conserva Astronautas y Seguimiento (lo que registró la gente);
+ *  las evaluaciones, mediciones, alertas e intervenciones de ejemplo se reemplazan porque usaban los 5 grupos viejos. */
+function migrar(bd) {
+  let cambio = false;
+  if (bd._version !== VERSION) {
+    ['Evaluaciones', 'Monitoreo', 'Alertas', 'Intervenciones'].forEach((t) => { bd[t] = structuredClone(SEMILLA[t] || []); });
+    delete bd.Sesiones; delete bd.EMG;
+    bd._version = VERSION; cambio = true;
+  }
+  CONFIGURACION.forEach((t) => {
+    if (JSON.stringify(bd[t]) !== JSON.stringify(SEMILLA[t])) { bd[t] = structuredClone(SEMILLA[t]); cambio = true; }
+  });
+  // Lo que la semilla trae de nuevo (evaluaciones y mediciones de ejemplo) se agrega solo si falta, sin pisar lo guardado
+  const CLAVES = { Evaluaciones: (f) => f.id_evaluacion, Monitoreo: (f) => f.id_medicion };
+  for (const [hoja, clave] of Object.entries(CLAVES)) {
+    const existentes = new Set((bd[hoja] || []).map(clave));
+    const faltan = (SEMILLA[hoja] || []).filter((f) => !existentes.has(clave(f)));
+    if (faltan.length) { bd[hoja] = [...(bd[hoja] || []), ...structuredClone(faltan)]; cambio = true; }
+  }
+  return cambio;
+}
 
 async function leerBD(env) {
   const guardado = await env.ASTRA_FIT.get(CLAVE);
   if (guardado) {
     const bd = JSON.parse(guardado);
-    // Los umbrales son configuración, no datos de la gente: si cambian en la semilla, se actualizan sin tocar lo demás.
-    // Lo que la semilla trae de nuevo (catálogos, sesiones, EMG, alertas) se agrega solo si falta, sin pisar nada de lo guardado.
-    let cambio = false;
-    if (JSON.stringify(bd.Umbrales) !== JSON.stringify(SEMILLA.Umbrales)) { bd.Umbrales = structuredClone(SEMILLA.Umbrales); cambio = true; }
-    const CLAVES = { Catalogos: (f) => f.lista + '|' + f.valor, Sesiones: (f) => f.id_sesion, EMG: (f) => [f.id_sesion, f.grupo_muscular, f.lado].join('|'), Alertas: (f) => f.id_alerta };
-    for (const [hoja, clave] of Object.entries(CLAVES)) {
-      const existentes = new Set((bd[hoja] || []).map(clave));
-      const faltan = (SEMILLA[hoja] || []).filter((f) => !existentes.has(clave(f)));
-      if (faltan.length) { bd[hoja] = [...(bd[hoja] || []), ...structuredClone(faltan)]; cambio = true; }
-    }
-    if (cambio) await env.ASTRA_FIT.put(CLAVE, JSON.stringify(bd));
+    if (migrar(bd)) await env.ASTRA_FIT.put(CLAVE, JSON.stringify(bd));
     return bd;
   }
   const bd = structuredClone(SEMILLA);
+  bd._version = VERSION;
   await env.ASTRA_FIT.put(CLAVE, JSON.stringify(bd));
   return bd;
 }
@@ -50,6 +70,15 @@ function ahora() {
 }
 const mayorNumero = (filas, campo) => Math.max(0, ...filas.map((f) => parseInt(String(f[campo]).replace(/\D/g, ''), 10) || 0));
 const objeto = (v, nombre) => { if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error('Falta ' + nombre); return v; };
+
+/* Igual que guardarOActualizar_ de Code.gs: si la fila existe cambia los campos enviados, si no la agrega */
+function guardarOActualizar(bd, tabla, clave, obj, t) {
+  const filas = (bd[tabla] = bd[tabla] || []);
+  const fila = filas.find((f) => String(f[clave]) === String(obj[clave]));
+  if (!fila) { const nueva = { ...obj, registrado_en: obj.registrado_en || t }; filas.push(nueva); return nueva; }
+  Object.keys(obj).forEach((k) => { if (k !== 'registrado_en' && obj[k] !== undefined) fila[k] = obj[k]; });
+  return fila;
+}
 
 /* Mismas funciones y mismos nombres que Code.gs y local/server.js */
 const funciones = {
@@ -97,15 +126,24 @@ const funciones = {
     return { ok: true, registro };
   },
 
-  async guardarSesion(env, sesion, filasEmg) {
-    objeto(sesion, 'la sesión');
-    if (filasEmg && (!Array.isArray(filasEmg) || filasEmg.length > MAX_FILAS_EMG)) throw new Error('Filas de EMG no válidas');
-    const bd = await leerBD(env);
-    sesion.registrado_en = ahora();
-    bd.Sesiones.push(sesion);
-    (filasEmg || []).forEach((f) => bd.EMG.push(f));
+  async guardarEvaluaciones(env, filas) {
+    if (!Array.isArray(filas) || filas.length > MAX_FILAS) throw new Error('Filas de evaluación no válidas');
+    filas.forEach((f) => { objeto(f, 'la evaluación'); if (!f.id_evaluacion) throw new Error('Falta id_evaluacion'); });
+    const bd = await leerBD(env), t = ahora();
+    const guardadas = filas.map((f) => guardarOActualizar(bd, 'Evaluaciones', 'id_evaluacion', { ...f, actualizado_en: t }, t));
     await escribirBD(env, bd);
-    return { ok: true, sesion };
+    return { ok: true, evaluaciones: guardadas };
+  },
+
+  async guardarMedicion(env, medicion, evaluacion) {
+    objeto(medicion, 'la medición'); objeto(evaluacion, 'la evaluación');
+    if (!evaluacion.id_evaluacion) throw new Error('Falta id_evaluacion');
+    const bd = await leerBD(env), t = ahora();
+    medicion.registrado_en = t;
+    (bd.Monitoreo = bd.Monitoreo || []).push(medicion);
+    const fila = guardarOActualizar(bd, 'Evaluaciones', 'id_evaluacion', { ...evaluacion, actualizado_en: t }, t);
+    await escribirBD(env, bd);
+    return { ok: true, medicion, evaluacion: fila };
   },
 
   async actualizarAlerta(env, idAlerta, cambios) {

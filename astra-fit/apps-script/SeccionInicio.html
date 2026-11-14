@@ -1,18 +1,75 @@
-<!-- SeccionInicio.html — Resumen del astronauta: datos de registro, IMC, signos vitales y última actualización.
-     Fondo: blanco (encabezado) y gris (tarjetas).  Escucha "astronauta-elegido" y "astronauta-actualizado".
+<!-- SeccionInicio.html — Resumen del astronauta. Encabezado oscuro con el astronauta y el exterior (la lógica del exterior está en SeccionEntorno.html), luego datos de registro, IMC, signos vitales y última actualización.
+     Fondo: blanco (encabezado) y gris (tarjetas).  Escucha "astronauta-elegido", "astronauta-actualizado" y "datos-actualizados".
      Los signos vitales son SIMULADOS: en la Estación los registra una camiseta biomonitor (Bio-Monitor, Agencia Espacial Canadiense). -->
-<header class="hero" id="inicio">
-  <div class="contenedor">
-    <div id="resumen-avatar"></div>
-    <p class="texto-2" id="resumen-id"></p>
-    <h1 class="hero-titulo" id="resumen-titulo">Resumen.</h1>
-    <p class="subtitulo" id="resumen-sub"></p>
-    <div class="acciones">
-      <button type="button" class="boton" id="btn-editar-perfil">Editar perfil</button>
-      <a class="enlace" href="#registro">Registrar una evaluación</a>
+<header class="hero escena" id="inicio" data-entorno="orbita" aria-labelledby="resumen-titulo">
+  <svg class="escena-dibujo" id="entorno-escena-dibujo" viewBox="0 -280 1000 700" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+    <defs>
+      <radialGradient id="g-tierra" cx="40%" cy="30%" r="75%"><stop offset="0" stop-color="#3a7bff"/><stop offset=".6" stop-color="#1b4fbf"/><stop offset="1" stop-color="#0a2462"/></radialGradient>
+      <radialGradient id="g-luna" cx="50%" cy="10%" r="80%"><stop offset="0" stop-color="#d1d1d6"/><stop offset="1" stop-color="#6e6e73"/></radialGradient>
+      <radialGradient id="g-marte" cx="50%" cy="10%" r="80%"><stop offset="0" stop-color="#d9784a"/><stop offset="1" stop-color="#7a2f16"/></radialGradient>
+    </defs>
+    <g id="escena-estrellas"></g>
+    <g id="escena-contenido"></g>
+  </svg>
+
+  <div class="contenedor hero-espacio">
+    <div class="escena-cabecera">
+      <p class="escena-titulo" id="entorno-titulo">Afuera de la nave.</p>
+      <div class="segmentado segmentado--oscuro" data-segmentado id="entorno-selector" role="group" aria-label="Ver entorno">
+        <button type="button" data-valor="orbita" aria-pressed="true">Órbita</button>
+        <button type="button" data-valor="luna" aria-pressed="false">Luna</button>
+        <button type="button" data-valor="marte" aria-pressed="false">Marte</button>
+      </div>
+    </div>
+
+    <div class="hero-centro">
+      <div id="resumen-avatar"></div>
+      <p class="hero-id" id="resumen-id"></p>
+      <h1 class="hero-titulo" id="resumen-titulo">Resumen.</h1>
+      <p class="subtitulo" id="resumen-sub"></p>
+      <div class="acciones">
+        <button type="button" class="boton" id="btn-editar-perfil">Editar perfil</button>
+        <a class="enlace" href="#monitoreo">Ver el monitoreo</a>
+      </div>
+    </div>
+
+    <div class="escena-tarjetas" id="entorno-escena">
+      <article class="vidrio">
+        <p class="nota">Desde el despegue</p>
+        <p class="cifra"><span id="entorno-dias">0</span><small>días</small></p>
+        <p class="nota" id="entorno-lugar">Estación en órbita baja</p>
+      </article>
+      <article class="vidrio">
+        <p class="nota">Gravedad</p>
+        <p class="cifra" id="entorno-gravedad">≈ 0 g</p>
+        <div class="medidor" aria-hidden="true"><span class="medidor-relleno" id="entorno-gravedad-barra"></span></div>
+        <div class="medidor-etiquetas nota" aria-hidden="true"><span>0</span><span>Tierra, 1 g</span></div>
+        <p class="nota" id="entorno-gravedad-nota"></p>
+      </article>
+      <article class="vidrio">
+        <p class="nota">Temperatura exterior</p>
+        <p class="cifra" id="entorno-temp"><span></span><small>°C</small></p>
+        <div class="termometro" aria-hidden="true">
+          <span class="termometro-rango" id="entorno-temp-rango"></span>
+          <span class="termometro-cabina" id="entorno-temp-cabina"><span class="nota">Cabina</span></span>
+        </div>
+        <div class="medidor-etiquetas nota" aria-hidden="true"><span>−200 °C</span><span>0 °C</span><span>150 °C</span></div>
+        <p class="nota" id="entorno-temp-nota"></p>
+      </article>
+      <article class="vidrio">
+        <p class="nota">Duración del día</p>
+        <p class="cifra" id="entorno-dia"><span></span><small></small></p>
+        <p class="nota" id="entorno-dia-nota"></p>
+      </article>
+    </div>
+
+    <div class="escena-pie">
+      <p class="entorno-musculo" id="entorno-musculo"></p>
+      <p class="nota">Fuentes: NASA, Agencia Espacial Canadiense y The Planetary Society. Valores redondeados.</p>
     </div>
   </div>
 </header>
+<?!= include('SeccionEntorno'); ?>
 
 <section class="seccion seccion--gris seccion--compacta" aria-label="Resumen del astronauta">
   <div class="contenedor pila-grande">
@@ -55,7 +112,8 @@
     $('resumen-avatar').innerHTML = UI.avatar(a, 'avatar--grande');
     $('resumen-id').textContent = `${a.id_astronauta}, ${String(a.rol || 'tripulante').toLowerCase()}`;
     $('resumen-titulo').textContent = `Resumen de ${a.nombre}.`;
-    const textoDia = dia === null ? '' : dia < 0 ? `Despega en ${-dia} días hacia ${entorno.enFrase}.` : `Día ${dia} de misión en ${entorno.enFrase}.`;
+    // El conteo de días va en grande en la ventana al exterior; aquí solo el lugar y la fecha
+    const textoDia = dia === null ? '' : dia < 0 ? `Despega en ${-dia} días hacia ${entorno.enFrase}.` : `En ${entorno.enFrase} desde el ${Calc.fechaCorta(a.fecha_inicio_mision)}.`;
     $('resumen-sub').textContent = `${textoDia} Perfil actualizado ${Calc.relativo(a.actualizado_en || a.registrado_en).toLowerCase()}.`;
   }
 
@@ -115,8 +173,10 @@
       valor: (v) => Math.round(v.fc), nivel: (v) => (v.fc >= 50 && v.fc <= 100 ? 'verde' : v.fc >= 45 && v.fc <= 110 ? 'amarillo' : 'rojo') },
     { id: 'fr', nombre: 'Frecuencia respiratoria', unidad: 'rpm', rango: 'En reposo: 12 a 20 por minuto', icono: 'pulmones',
       valor: (v) => Math.round(v.fr), nivel: (v) => (v.fr >= 12 && v.fr <= 20 ? 'verde' : v.fr >= 10 && v.fr <= 24 ? 'amarillo' : 'rojo') },
+    // Categorías de la American Heart Association: menos de 130/80 (normal o elevada) = verde,
+    // hipertensión etapa 1 (130-139 o 80-89) = amarillo, etapa 2 (140 o más, o 90 o más) = rojo
     { id: 'pa', nombre: 'Presión arterial', unidad: 'mmHg', rango: 'Normal: menos de 120/80', icono: 'presion',
-      valor: (v) => `${Math.round(v.sis)}/${Math.round(v.dia)}`, nivel: (v) => (v.sis < 130 && v.dia < 85 ? 'verde' : v.sis < 140 && v.dia < 90 ? 'amarillo' : 'rojo') },
+      valor: (v) => `${Math.round(v.sis)}/${Math.round(v.dia)}`, nivel: (v) => (v.sis < 130 && v.dia < 80 ? 'verde' : v.sis < 140 && v.dia < 90 ? 'amarillo' : 'rojo') },
     { id: 'spo2', nombre: 'Saturación de oxígeno', unidad: '%', rango: 'Normal: 95 % o más', icono: 'oxigeno',
       valor: (v) => Math.round(v.spo2), nivel: (v) => (v.spo2 >= 95 ? 'verde' : v.spo2 >= 90 ? 'amarillo' : 'rojo') }
   ];
@@ -173,18 +233,23 @@
     const peso = Calc.pesoActual(a);
     const agarre = Calc.ultimo('Seguimiento', id, 'agarre_kg');
     const pantorrilla = Calc.ultimo('Seguimiento', id, 'pantorrilla_cm');
-    const evaluacion = Calc.ultimo('Sesiones', id, 'fuerza_pico_n');
+    const evaluacion = Calc.ultimo('Evaluaciones', id, 'fuerza_kg');
+    const medicion = Calc.ultimo('Monitoreo', id, 'emg_rms_uv');
+    // Riesgo ERDM-A de la última evaluación de cada músculo
+    const riesgos = Erdm.GRUPOS.map((g) => Erdm.ultima(id, g)).filter(Boolean);
+    const enRiesgo = riesgos.filter((r) => r.riesgo !== 'bajo').length;
     const filas = [
       { nombre: 'Peso', detalle: `${Calc.decimal(peso.valor)} kg, ${peso.fuente === 'seguimiento' ? 'seguimiento diario' : 'perfil'}`, fecha: peso.fecha, semanal: true },
       { nombre: 'Talla', detalle: `${Calc.numero(a.talla_cm, 0)} cm, perfil`, fecha: a.talla_actualizada_en || a.registrado_en },
       { nombre: 'Fuerza de agarre', detalle: agarre ? `${Calc.numero(agarre.valor)} kg` : 'Sin registros', fecha: agarre && agarre.fecha, semanal: true },
       { nombre: 'Circunferencia de pantorrilla', detalle: pantorrilla ? `${Calc.numero(pantorrilla.valor)} cm` : 'Sin registros', fecha: pantorrilla && pantorrilla.fecha, semanal: true },
-      { nombre: 'Evaluación neuromuscular', detalle: evaluacion ? `Semana ${evaluacion.fila.semana_mision} de misión` : 'Sin evaluaciones', fecha: evaluacion && evaluacion.fecha, semanal: true },
+      { nombre: 'Evaluación ERDM-A', detalle: evaluacion ? (enRiesgo ? `${enRiesgo} de 6 músculos en riesgo moderado o alto` : 'Los 6 músculos en riesgo bajo') : 'Sin evaluación basal', fecha: evaluacion && evaluacion.fecha, semanal: true, limite: 14 },
+      { nombre: 'Monitoreo con sensor', detalle: medicion ? `${Erdm.etiqueta(medicion.fila.grupo_muscular)}, EMG e IMU` : 'Sin mediciones', fecha: medicion && (medicion.fila.registrado_en || medicion.fecha), semanal: true, limite: 14 },
       { nombre: 'Perfil', detalle: 'Datos de registro', fecha: a.actualizado_en || a.registrado_en }
     ];
     $('resumen-actualizaciones').innerHTML = filas.map((f) => {
       const dias = Calc.diasDesde(f.fecha);
-      const nivel = !f.semanal ? null : dias === null || dias > 7 ? 'amarillo' : 'verde';
+      const nivel = !f.semanal ? null : dias === null || dias > (f.limite || 7) ? 'amarillo' : 'verde';
       return `<li>
         <div><div class="texto" style="font-weight:600">${f.nombre}</div><div class="nota">${esc(f.detalle)}${f.fecha ? `, ${Calc.fechaCorta(f.fecha)}` : ''}</div></div>
         ${nivel ? `<span class="estado estado--${nivel}">${Calc.relativo(f.fecha)}</span>` : `<span class="pequeno texto-2">${Calc.relativo(f.fecha)}</span>`}
@@ -202,10 +267,15 @@
   }
   $('btn-editar-perfil').addEventListener('click', () => Perfil.abrir('editar', Sesion.astronauta));
   document.addEventListener('astronauta-elegido', (e) => dibujar(e.detail));
-  // Al guardar una evaluación o un seguimiento (SeccionRegistro) cambian las fechas de "Última actualización"
-  document.addEventListener('datos-actualizados', () => { if (Sesion.astronauta) dibujar(Sesion.astronauta); });
   document.addEventListener('astronauta-actualizado', (e) => {
     if (Sesion.astronauta && e.detail.id_astronauta === Sesion.astronauta.id_astronauta) dibujar(e.detail);
+  });
+  // Una medición nueva (SeccionMonitoreo.html) o un perfil editado cambian la última actualización
+  document.addEventListener('datos-actualizados', () => {
+    if (!Sesion.astronauta) return;
+    dibujarDatos(Sesion.astronauta);
+    dibujarImc(Sesion.astronauta);
+    dibujarActualizaciones(Sesion.astronauta);
   });
 })();
 </script>

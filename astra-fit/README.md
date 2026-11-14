@@ -30,19 +30,46 @@ Todo lo que se sube a Apps Script está en `apps-script/`, con los mismos nombre
 | `Index.html` | Esqueleto: pantalla de entrada + panel con sus secciones | Dashboard |
 | `SeccionAcceso.html` | Pantalla de entrada: logo, astronautas, registrar nuevo | Dashboard |
 | `SeccionInicio.html` | Resumen: datos de registro, IMC, signos vitales y última actualización | Dashboard |
-| `SeccionEntorno.html` | Entorno de la misión (órbita, Luna, Marte): días, gravedad, temperatura, duración del día | Dashboard |
+| `SeccionEntorno.html` | Lógica del exterior (órbita, Luna o Marte) que se ve en el encabezado oscuro de SeccionInicio: escena animada, días desde el despegue, gravedad, temperatura y duración del día | Dashboard |
 | `FormPerfil.html` | Ventana para registrar o editar un astronauta, con emoji de perfil | Dashboard |
 | `JsCalculos.html` | IMC, fechas, peso más reciente y datos de cada entorno | Dashboard |
-| `SeccionCuerpo.html` | Visor del cuerpo, dentro de `#visor-cuerpo` | **Equipo del cuerpo** |
-| `SeccionEvolucion.html` | Gráfica semana a semana | Dashboard |
-| `SeccionAlertas.html` | Alertas y recomendaciones | Dashboard |
-| `SeccionRegistro.html` | Formularios de registro | Dashboard |
+| `JsAvatares.html` | Avatares de astronauta con casco (en lugar de emojis) | Dashboard |
+| `JsErdm.html` | Escala ERDM-A: compara cada músculo con su basal, da de 0 a 10 puntos, nivel de riesgo, alertas y plan sugerido. Lee los cortes de la pestaña `EscalaERDM` | Dashboard |
+| `SeccionMonitoreo.html` | Monitoreo neuromuscular: figura de frente y espalda con la banda de cada músculo, una gráfica pequeña por músculo (puntaje ERDM-A por semana) y, al tocar uno, señales EMG e IMU en vivo, medición de 10 s (EMG, IMU y dinamómetro) y tarjeta de la ERDM-A | Dashboard |
+| `SeccionBienestar.html` | ¿Cómo estás hoy?: sueño, ánimo, temperatura y glucosa, con semáforo y recomendación | Dashboard |
+| `SeccionSensores.html` | Seis bandas: estado de cada sensor, cómo se calculan los indicadores y especificaciones | Dashboard |
+| `SeccionCuerpo.html` | Visor del cuerpo 3D, dentro de `#visor-cuerpo` (colorea cuádriceps y pantorrilla con su riesgo ERDM-A) | **Equipo del cuerpo** |
+| `SeccionMision.html` | Destinos: el astronauta animado en la Estación, Gateway, tránsito, Luna y Marte | **Equipo 3D** |
+| `SeccionEvolucion.html` | Semana a semana: una gráfica por músculo del puntaje ERDM-A o de cada dimensión frente a la basal, con los cortes de la escala y tabla | Dashboard |
+| `SeccionAlertas.html` | Lo que requiere atención: alertas abiertas, plan de intervención y fortalecimiento por músculo (sección 6 de la ERDM-A), evaluación prioritaria, protocolo e intervenciones | Dashboard |
 | `JsUi.html` | Avisos, controles segmentados, barra superior | — |
 | `JsApi.html` | **Única conexión con los datos** (Sheet o servidor local) | Dashboard |
 | `Logo.html` | Logo de Sinergia Cósmica incrustado | — |
 | `Code.gs` | Servidor en Apps Script: lee y escribe el Sheet | Base de datos |
+| `DatosEjemplo.gs` | Datos de ejemplo para llenar un Sheet nuevo (se genera desde `local/datos-ejemplo.json`) | — |
 
 `local/` solo sirve para trabajar en el computador: **no se sube a Apps Script**.
+
+## Pestañas del Sheet `BD_ASTRA-FIT`
+
+| Pestaña | Una fila por | Quién la llena |
+| --- | --- | --- |
+| `Astronautas` | astronauta | Formulario de perfil |
+| `Catalogos` | opción de una lista (músculos, tareas, fases, entornos…) | El equipo, a mano |
+| `Evaluaciones` | astronauta × fecha × músculo (6 músculos de la ERDM-A) | La banda del sensor (EMG, coordinación y fuerza). Circunferencia y VO₂pico vienen de los datos de ejemplo. La primera es la **basal** |
+| `Monitoreo` | medición de 10 s con el sensor | Sección Monitoreo |
+| `EscalaERDM` | dimensión de la escala, con sus cortes de moderado y alto | El equipo (documento ASTRA-FIT) |
+| `PlanFortalecimiento` | músculo × nivel de riesgo | El equipo (documento ASTRA-FIT) |
+| `Seguimiento` | día (agarre, circunferencias, masa, dolor, sueño, ánimo, temperatura, glucosa) | Sección Bienestar |
+| `Umbrales` | indicador del seguimiento diario | El equipo |
+| `Alertas` | alerta generada | La página, al guardar |
+| `Intervenciones` | intervención aplicada | El equipo |
+
+Para regenerar los datos de ejemplo: `python3 local/generar_datos.py` (escribe `local/datos-ejemplo.json` y los CSV de `publicar/hojas-csv/`).
+Después, regenerar `DatosEjemplo.gs` para Apps Script.
+
+En Cloudflare los datos viven en KV (`worker/index.js`). Al cambiar la estructura se sube `VERSION` en el Worker y el
+documento guardado se migra solo la primera vez que se abre (se conservan Astronautas y Seguimiento).
 
 ## Reglas para trabajar juntos
 

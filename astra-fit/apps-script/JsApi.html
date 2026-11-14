@@ -36,7 +36,8 @@ const API = (() => {
     actualizarAstronauta: (idAstronauta, cambios) => llamar('actualizarAstronauta', idAstronauta, cambios),
     guardarAlertas: (lista) => llamar('guardarAlertas', lista),
     guardarSeguimiento: (registro) => llamar('guardarSeguimiento', registro),
-    guardarSesion: (sesion, filasEmg) => llamar('guardarSesion', sesion, filasEmg),
+    guardarEvaluaciones: (filas) => llamar('guardarEvaluaciones', filas),
+    guardarMedicion: (medicion, evaluacion) => llamar('guardarMedicion', medicion, evaluacion),
     actualizarAlerta: (idAlerta, cambios) => llamar('actualizarAlerta', idAlerta, cambios)
   };
 })();

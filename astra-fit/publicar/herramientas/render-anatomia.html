@@ -14,7 +14,7 @@ const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'),
 renderer.setSize(W, H, false); renderer.setPixelRatio(1); renderer.setClearColor(0x000000, 0);
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .95; renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-const GRUPO_DE = { quadriceps: 'quad', gluteal: 'glute', calf: 'gastro', back_muscles: 'back' };
+const GRUPO_DE = { quadriceps: 'quad', gluteal: 'glute', calf: 'gastro', back_muscles: 'back', upper_arm_muscles: 'brazo', forearm_muscles: 'antebrazo' };
 const modelos = {};
 async function cargar(sexo) {
   if (modelos[sexo]) return modelos[sexo];
@@ -35,8 +35,19 @@ async function cargar(sexo) {
 const matBase = new THREE.MeshStandardMaterial({ color: 0x9eaac2, roughness: .46, metalness: .08 });
 const matMasc = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
-window.dibujar = async (sexo, vista, modo) => {      // modo: 'base' o un grupo ('quad', 'glute', 'gastro', 'back')
+// Músculos de la escala ERDM-A. El modelo junta bíceps y tríceps ("upper_arm") y gastrocnemio y sóleo ("calf"):
+// el bíceps se toma de frente y el tríceps de espalda; la pantorrilla se parte en dos a media altura
+// (arriba gastrocnemio, abajo sóleo), que es una aproximación visual, no anatómica exacta.
+const ERDM = { biceps: ['brazo'], triceps: ['brazo'], antebrazo: ['antebrazo'], cuadriceps: ['quad'], gastrocnemio: ['gastro', 'arriba'], soleo: ['gastro', 'abajo'] };
+window.dibujar = async (sexo, vista, modoPedido) => {      // modo: 'base', un grupo ('quad', 'glute', 'gastro', 'back', 'brazo', 'antebrazo') o un músculo de ERDM
   const { raiz, mallas } = await cargar(sexo);
+  const [modo, mitad] = ERDM[modoPedido] || [modoPedido];
+  renderer.clippingPlanes = [];
+  if (mitad) {   // plano horizontal a media altura de la pantorrilla
+    const c = new THREE.Box3(); mallas.filter((m) => m.grupo === modo).forEach(({ o }) => c.expandByObject(o));
+    const y = (c.min.y + c.max.y) / 2 + (c.max.y - c.min.y) * 0.05;
+    renderer.clippingPlanes = [mitad === 'arriba' ? new THREE.Plane(new THREE.Vector3(0, 1, 0), -y) : new THREE.Plane(new THREE.Vector3(0, -1, 0), y)];
+  }
   const escena = new THREE.Scene(); escena.add(raiz);
   mallas.forEach(({ o, grupo }) => { o.visible = modo === 'base' ? true : grupo === modo; o.material = modo === 'base' ? matBase : matMasc; });
   // Encuadre fijo: el de todos los músculos, igual en todas las imágenes
@@ -64,6 +75,7 @@ window.dibujar = async (sexo, vista, modo) => {      // modo: 'base' o un grupo 
         v.set(...p).applyMatrix4(o.matrixWorld).project(cam); x0 = Math.min(x0, (v.x + 1) / 2); x1 = Math.max(x1, (v.x + 1) / 2); y0 = Math.min(y0, 1 - (v.y + 1) / 2); y1 = Math.max(y1, 1 - (v.y + 1) / 2); hay = true; });
     });
     if (hay) bb = { x0, y0, x1, y1 };
+    if (hay && mitad) { const m = (y0 + y1) / 2 - (y1 - y0) * 0.05; bb = mitad === 'arriba' ? { x0, y0, x1, y1: m } : { x0, y0: m, x1, y1 }; }
   }
   return { png: document.getElementById('c').toDataURL('image/png'), bb };
 };

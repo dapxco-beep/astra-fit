@@ -73,7 +73,7 @@ const Calc = (() => {
     const perfil = { valor: Number(a.peso_kg), fecha: a.peso_actualizado_en || a.registrado_en, fuente: 'perfil' };
     const seg = ultimo('Seguimiento', a.id_astronauta, 'masa_kg');
     // Se compara fecha y hora: si el peso se editó en el perfil después de la medición del día, gana el perfil
-    const momentoSeg = seg ? String(seg.fila.registrado_en || seg.fecha + ' 00:00') : '';
+    const momentoSeg = seg ? String(seg.fila.registrado_en || seg.fecha + ' 23:59') : '';  // sin hora: se asume el final de ese día
     if (seg && (!perfil.fecha || momentoSeg >= String(perfil.fecha))) return { valor: seg.valor, fecha: seg.fecha, fuente: 'seguimiento' };
     return perfil;
   }
@@ -109,8 +109,8 @@ const Calc = (() => {
     },
     marte: {
       nombre: 'Base en Marte', enFrase: 'la base en Marte', corto: 'Marte',
-      gravedad: { g: 0.38, texto: '0,38 g', detalle: '3,71 m/s², el 38 % de la gravedad terrestre' },
-      temperatura: { min: -153, max: 20, detalle: 'De −153 °C a 20 °C; promedio cercano a −63 °C' },
+      gravedad: { g: 0.38, texto: '0,38 g', detalle: 'Cerca de 3,7 m/s², el 38 % de la gravedad terrestre' },
+      temperatura: { min: -153, max: 20, detalle: 'De −153 °C a 20 °C según la hora, la estación y el lugar' },
       cabina: 22,
       dia: { cifra: '24 h 39', unidad: 'min', detalle: 'Un sol (día marciano), apenas 39 minutos más largo que en la Tierra' },
       musculo: 'Con el 38 % de la gravedad terrestre, la carga sobre piernas y espalda baja a menos de la mitad.'

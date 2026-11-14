@@ -10,11 +10,13 @@
  *   guardarAstronauta(astronauta)   → agrega una fila a Astronautas con el siguiente id AST-###
  *   actualizarAstronauta(id, cambios) → edita el perfil (registra la fecha de cambio de peso y talla)
  *   guardarSeguimiento(registro)    → agrega una fila a Seguimiento
- *   guardarSesion(sesion, emg)      → agrega 1 fila a Sesiones y varias a EMG
+ *   guardarEvaluaciones(filas)      → crea o actualiza filas de Evaluaciones (una por astronauta, fecha y músculo)
+ *   guardarMedicion(medicion, eval) → agrega la medición del sensor a Monitoreo y actualiza su fila de Evaluaciones
  *   actualizarAlerta(id, cambios)   → cambia estado / nota de una alerta
  */
 
-const PESTANAS = ['Astronautas', 'Catalogos', 'Sesiones', 'EMG', 'Seguimiento', 'Umbrales', 'Alertas', 'Intervenciones'];
+const PESTANAS = ['Astronautas', 'Catalogos', 'Evaluaciones', 'Monitoreo', 'EscalaERDM', 'PlanFortalecimiento',
+                  'Seguimiento', 'Umbrales', 'Alertas', 'Intervenciones'];
 
 /* ------------------------------------------------------------------ Página */
 // Páginas disponibles: la principal y la guía de componentes (?page=componentes).
@@ -85,7 +87,7 @@ function leerHoja_(hoja) {
       cabecera.forEach(function (col, i) {
         let v = fila[i];
         // google.script.run no puede devolver fechas: se pasan a texto
-        if (v instanceof Date) v = Utilities.formatDate(v, zona, /_en$/.test(col) ? 'yyyy-MM-dd HH:mm' : 'yyyy-MM-dd');  // *_en = fecha y hora
+        if (v instanceof Date) v = Utilities.formatDate(v, zona, col === 'hora' ? 'HH:mm' : /_en$/.test(col) ? 'yyyy-MM-dd HH:mm' : 'yyyy-MM-dd');  // hora = solo hora; *_en = fecha y hora
         obj[col] = v === '' ? null : v;
       });
       return obj;
@@ -158,12 +160,27 @@ function guardarSeguimiento(registro) {
   });
 }
 
-function guardarSesion(sesion, filasEmg) {
+/** Crea o actualiza filas de Evaluaciones. La clave es id_evaluacion (EVA-AST001-20261114-cuadriceps). */
+function guardarEvaluaciones(filas) {
   return conBloqueo_(function () {
-    sesion.registrado_en = ahora_();
-    agregarFila_('Sesiones', sesion);
-    (filasEmg || []).forEach(function (f) { agregarFila_('EMG', f); });
-    return { ok: true, sesion: sesion };
+    const ahora = ahora_();
+    const guardadas = (filas || []).map(function (f) {
+      f.actualizado_en = ahora;
+      return guardarOActualizar_('Evaluaciones', 'id_evaluacion', f, ahora);
+    });
+    return { ok: true, evaluaciones: guardadas };
+  });
+}
+
+/** Una medición del sensor: va a Monitoreo y sus resultados (EMG y coordinación) a la fila del día en Evaluaciones. */
+function guardarMedicion(medicion, evaluacion) {
+  return conBloqueo_(function () {
+    const ahora = ahora_();
+    medicion.registrado_en = ahora;
+    agregarFila_('Monitoreo', medicion);
+    evaluacion.actualizado_en = ahora;
+    const fila = guardarOActualizar_('Evaluaciones', 'id_evaluacion', evaluacion, ahora);
+    return { ok: true, medicion: medicion, evaluacion: fila };
   });
 }
 
@@ -194,6 +211,32 @@ function agregarFila_(nombreHoja, obj) {
   asegurarColumnas_(hoja, Object.keys(obj));
   const cab = hoja.getRange(1, 1, 1, hoja.getLastColumn()).getValues()[0];
   hoja.appendRow(cab.map(function (col) { return obj[col] === undefined || obj[col] === null ? '' : obj[col]; }));
+}
+
+/** Si llega un campo que la hoja aún no tiene (ej. emoji), agrega la columna al final de la fila 1. */
+/** Busca la fila cuya columna `clave` vale obj[clave]: si existe cambia solo los campos enviados; si no, la agrega. */
+function guardarOActualizar_(nombreHoja, clave, obj, ahora) {
+  const hoja = SpreadsheetApp.getActive().getSheetByName(nombreHoja);
+  if (!hoja) throw new Error('No existe la pestaña ' + nombreHoja);
+  asegurarColumnas_(hoja, Object.keys(obj).concat(['registrado_en']));
+  const valores = hoja.getDataRange().getValues();
+  const cab = valores[0].map(String);
+  const col = cab.indexOf(clave);
+  const i = valores.findIndex(function (f, n) { return n > 0 && String(f[col]) === String(obj[clave]); });
+  if (i < 1) {
+    obj.registrado_en = obj.registrado_en || ahora;
+    hoja.appendRow(cab.map(function (c) { return obj[c] === undefined || obj[c] === null ? '' : obj[c]; }));
+    return obj;
+  }
+  const fila = valores[i].slice();
+  Object.keys(obj).forEach(function (k) {
+    const c = cab.indexOf(k);
+    if (c >= 0 && k !== 'registrado_en' && obj[k] !== undefined) fila[c] = obj[k] === null ? '' : obj[k];
+  });
+  hoja.getRange(i + 1, 1, 1, fila.length).setValues([fila]);
+  const salida = {};
+  cab.forEach(function (c, j) { salida[c] = fila[j] === '' ? null : fila[j]; });
+  return salida;
 }
 
 /** Si llega un campo que la hoja aún no tiene (ej. emoji), agrega la columna al final de la fila 1. */
