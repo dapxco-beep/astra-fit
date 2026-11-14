@@ -34,7 +34,8 @@ for (const [pagina, archivo] of [['Index', 'index.html'], ['Componentes', 'compo
 }
 
 // Modelos 3D: los mismos que SeccionCuerpo y SeccionMision piden con BASE_MODELOS
-const MODELOS = ['Xbot.glb', 'Michelle.glb', 'avatar-male.glb', 'anatomy-male.glb', 'anatomy-female.glb', 'astronaut.glb'];
+// Los .glb adelgazados se generan con astra-fit/publicar/herramientas/dividir-glb.js (solo músculos). astronaut.glb lo usa Destinos.
+const MODELOS = ['Xbot-animaciones.glb', 'astronaut.glb', 'anatomy-male-musculos.glb', 'anatomy-female-musculos.glb'];
 const ESCENARIOS = ['iss.glb', 'capsula.glb', 'lem.glb', 'rover.glb', 'hab1.glb', 'hab2.glb', 'gateway.png'];
 let copiados = 0;
 function copiar(rel) {

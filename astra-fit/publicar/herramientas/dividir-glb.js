@@ -4,9 +4,8 @@
  *   node astra-fit/publicar/herramientas/dividir-glb.js
  *
  * Qué hace (los bytes comprimidos con meshopt se copian tal cual, no se vuelven a comprimir ni se pierde calidad):
- *   - anatomy-male/female.glb  →  *-musculos.glb  (solo los músculos: lo único que se ve al abrir el visor)
- *                              →  *-resto.glb     (huesos, órganos, vasos y nervios: se bajan solo si se elige esa capa)
- *   - Xbot.glb                 →  Xbot-animaciones.glb  (solo los huesos y las 7 animaciones: la silueta del Xbot nunca se muestra)
+ *   - anatomy-male/female.glb  →  *-musculos.glb  (solo los músculos; huesos, órganos, vasos y nervios no se usan)
+ *   - Xbot.glb                 →  Xbot-animaciones.glb  (solo los huesos y las animaciones idle, walk y run: la silueta del Xbot nunca se muestra)
  * Los archivos originales no se tocan.
  */
 const fs = require('fs');
@@ -35,7 +34,7 @@ function escribirGLB(archivo, json, bin) {
  *  raices:        nombres de los nodos raíz de la escena que se conservan (si es null, se conservan todas)
  *  sinMallas:     true = se quitan mallas y pieles (queda solo el esqueleto de nodos y las animaciones)
  */
-function extraer(origen, destino, { raices = null, sinMallas = false } = {}) {
+function extraer(origen, destino, { raices = null, sinMallas = false, soloAnimaciones = null } = {}) {
   const { json: j, bin } = leerGLB(origen);
   const escena = j.scenes[j.scene || 0], rootsOrig = escena.nodes;
   const rootsKeep = raices ? rootsOrig.filter((i) => raices.includes(j.nodes[i].name)) : rootsOrig.slice();
@@ -51,10 +50,12 @@ function extraer(origen, destino, { raices = null, sinMallas = false } = {}) {
   const mallasOrden = [...mallas].sort((a, b) => a - b), mallaNueva = new Map(mallasOrden.map((v, k) => [v, k]));
   mallasOrden.forEach((m) => j.meshes[m].primitives.forEach((p) => { Object.values(p.attributes).forEach((a) => accesores.add(a)); if (p.indices !== undefined) accesores.add(p.indices); if (p.material !== undefined) materiales.add(p.material); }));
   const pieles = new Set(); if (!sinMallas) nodosOrden.forEach((i) => { if (j.nodes[i].skin !== undefined) pieles.add(j.nodes[i].skin); });
+  // Sin mallas se conservan las pieles (unos pocos KB): three.js solo trata como hueso a los nodos que pertenecen a una piel
+  else (j.skins || []).forEach((_, s) => pieles.add(s));
   const pielesOrden = [...pieles].sort((a, b) => a - b), pielNueva = new Map(pielesOrden.map((v, k) => [v, k]));
   pielesOrden.forEach((s) => { if (j.skins[s].inverseBindMatrices !== undefined) accesores.add(j.skins[s].inverseBindMatrices); });
   // Animaciones: solo los canales que mueven nodos conservados
-  const animaciones = (j.animations || []).map((an) => {
+  const animaciones = (j.animations || []).filter((an) => !soloAnimaciones || soloAnimaciones.includes(an.name)).map((an) => {
     const canales = an.channels.filter((c) => nodos.has(c.target.node)), muestras = [...new Set(canales.map((c) => c.sampler))].sort((a, b) => a - b), mapa = new Map(muestras.map((v, k) => [v, k]));
     muestras.forEach((s) => { accesores.add(an.samplers[s].input); accesores.add(an.samplers[s].output); });
     return { an, canales, muestras, mapa };
@@ -109,10 +110,10 @@ function informe(nombre, origen, destino, resultado) { console.log(`${nombre.pad
 
 for (const sx of ['male', 'female']) {
   const o = path.join(ASSETS, `anatomy-${sx}.glb`);
-  for (const [sufijo, raices] of [['musculos', ['muscles']], ['resto', ['skeleton', 'organs', 'vessels', 'nerves']]]) {
+  for (const [sufijo, raices] of [['musculos', ['muscles']]]) {   // solo músculos: huesos, órganos, vasos y nervios no se usan
     const d = path.join(ASSETS, `anatomy-${sx}-${sufijo}.glb`);
     informe(`anatomy-${sx}-${sufijo}.glb`, o, d, extraer(o, d, { raices }));
   }
 }
 const xo = path.join(ASSETS, 'Xbot.glb'), xd = path.join(ASSETS, 'Xbot-animaciones.glb');
-informe('Xbot-animaciones.glb', xo, xd, extraer(xo, xd, { sinMallas: true }));
+informe('Xbot-animaciones.glb', xo, xd, extraer(xo, xd, { sinMallas: true, soloAnimaciones: ['idle', 'walk', 'run'] }));

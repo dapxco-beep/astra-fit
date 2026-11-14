@@ -13,6 +13,7 @@
   <?!= include('JsApi'); ?>
   <?!= include('JsCalculos'); ?>
   <?!= include('JsAvatares'); ?>
+  <?!= include('JsAnimacionCuerpo'); ?>
   <?!= include('JsAlertas'); ?>
   <?!= include('JsErdm'); ?>
 </head>
@@ -91,11 +92,11 @@
       if (cn.saveData || /2g|3g/.test(cn.effectiveType || '') || matchMedia('(max-width: 820px)').matches || (navigator.deviceMemory && navigator.deviceMemory <= 4)) return;
       idle(() => LIBS.forEach((l) => calentar(CDN + l)));
       const base = () => (typeof API !== 'undefined' && API.modo === 'local') ? '/assets/' : 'https://astra-fit-modelos.dapxco.workers.dev/assets/';
-      const porSexo = { M: ['avatar-male.glb', 'anatomy-male.glb'], F: ['Michelle.glb', 'anatomy-female.glb'] };
+      const porSexo = { M: ['anatomy-male-musculos.glb'], F: ['anatomy-female-musculos.glb'] };
       const alPasar = (e) => {
         const t = e.target.closest && e.target.closest('.perfil[data-id]'); if (!t || typeof Sesion === 'undefined' || !Sesion.datos) return;
         const a = Sesion.datos.Astronautas.find((x) => x.id_astronauta === t.dataset.id); if (!a) return;
-        ['Xbot.glb', ...porSexo[String(a.sexo).toUpperCase() === 'F' ? 'F' : 'M'], 'astronaut.glb'].forEach((f) => calentar(base() + f));
+        ['Xbot-animaciones.glb', ...porSexo[String(a.sexo).toUpperCase() === 'F' ? 'F' : 'M']].forEach((f) => calentar(base() + f));
       };
       document.addEventListener('pointerover', alPasar); document.addEventListener('focusin', alPasar); document.addEventListener('touchstart', alPasar, { passive: true });
     })();
