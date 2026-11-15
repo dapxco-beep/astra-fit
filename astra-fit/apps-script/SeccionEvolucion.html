@@ -92,6 +92,14 @@
     return `<svg viewBox="0 0 ${W} ${H}" class="evo-svg" role="img" aria-label="${esc(Erdm.etiqueta(g))}: ${esc(MEDIDAS[medida].eje)} por semana">${svg}</svg>`;
   }
 
+  /** Texto con la última medición del sensor (o del VO2pico) de ese grupo, para saber qué tan al día está la curva. */
+  function ultimaMedicion(grupo) {
+    const lista = (Sesion.datos.Monitoreo || []).filter((x) => x.id_astronauta === Sesion.astronauta.id_astronauta && x.grupo_muscular === grupo)
+      .sort((p, q) => String(p.registrado_en || p.fecha).localeCompare(String(q.registrado_en || q.fecha)));
+    const u = lista[lista.length - 1];
+    return u ? `Última medición: ${Calc.fechaCorta(u.fecha)}${u.hora ? `, ${u.hora}` : ''}` : 'Sin mediciones del sensor';
+  }
+
   let datos = {};
   function pintar() {
     if (!Sesion.astronauta) return;
@@ -118,6 +126,7 @@
         </figcaption>
         ${s.pts.length ? grafica(g, s, escala) : '<p class="nota evo-vacio">Sin evaluación basal.</p>'}
         <p class="nota evo-pie">${esc(m.eje)} · semanas desde la basal</p>
+        <p class="nota evo-ultima">${esc(ultimaMedicion(medida === 'vo2pico' ? 'vo2pico' : g))}</p>
       </figure>`;
     }).join('');
     pintarTabla();

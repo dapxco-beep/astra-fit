@@ -1014,4 +1014,41 @@ html[data-ligero] .tablero { transition: none; }
   .nav-marca-largo, .nav-etiqueta-largo, .nav-texto, .barra-lateral #nav-nombre, .nav-item > span:not(.nav-badge) { transition: max-width var(--dur-media) var(--curva-suave), opacity .12s ease; }
   .tablero:not(.tablero--plegado) .nav-marca-largo, .tablero:not(.tablero--plegado) .nav-etiqueta-largo, .tablero:not(.tablero--plegado) .nav-texto, .tablero:not(.tablero--plegado) #nav-nombre, .tablero:not(.tablero--plegado) .nav-item > span:not(.nav-badge) { transition-delay: .1s, .14s; }
 }
+
+/* Mediciones guardadas: nota de las gráficas, tabla de mediciones (ver y eliminar) y VO2pico */
+.mon-graficas-barra { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--e-2) var(--e-4); margin: var(--e-2) 0; }
+.mon-graficas-barra p { color: var(--tinta-2); }
+.mon-mini-ultima { color: var(--tinta-2); }
+.mon-historial { padding: var(--e-5); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--e-3); margin-top: var(--e-4); }
+.mon-vo2, .mon-vo2-figura { grid-template-columns: minmax(0, 1fr); }
+.mon-tabla-med { font-size: var(--t-pequeno); font-variant-numeric: tabular-nums; }
+.mon-tabla-med th[scope="row"] { font-weight: 600; white-space: nowrap; color: var(--tinta); }
+.mon-tabla-med tr.es-actual { background: rgba(0, 113, 227, .06); }
+.mon-acciones { white-space: nowrap; text-align: right; }
+.mon-acciones > button + button { margin-left: var(--e-3); }
+.mon-eliminar { color: var(--rojo-texto); }
+.mon-confirmar { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--e-2); }
+.mon-vo2 { padding: var(--e-6); display: grid; gap: var(--e-5); margin-top: var(--e-6); }
+.mon-vo2-cabecera { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: var(--e-4); }
+.mon-vo2-cabecera .pila-chica { display: grid; gap: 4px; max-width: 60ch; }
+.mon-vo2-cuerpo { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: var(--e-6); align-items: start; }
+.mon-vo2-pasos { margin: 0; padding-left: 1.25em; display: grid; gap: var(--e-2); }
+.mon-vo2-escala { display: grid; gap: var(--e-2); padding: var(--e-4); border-radius: 14px; background: var(--fondo); }
+.mon-vo2-cortes { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.mon-vo2-cortes .estado { min-width: 86px; display: inline-block; }
+.mon-vo2-progreso { display: grid; gap: var(--e-2); }
+.mon-vo2-barra { height: 6px; border-radius: 999px; background: var(--fondo); overflow: hidden; }
+.mon-vo2-barra span { display: block; height: 100%; width: 0; background: var(--azul); border-radius: inherit; }
+.mon-vo2-figura { margin: 0; display: grid; gap: var(--e-2); }
+.mon-vo2-dato { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--e-2) var(--e-3); }
+.mon-vo2-valor { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.mon-vo2-valor small { font-size: var(--t-pequeno); font-weight: 400; color: var(--tinta-2); }
+.vo2-svg { width: 100%; height: auto; display: block; }
+.vo2-eje { font-size: 11px; fill: var(--tinta-2); }
+.vo2-basal { stroke: var(--tinta-2); stroke-width: 1; }
+.vo2-corte { stroke-width: 1; stroke-dasharray: 4 4; }
+.vo2-corte--moderado { stroke: var(--amarillo); } .vo2-corte--alto { stroke: var(--rojo); }
+.vo2-linea { fill: none; stroke: var(--azul); stroke-width: 2; stroke-linejoin: round; }
+.vo2-punto { stroke: #fff; stroke-width: 2; } .vo2-punto--verde { fill: var(--verde); } .vo2-punto--amarillo { fill: var(--amarillo); } .vo2-punto--rojo { fill: var(--rojo); }
+@media (max-width: 900px) { .mon-vo2-cuerpo { grid-template-columns: minmax(0, 1fr); } .mon-vo2 { padding: var(--e-5); } }
 </style>
