@@ -41,7 +41,7 @@
         <header class="barra-superior">
           <a class="nav-marca" href="#hoy">ASTRA-FIT</a>
           <span class="nav-etiqueta">Datos simulados</span>
-          <span class="nav-astronauta"><span id="nav-avatar-m"></span><span id="nav-nombre-m"></span></span>
+          <a class="nav-astronauta" href="#inicio" aria-label="Mi perfil"><span id="nav-avatar-m"></span><span id="nav-nombre-m"></span></a>
           <button type="button" class="enlace nav-cambiar-m" onclick="Sesion.salir()">Cambiar</button>
         </header>
 
@@ -59,6 +59,7 @@
         <footer class="pie">
           <div class="contenedor">
             Prototipo de Sinergia Cósmica para NASA Space Apps Challenge 2026, con datos simulados. Las alertas son indicadores de seguimiento, no diagnósticos médicos.
+            <span class="nota" id="version-app" data-version="{{VERSION}}"></span>
           </div>
         </footer>
       </div>
@@ -133,6 +134,7 @@
         '<button type="button" class="tab" id="tab-mas" aria-expanded="false" aria-controls="hoja-mas">' + I('<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>') + '<span>Más</span></button>';
       $('nav-mas').innerHTML = VISTAS.filter((v) => !PRINCIPALES.includes(v.id)).map((v) => '<li>' + item(v, 'nav-item') + '</li>').join('');
 
+      const ver = $('version-app'); if (ver) ver.textContent = ver.dataset.version && !ver.dataset.version.includes('{{') ? ' Versión ' + ver.dataset.version + '.' : '';
       const hoja = $('hoja-mas'), botonMas = $('tab-mas');
       const cerrarHoja = () => { hoja.hidden = true; botonMas.setAttribute('aria-expanded', 'false'); };
       botonMas.addEventListener('click', () => { hoja.hidden = !hoja.hidden; botonMas.setAttribute('aria-expanded', String(!hoja.hidden)); });
