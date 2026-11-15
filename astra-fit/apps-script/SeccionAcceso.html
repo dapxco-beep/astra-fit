@@ -69,6 +69,7 @@ const Sesion = { datos: null, astronauta: null };
   /* Volver a la pantalla de entrada (lo usa el botón "Cambiar" de la barra superior) */
   Sesion.salir = () => {
     Sesion.astronauta = null;
+    document.dispatchEvent(new CustomEvent('sesion-cerrada'));   // Monitoreo cancela lo que estuviera midiendo
     try { sessionStorage.removeItem(CLAVE); } catch (e) { /* idem */ }
     // Al elegir de nuevo se entra por el perfil, no por la última vista del astronauta anterior
     try { history.replaceState(null, '', location.pathname + location.search + '#inicio'); } catch (e) { /* idem */ }

@@ -766,7 +766,7 @@
     congelado = null; pintarNotaGraficas();
     limpiar();
     fuente = prepararFuente(true);
-    midiendo = { grupo, t: 0, fase: $('mon-fase').value };
+    midiendo = { grupo, t: 0, fase: $('mon-fase').value, id: astronauta().id_astronauta };   // la medición queda atada a este astronauta
     const tt = $('mon-titulo'); tt.setAttribute('tabindex', '-1'); if (document.activeElement === $('mon-medir')) tt.focus({ preventScroll: true });   // el botón se desactiva: el foco no se pierde
     pintarNotaGraficas();
     $('mon-medir').disabled = true; $('mon-medir').textContent = 'Midiendo…'; $('mon-fase').disabled = true;
@@ -778,6 +778,7 @@
 
   async function terminarMedicion() {
     const s = fuente, m = midiendo, a = astronauta();
+    if (!a || a.id_astronauta !== m.id) { cancelarEnCurso(); return; }   // se cambió de astronauta a mitad de la medición
     const r = procesar(s);
     const senales = capturarSenales();   // las 6 repeticiones quedan guardadas con la medición
     midiendo = null;
@@ -1020,23 +1021,26 @@
     if ('no' in b.dataset) { confirmando = null; pintarVo2(); return; }
     if (b.dataset.si) { const m = vo2Mediciones().find((x) => x.id_medicion === b.dataset.si); confirmando = null; if (m) eliminarMedicion(m, b); }
   });
+  let vo2Turno = 0, guardandoVo2 = false;
   $('vo2-medir').addEventListener('click', () => {
     const a = astronauta(); if (!a || midiendoVo2) return;
+    const turno = ++vo2Turno;   // si se cambia de astronauta, el turno cambia y esta prueba se detiene
     midiendoVo2 = true; $('vo2-medir').disabled = true; $('vo2-fase').disabled = true; $('vo2-progreso').hidden = false;
     const serie = vo2Serie(), ref = serie.pts.length ? serie.pts[serie.pts.length - 1].valor : (serie.basal ? serie.basal.valor : 42);
     const final = Math.round(ref * (1 + azar() * 0.012) * 10) / 10, fcMax = Math.round(158 + Math.random() * 18);
     const inicio = performance.now(), fase = $('vo2-fase').value;
     const paso = () => {
+      if (turno !== vo2Turno) return;
       const t = Math.min(VO2_DURACION, (performance.now() - inicio) / 1000), avance = t / VO2_DURACION;
       $('vo2-barra').style.width = `${(avance * 100).toFixed(1)}%`;
       const min = Math.floor(t), seg = Math.floor((t - min) * 60);
       $('vo2-progreso-texto').textContent = `Prueba en curso, minuto ${min}:${String(seg).padStart(2, '0')} de 5:00 (simulada). VO₂ ${n0(final * (0.35 + 0.65 * Math.sqrt(avance)), 1)} mL/kg/min`;
-      if (t < VO2_DURACION) requestAnimationFrame(paso); else guardarVo2(final, fcMax, fase);
+      if (t < VO2_DURACION) requestAnimationFrame(paso); else guardarVo2(a, final, fcMax, fase);
     };
     requestAnimationFrame(paso);
   });
-  async function guardarVo2(valor, fcMax, fase) {
-    const a = astronauta();
+  async function guardarVo2(a, valor, fcMax, fase) {   // a: el astronauta con que empezó la prueba
+    guardandoVo2 = true;
     const pad = (n) => String(n).padStart(2, '0'), d = new Date();
     const fecha = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, hora = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
     const medicion = { id_medicion: `MON-${a.id_astronauta.replace('-', '')}-${fecha.replace(/-/g, '')}-${hora.replace(':', '')}-vo2pico`, id_astronauta: a.id_astronauta, fecha, hora, fase,
@@ -1060,13 +1064,26 @@
     } catch (err) {
       UI.aviso('No se pudo guardar el VO₂pico: ' + err.message, 'error');
     } finally {
-      midiendoVo2 = false; $('vo2-fase').disabled = false; $('vo2-progreso').hidden = true;
+      midiendoVo2 = false; guardandoVo2 = false; $('vo2-fase').disabled = false; $('vo2-progreso').hidden = true;
       pintarVo2(); pintarCuerpo(); pintarMinis(); if (abierto) { pintarErdm(); }
     }
   }
 
+  /* ======================================================== CANCELAR AL CAMBIAR DE ASTRONAUTA */
+  // Una medición o una prueba de VO2pico en curso no se puede guardar en otro astronauta: se cancela y se avisa.
+  // Si ya se estaba guardando, termina en el astronauta con que empezó.
+  function cancelarEnCurso(avisar) {
+    const habia = !!midiendo || (midiendoVo2 && !guardandoVo2);
+    if (midiendo) { midiendo = null; if (astronauta()) fuente = prepararFuente(false); else animando = false; }   // sin astronauta (pantalla de entrada) se detiene el ciclo
+    $('mon-medir').disabled = false; $('mon-medir').textContent = 'Iniciar medición'; $('mon-fase').disabled = false;
+    if (midiendoVo2 && !guardandoVo2) { vo2Turno++; midiendoVo2 = false; $('vo2-medir').disabled = false; $('vo2-fase').disabled = false; $('vo2-progreso').hidden = true; }
+    if (habia && avisar) UI.aviso('Se canceló la medición en curso al cambiar de astronauta; no se guardó nada.', 'advertencia');
+  }
+  document.addEventListener('sesion-cerrada', () => cancelarEnCurso(true));
+
   /* ======================================================== EVENTOS */
   document.addEventListener('astronauta-elegido', () => {
+    cancelarEnCurso(true);
     if (sexoFigura !== (String(astronauta().sexo).toUpperCase() === 'F' ? 'F' : 'M')) dibujarCuerpo(astronauta().sexo);
     midiendo = null; congelado = null; Object.keys(bateria).forEach((k) => delete bateria[k]);
     // empieza por el músculo con más riesgo (o cuádriceps)
