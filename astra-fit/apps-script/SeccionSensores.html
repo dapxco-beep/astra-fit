@@ -1,111 +1,183 @@
-<!-- SeccionSensores.html — Bandas, sensores y especificaciones técnicas.  Fondo: blanco.  Responsable: Dashboard
-     Implementa la "Descripción técnica del sistema de monitoreo" del documento ASTRA-FIT (secciones 2, 3, 4, 5, 6, 8, 9, 10, 11 y 12):
-     seis bandas (un canal EMG y una IMU cada una), estado de cada sensor, cómo se calculan los indicadores, qué cambia en
-     microgravedad, especificaciones propuestas y límites del prototipo.
-     SIMULADO: no hay hardware. Los estados de las bandas salen del escenario del astronauta (determinista).
-     Se vuelve a dibujar con "astronauta-elegido" y "astronauta-actualizado". -->
-<section class="seccion seccion--blanca" id="sensores">
-  <div class="contenedor pila-grande">
-    <div class="seccion-cabecera">
-      <h2 class="titulo">Seis bandas, un solo panel.</h2>
-      <p class="subtitulo">Cada banda lleva un electrodo EMG y una unidad inercial. Todas envían sus datos por Bluetooth de baja energía a la unidad receptora.</p>
+<!-- SeccionSensores.html — Guía de la banda (ventana emergente) y "Cómo funcionan las bandas".  Va dentro del Monitoreo.
+     Antes era la vista "Bandas"; ahora no es una vista propia: al tocar uno de los 6 músculos en la figura del Monitoreo se
+     abre esta ventana con lo que mide su banda y una animación de dónde y cómo ponerla para que la medición se parezca lo
+     más posible a la realidad. Debajo del Monitoreo queda, plegado, lo general de las bandas (señales, microgravedad,
+     especificaciones y límites), tomado de la "Descripción técnica del sistema de monitoreo" del documento ASTRA-FIT.
+
+     Puntos de colocación: recomendaciones europeas SENIAM para EMG de superficie (Hermens y cols., 2000; seniam.org).
+     SENIAM no describe los flexores del antebrazo: para ellos se usa el vientre del músculo, en el tercio proximal.
+     SIMULADO: no hay hardware. El estado y la batería de cada banda salen del escenario del astronauta (siempre los mismos).
+     Uso:  GuiaBanda.abrir('cuadriceps')     Necesita window.FiguraMon (SeccionMonitoreo) para dibujar la anatomía. -->
+<dialog class="dialogo guia" id="guia-banda" aria-labelledby="guia-titulo">
+  <div class="guia-hoja">
+    <div class="guia-cabecera">
+      <div class="guia-titulos">
+        <p class="nota" id="guia-banda-n"></p>
+        <h2 class="titulo-tarjeta" id="guia-titulo">Cómo ponerse la banda</h2>
+        <div class="guia-estado" id="guia-estado"></div>
+      </div>
+      <button type="button" class="guia-cerrar" data-cerrar aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
     </div>
 
-    <div class="rejilla rejilla-3" id="sen-bandas" aria-live="polite"></div>
-    <p class="nota" style="text-align:center">Estados y baterías simulados. Conectado, Adquisición activa, Señal de calidad insuficiente, Batería baja y Desconectado son los cinco estados del documento.</p>
+    <div class="guia-cuerpo">
+      <figure class="guia-figura">
+        <svg id="guia-svg" viewBox="0 0 290 348" role="img" aria-labelledby="guia-svg-desc"><desc id="guia-svg-desc">Animación de la colocación de la banda</desc></svg>
+        <figcaption class="guia-leyenda" id="guia-leyenda" aria-live="polite"></figcaption>
+        <div class="guia-controles">
+          <button type="button" class="enlace enlace--simple pequeno" id="guia-pausa">Pausar</button>
+          <span class="nota" id="guia-escala"></span>
+        </div>
+      </figure>
 
-    <details class="tarjeta pila" id="sen-explica" open>
-      <summary class="titulo-tarjeta">Cómo funcionan las señales</summary>
-    <div class="rejilla rejilla-2">
-      <section class="pila" aria-labelledby="sen-t-emg">
-        <h3 class="titulo-tarjeta" id="sen-t-emg">Qué se calcula de la señal EMG</h3>
-        <ul class="lista lista--texto pila">
-          <li><strong>RMS:</strong> amplitud de la señal en ventanas móviles de 250 ms, actualizadas cada 50 ms. Así se ve cómo cambia durante la repetición y no solo el promedio de toda la sesión.</li>
-          <li><strong>RMS normalizado:</strong> RMS actual dividido entre el RMS de una contracción de referencia del mismo músculo, en %. Sirve para comparar sesiones si se mantienen las mismas condiciones.</li>
-          <li><strong>Frecuencia mediana:</strong> divide el espectro de potencia en dos mitades iguales. Su caída durante una contracción sostenida se relaciona con fatiga, pero no debe usarse sola para diagnosticar.</li>
-        </ul>
-        <p class="nota">La EMG no mide la fuerza directamente. La amplitud y la frecuencia se interpretan por separado.</p>
-      </section>
-      <section class="pila" aria-labelledby="sen-t-imu">
-        <h3 class="titulo-tarjeta" id="sen-t-imu">Qué aporta la unidad inercial (IMU)</h3>
-        <ul class="lista lista--texto pila">
-          <li><strong>Acelerómetro</strong> (ax, ay, az): cambios de aceleración del segmento donde está fijado, y regularidad de los ejercicios.</li>
-          <li><strong>Giroscopio</strong> (gx, gy, gz): velocidad angular máxima y media, duración de cada repetición y cambios entre repeticiones.</li>
-          <li><strong>Juntos con la EMG:</strong> se sincronizan para relacionar la activación del músculo con el movimiento que produce.</li>
-        </ul>
-        <p class="nota">La IMU mide el movimiento del segmento, no la actividad de un músculo ni su fuerza.</p>
-      </section>
+      <div class="pila">
+        <p class="pequeno texto-2" id="guia-postura"></p>
+        <ol class="guia-pasos" id="guia-pasos"></ol>
+      </div>
     </div>
 
-    <section class="pila" aria-labelledby="sen-t-micro">
-      <h3 class="titulo-tarjeta" id="sen-t-micro">Qué cambia en microgravedad</h3>
-      <div class="rejilla rejilla-3">
-        <div class="pila"><strong>Acelerómetro</strong><p class="texto-2">En una nave en caída libre, un acelerómetro quieto marca valores cercanos a 0 g, no 1 g como en la Tierra. La gravedad no desapareció: el sensor y la nave caen juntos. Por eso no se usa para calcular inclinación; solo para movimiento y regularidad.</p></div>
-        <div class="pila"><strong>Giroscopio</strong><p class="texto-2">Sigue midiendo la rotación sin necesitar la gravedad. Pero al integrar la velocidad angular para estimar orientación, los errores pequeños se acumulan (deriva), así que hacen falta calibración y corrección de sesgos.</p></div>
-        <div class="pila"><strong>Calibración</strong><p class="texto-2">Los ejes del sensor hay que relacionarlos con el segmento del cuerpo antes de leerlos anatómicamente. Las pruebas de la Tierra no se trasladan sin adaptación.</p></div>
-      </div>
-    </section>
+    <div class="guia-funciona">
+      <h3 class="titulo-tarjeta guia-subtitulo">Qué mide esta banda</h3>
+      <div class="guia-mide" id="guia-mide"></div>
+    </div>
 
-    <section class="pila" aria-labelledby="sen-t-flujo">
-      <h3 class="titulo-tarjeta" id="sen-t-flujo">Cómo es una evaluación</h3>
-      <ol class="lista lista--texto pila">
-        <li><strong>Colocar las bandas</strong> sobre los segmentos del protocolo, con buen contacto de la piel y sensores firmes.</li>
-        <li><strong>Conectar y comprobar:</strong> ASTRA-FIT identifica cada banda, revisa la calidad de la señal y calibra.</li>
-        <li><strong>Ejercicios estandarizados</strong> de los músculos elegidos, con las seis bandas adquiriendo a la vez.</li>
-        <li><strong>Procesar y guardar:</strong> los registros pasan al historial del astronauta y se comparan con su basal.</li>
-      </ol>
-      <p class="nota">Una sesión del prototipo dura unos 25 a 35 minutos, con preparación, calibración, ejercicios y revisión. Es una propuesta de diseño, no un protocolo oficial de NASA.</p>
-    </section>
-    </details>
-
-    <details class="tarjeta" id="sen-espec">
-      <summary class="titulo-tarjeta">Especificaciones técnicas propuestas</summary>
-      <div class="tabla-scroll" tabindex="0" role="region" aria-label="Especificaciones técnicas">
-        <table class="tabla">
-          <thead><tr><th>Componente</th><th>Configuración propuesta</th></tr></thead>
-          <tbody>
-            <tr><td>Grupos musculares</td><td>6, con 6 canales EMG y 6 módulos IMU (configuración conceptual inicial)</td></tr>
-            <tr><td>EMG</td><td>2.000 muestras/s por canal, banda de análisis 20–450 Hz, 16 bits o más, electrodos bipolares según protocolo</td></tr>
-            <tr><td>Acelerómetro</td><td>Triaxial, ±4 g, 100 Hz, 16 bits</td></tr>
-            <tr><td>Giroscopio</td><td>Triaxial, ±500 °/s, 100 Hz, 16 bits</td></tr>
-            <tr><td>Datos brutos</td><td>Unos 41,6 kbit/s por banda y unos 249,6 kbit/s en total, sin contar encabezados ni protocolo</td></tr>
-            <tr><td>Comunicación</td><td>Bluetooth de baja energía hacia una unidad receptora central, con almacenamiento local para cortes breves</td></tr>
-            <tr><td>Procesamiento</td><td>Local, con marcas de tiempo y sincronización entre bandas</td></tr>
-            <tr><td>Comparación</td><td>Valores basales de cada astronauta, en condiciones equivalentes</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="nota" style="margin-top:var(--e-3)">Propuesta inicial para el prototipo. La elección final depende del hardware disponible y de probar la adquisición, la sincronización y la transmisión.</p>
-    </details>
-
-    <details class="tarjeta" id="sen-limites">
-      <summary class="titulo-tarjeta">Alcance y limitaciones</summary>
-      <ul class="lista pila" style="margin-top:var(--e-4)">
-        <li>ASTRA-FIT es un prototipo de monitoreo y apoyo al seguimiento neuromuscular. No es un dispositivo médico validado.</li>
-        <li>La EMG no determina la fuerza de un músculo, y las IMU no miden fuerza, masa muscular ni activación eléctrica.</li>
-        <li>Los indicadores se interpretan según el ejercicio, las condiciones de medición y los valores de referencia de cada persona.</li>
-        <li>El procesamiento inercial debe tener en cuenta que en microgravedad no hay una referencia gravitacional útil para ciertos algoritmos de orientación.</li>
-        <li>Usar hardware real, validar la precisión y llevarlo a una misión requieren fases posteriores.</li>
-        <li>En esta demostración todas las señales y los estados de las bandas son simulados.</li>
-      </ul>
-    </details>
+    <div class="guia-pie">
+      <p class="nota">Simulado. Colocación según SENIAM; es una propuesta del prototipo, no un protocolo oficial de NASA.</p>
+      <button type="button" class="boton" id="guia-medir">Ver señales y medir</button>
+    </div>
   </div>
-</section>
+</dialog>
+
+<details class="tarjeta pila mon-bandas-info" id="sen-explica">
+  <summary class="titulo-tarjeta">Cómo funcionan las bandas</summary>
+  <p class="texto-2">Seis bandas, una por músculo. Cada una lleva un par de electrodos EMG y una unidad inercial (IMU), y envía sus datos por Bluetooth de baja energía a la unidad receptora. Toca un músculo en la figura para ver dónde va su banda.</p>
+  <div class="rejilla rejilla-2">
+    <section class="pila" aria-labelledby="sen-t-emg">
+      <h3 class="titulo-tarjeta" id="sen-t-emg">Qué se calcula de la señal EMG</h3>
+      <ul class="lista lista--texto pila">
+        <li><strong>RMS:</strong> amplitud de la señal en ventanas móviles de 250 ms, actualizadas cada 50 ms. Así se ve cómo cambia durante la repetición y no solo el promedio de toda la sesión.</li>
+        <li><strong>RMS normalizado:</strong> RMS actual dividido entre el RMS de una contracción de referencia del mismo músculo, en %. Sirve para comparar sesiones si se mantienen las mismas condiciones.</li>
+        <li><strong>Frecuencia mediana:</strong> divide el espectro de potencia en dos mitades iguales. Su caída durante una contracción sostenida se relaciona con fatiga, pero no debe usarse sola para diagnosticar.</li>
+      </ul>
+      <p class="nota">La EMG no mide la fuerza directamente. La amplitud y la frecuencia se interpretan por separado.</p>
+    </section>
+    <section class="pila" aria-labelledby="sen-t-imu">
+      <h3 class="titulo-tarjeta" id="sen-t-imu">Qué aporta la unidad inercial (IMU)</h3>
+      <ul class="lista lista--texto pila">
+        <li><strong>Acelerómetro</strong> (ax, ay, az): cambios de aceleración del segmento donde está fijado, y regularidad de los ejercicios.</li>
+        <li><strong>Giroscopio</strong> (gx, gy, gz): velocidad angular máxima y media, duración de cada repetición y cambios entre repeticiones.</li>
+        <li><strong>Juntos con la EMG:</strong> se sincronizan para relacionar la activación del músculo con el movimiento que produce.</li>
+      </ul>
+      <p class="nota">La IMU mide el movimiento del segmento, no la actividad de un músculo ni su fuerza.</p>
+    </section>
+  </div>
+
+  <section class="pila" aria-labelledby="sen-t-micro">
+    <h3 class="titulo-tarjeta" id="sen-t-micro">Qué cambia en microgravedad</h3>
+    <div class="rejilla rejilla-3">
+      <div class="pila"><strong>Acelerómetro</strong><p class="texto-2">En una nave en caída libre, un acelerómetro quieto marca valores cercanos a 0 g, no 1 g como en la Tierra. La gravedad no desapareció: el sensor y la nave caen juntos. Por eso no se usa para calcular inclinación; solo para movimiento y regularidad.</p></div>
+      <div class="pila"><strong>Giroscopio</strong><p class="texto-2">Sigue midiendo la rotación sin necesitar la gravedad. Pero al integrar la velocidad angular para estimar orientación, los errores pequeños se acumulan (deriva), así que hacen falta calibración y corrección de sesgos.</p></div>
+      <div class="pila"><strong>Calibración</strong><p class="texto-2">Los ejes del sensor hay que relacionarlos con el segmento del cuerpo antes de leerlos anatómicamente. Las pruebas de la Tierra no se trasladan sin adaptación.</p></div>
+    </div>
+  </section>
+
+  <section class="pila" aria-labelledby="sen-t-flujo">
+    <h3 class="titulo-tarjeta" id="sen-t-flujo">Cómo es una evaluación</h3>
+    <ol class="lista lista--texto pila">
+      <li><strong>Colocar las bandas</strong> sobre los segmentos del protocolo, con buen contacto de la piel y sensores firmes.</li>
+      <li><strong>Conectar y comprobar:</strong> ASTRA-FIT identifica cada banda, revisa la calidad de la señal y calibra.</li>
+      <li><strong>Ejercicios estandarizados</strong> de los músculos elegidos, con las seis bandas adquiriendo a la vez.</li>
+      <li><strong>Procesar y guardar:</strong> los registros pasan al historial del astronauta y se comparan con su basal.</li>
+    </ol>
+    <p class="nota">Una sesión del prototipo dura unos 25 a 35 minutos, con preparación, calibración, ejercicios y revisión. Es una propuesta de diseño, no un protocolo oficial de NASA.</p>
+  </section>
+
+  <section class="pila" aria-labelledby="sen-t-espec">
+    <h3 class="titulo-tarjeta" id="sen-t-espec">Especificaciones técnicas propuestas</h3>
+    <div class="tabla-scroll" tabindex="0" role="region" aria-label="Especificaciones técnicas">
+      <table class="tabla">
+        <thead><tr><th>Componente</th><th>Configuración propuesta</th></tr></thead>
+        <tbody>
+          <tr><td>Grupos musculares</td><td>6, con 6 canales EMG y 6 módulos IMU (configuración conceptual inicial)</td></tr>
+          <tr><td>EMG</td><td>2.000 muestras/s por canal, banda de análisis 20–450 Hz, 16 bits o más, electrodos bipolares según protocolo</td></tr>
+          <tr><td>Acelerómetro</td><td>Triaxial, ±4 g, 100 Hz, 16 bits</td></tr>
+          <tr><td>Giroscopio</td><td>Triaxial, ±500 °/s, 100 Hz, 16 bits</td></tr>
+          <tr><td>Datos brutos</td><td>Unos 41,6 kbit/s por banda y unos 249,6 kbit/s en total, sin contar encabezados ni protocolo</td></tr>
+          <tr><td>Comunicación</td><td>Bluetooth de baja energía hacia una unidad receptora central, con almacenamiento local para cortes breves</td></tr>
+          <tr><td>Procesamiento</td><td>Local, con marcas de tiempo y sincronización entre bandas</td></tr>
+          <tr><td>Comparación</td><td>Valores basales de cada astronauta, en condiciones equivalentes</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="pila" aria-labelledby="sen-t-limites">
+    <h3 class="titulo-tarjeta" id="sen-t-limites">Alcance y limitaciones</h3>
+    <ul class="lista lista--texto pila">
+      <li>ASTRA-FIT es un prototipo de monitoreo y apoyo al seguimiento neuromuscular. No es un dispositivo médico validado.</li>
+      <li>La EMG no determina la fuerza de un músculo, y las IMU no miden fuerza, masa muscular ni activación eléctrica.</li>
+      <li>Los indicadores se interpretan según el ejercicio, las condiciones de medición y los valores de referencia de cada persona.</li>
+      <li>En esta demostración todas las señales y los estados de las bandas son simulados.</li>
+    </ul>
+  </section>
+</details>
 
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  // En móvil el bloque de explicaciones empieza cerrado: la sección pasa de unos 4.800 px a unos 2.000
-  if (matchMedia('(max-width: 640px)').matches) $('sen-explica').open = false;
-  // Seis bandas del documento: músculo, segmento donde va la IMU
-  const BANDAS = [
-    { n: 1, musculo: 'Sóleo', segmento: 'Pantorrilla, parte baja' },
-    { n: 2, musculo: 'Gastrocnemio', segmento: 'Pantorrilla' },
-    { n: 3, musculo: 'Cuádriceps', segmento: 'Muslo' },
-    { n: 4, musculo: 'Bíceps braquial', segmento: 'Brazo, cara anterior' },
-    { n: 5, musculo: 'Tríceps braquial', segmento: 'Brazo, cara posterior' },
-    { n: 6, musculo: 'Flexores del antebrazo', segmento: 'Antebrazo' }
-  ];
+  const esc = (t) => UI.esc(t);
+  const NS = 'http://www.w3.org/2000/svg';
+
+  /* ======================================================== LAS SEIS BANDAS
+     punto: dónde van los electrodos (SENIAM). postura: cómo se pone el astronauta. ref: electrodo de referencia (sobre hueso).
+     segmento: dónde queda la IMU. fibras: dirección de las fibras, que es la dirección del par de electrodos (grados desde
+     la vertical de la imagen). La IMU mide el movimiento de ese segmento durante la tarea. */
+  const GUIA = {
+    soleo: {
+      n: 1, segmento: 'Pierna, por dentro y abajo', fibras: 0,
+      postura: 'Sentado, con la rodilla doblada a unos 90° y el pie apoyado.',
+      punto: 'A dos tercios de la línea que va del cóndilo medial del fémur (rodilla, por dentro) al maléolo medial (tobillo, por dentro), debajo de la masa del gemelo.',
+      ref: 'Sobre el maléolo o la cara interna de la tibia.',
+      imu: 'la pierna: la flexión plantar mueve el pie, y la banda registra el ritmo y la regularidad de cada elevación'
+    },
+    gastrocnemio: {
+      n: 2, segmento: 'Pantorrilla', fibras: 0,
+      postura: 'Boca abajo o de pie, con la rodilla extendida y el pie suelto.',
+      punto: 'Sobre la parte más abultada del gemelo interno (gastrocnemio medial), en la dirección de la pierna.',
+      ref: 'Sobre el tobillo o la tibia.',
+      imu: 'la pantorrilla: cuánto y qué tan parejo se eleva el talón en cada repetición'
+    },
+    cuadriceps: {
+      n: 3, segmento: 'Muslo, por delante', fibras: 4,
+      postura: 'Sentado, con el tronco derecho y la rodilla un poco doblada.',
+      punto: 'En la mitad de la línea que va de la espina ilíaca anterosuperior (el hueso saliente de la cadera) al borde superior de la rótula, sobre el recto femoral.',
+      ref: 'Sobre la rótula o el tobillo.',
+      imu: 'el muslo: velocidad y rango de la extensión de rodilla, y si las repeticiones salen iguales'
+    },
+    biceps_braquial: {
+      n: 4, segmento: 'Brazo, por delante', fibras: 6,
+      postura: 'Sentado, con el codo doblado a 90° y la palma hacia arriba.',
+      punto: 'En la línea que va del acromion (la punta del hombro) a la fosa del codo, a un tercio de la distancia contando desde el codo.',
+      ref: 'Sobre la muñeca.',
+      imu: 'el brazo: cómo gira el segmento en cada flexión de codo y cuánto dura cada repetición'
+    },
+    triceps_braquial: {
+      n: 5, segmento: 'Brazo, por detrás', fibras: -4,
+      postura: 'Sentado, con el brazo junto al cuerpo y el codo doblado a 90°.',
+      punto: 'En la mitad de la línea que va de la parte de atrás del acromion al olécranon (la punta del codo), dos dedos hacia adentro, sobre la cabeza larga.',
+      ref: 'Sobre la muñeca.',
+      imu: 'el brazo: velocidad de la extensión de codo y regularidad entre repeticiones'
+    },
+    flexores_antebrazo: {
+      n: 6, segmento: 'Antebrazo, cara interna', fibras: 12,
+      postura: 'Sentado, con el antebrazo apoyado y la palma hacia arriba.',
+      punto: 'En el tercio superior de la cara interna del antebrazo, unos cuatro dedos debajo del pliegue del codo, sobre la masa que se endurece al cerrar el puño.',
+      ref: 'Sobre el hueso de la muñeca, del lado del meñique.',
+      imu: 'el antebrazo: el movimiento de la muñeca durante la prensión y si cada repetición se parece a la anterior'
+    }
+  };
+
   const ESTADOS = {
     activa: { texto: 'Adquisición activa', clase: 'verde' },
     conectada: { texto: 'Conectado', clase: 'verde' },
@@ -117,31 +189,120 @@
     return () => { t = Math.imul(t ^ (t >>> 15), t | 1) + 0x6D2B79F5 | 0; t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
   /** Estado simulado de cada banda según el escenario del astronauta (siempre el mismo para el mismo astronauta). */
-  function estados(a) {
+  function estadoBanda(a, grupo) {
     const r = azar('bandas' + a.id_astronauta);
-    return BANDAS.map((b) => {
+    const porN = {};
+    for (let n = 1; n <= 6; n++) {
       let bateria = Math.round(55 + r() * 40), estado = 'activa';
-      if (a.escenario === 'perdida_fuerza' && b.n === 1) { bateria = 14; estado = 'bateria'; }
-      if (a.escenario === 'asimetria' && (b.n === 5 || b.n === 6)) estado = 'senal';
-      if (a.escenario === 'asimetria' && b.n === 6) { estado = 'senal'; }
-      return { ...b, bateria, estado };
-    });
+      if (a.escenario === 'perdida_fuerza' && n === 1) { bateria = 14; estado = 'bateria'; }
+      if (a.escenario === 'asimetria' && (n === 5 || n === 6)) estado = 'senal';
+      porN[n] = { bateria, estado };
+    }
+    return porN[GUIA[grupo].n];
   }
 
-  function dibujar() {
-    if (!Sesion.astronauta) return;
-    const lista = estados(Sesion.astronauta);
-    $('sen-bandas').innerHTML = lista.map((b) => {
-      const e = ESTADOS[b.estado];
-      return `<article class="tarjeta pila">
-        <div class="tarjeta-cabecera"><h3 class="titulo-tarjeta">Banda ${b.n}</h3><span class="estado estado--${e.clase}">${e.texto}</span></div>
-        <p><strong>${UI.esc(b.musculo)}</strong></p>
-        <p class="texto-2">Canal EMG ${b.n} + IMU en: ${UI.esc(b.segmento)}.</p>
-        <p class="nota">Batería ${b.bateria} % · EMG 2.000 Hz · IMU 100 Hz</p>
-      </article>`;
-    }).join('');
+  /* ======================================================== LOS PASOS
+     El paso 2 cambia con el músculo. La animación muestra cada paso sobre la anatomía, acercada al músculo. */
+  const PASOS = (gu) => [
+    { t: 'Prepara la piel', d: 'Si hay vello, rasura la zona. Frota suave y limpia con alcohol; deja secar. Menos resistencia de la piel, menos ruido en la señal.' },
+    { t: 'Ubica el punto', d: gu.punto },
+    { t: 'Pega los electrodos', d: 'Dos electrodos de 10 mm como máximo, con 20 mm entre centros, alineados con las fibras del músculo. El de referencia va ' + gu.ref.charAt(0).toLowerCase() + gu.ref.slice(1) },
+    { t: 'Ajusta la banda', d: 'Pasa la banda sobre los electrodos, firme pero sin apretar: no debe moverse ni girar al hacer el ejercicio. El módulo con la IMU queda hacia afuera.' },
+    { t: 'Conecta y calibra', d: 'Quédate quieto unos 5 segundos mientras ASTRA-FIT calibra la IMU y revisa la calidad de la señal. Cuando la luz pase a verde, la banda está lista.' }
+  ];
+  const LEYENDA = ['Limpia la zona', 'Marca el punto sobre el músculo', 'Par de electrodos, 20 mm', 'La banda cubre los electrodos', 'Calibrando… lista'];
+  const DURACION = 3200;   // ms por paso
+
+  let grupoActual = null, paso = 0, temporizador = null, pausado = false;
+  const quieto = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const el = (tag, attrs = {}) => { const n = document.createElementNS(NS, tag); Object.entries(attrs).forEach(([k, v]) => n.setAttribute(k, v)); return n; };
+
+  /** Dibuja la anatomía acercada al músculo, con los electrodos, la banda y la IMU listos para animar. */
+  function dibujar(grupo) {
+    const svg = $('guia-svg'), F = window.FiguraMon;
+    svg.querySelectorAll(':scope > :not(desc)').forEach((n) => n.remove());
+    if (!F) return;
+    const m = F.MUSCULOS[grupo], sx = String((Sesion.astronauta || {}).sexo).toUpperCase() === 'F' ? 'F' : 'M', p = sx.toLowerCase();
+    const b = F.BANDAS[sx][m.mascara];
+    // Coordenadas de la imagen (640 × 1000). Ventana de 290 × 348 centrada en la banda: se ve el músculo y su segmento.
+    const cx = (b.x0 + b.x1) / 2 * 640, cy = b.y * 1000, ancho = (b.x1 - b.x0) * 640;
+    const VW = 290, VH = 348;
+    svg.setAttribute('viewBox', `${(cx - VW / 2).toFixed(1)} ${(cy - VH / 2).toFixed(1)} ${VW} ${VH}`);
+    const href = (n) => `${F.BASE_IMG}${p}-${F.ARCHIVO_VISTA[m.vista]}-${n}.png`;
+    const defs = el('defs');
+    const mask = el('mask', { id: 'guia-mascara', maskUnits: 'userSpaceOnUse', x: 0, y: 0, width: 640, height: 1000 });
+    const mi = el('image', { x: 0, y: 0, width: 640, height: 1000 }); mi.setAttribute('href', href(m.mascara)); mask.appendChild(mi); defs.appendChild(mask);
+    svg.appendChild(defs);
+    svg.appendChild(el('rect', { x: cx - VW, y: cy - VH, width: VW * 2, height: VH * 2, class: 'guia-fondo' }));
+    const base = el('image', { x: 0, y: 0, width: 640, height: 1000, class: 'guia-base' }); base.setAttribute('href', href('base')); svg.appendChild(base);
+    svg.appendChild(el('rect', { x: 0, y: 0, width: 640, height: 1000, mask: 'url(#guia-mascara)', class: 'guia-musculo', fill: F.COLOR_RIESGO[F.nivel(grupo)] || F.COLOR_RIESGO.gris }));
+
+    // Todo lo de la banda gira con las fibras del músculo
+    const g = el('g', { transform: `rotate(${GUIA[grupo].fibras} ${cx} ${cy})` });
+    // 1. piel: un círculo que "limpia"
+    g.appendChild(el('circle', { cx, cy, r: 24, class: 'guia-piel' }));
+    // 2. punto: línea de referencia en la dirección de las fibras y cruz
+    g.appendChild(el('line', { x1: cx, y1: cy - 70, x2: cx, y2: cy + 70, class: 'guia-linea' }));
+    g.appendChild(el('path', { d: `M${cx - 6} ${cy}h12M${cx} ${cy - 6}v12`, class: 'guia-cruz' }));
+    // 3. electrodos: 1 px de la imagen ≈ 1,9 mm → 20 mm entre centros ≈ 10,5 px; 10 mm ≈ 5 px de diámetro
+    [-5.25, 5.25].forEach((d) => g.appendChild(el('circle', { cx, cy: cy + d, r: 3.2, class: 'guia-electrodo' })));
+    // 4. banda (entra desde un lado) con el módulo de la IMU y su luz
+    const lado = m.lado < 0 ? -1 : 1;
+    const banda = el('g', { class: 'guia-banda', style: `--desde:${lado * -70}px` });
+    const largo = ancho + 24;
+    banda.appendChild(el('rect', { x: cx - largo / 2, y: cy - 11, width: largo, height: 22, rx: 7, class: 'guia-tela' }));
+    const mx = lado < 0 ? cx - largo / 2 - 13 : cx + largo / 2 - 3;
+    banda.appendChild(el('rect', { x: mx, y: cy - 9, width: 16, height: 18, rx: 4, class: 'guia-modulo' }));
+    banda.appendChild(el('circle', { cx: mx + 8, cy: cy - 3, r: 2.4, class: 'guia-luz' }));
+    banda.appendChild(el('circle', { cx: mx + 8, cy: cy - 3, r: 2.4, class: 'guia-luz-pulso' }));
+    g.appendChild(banda);
+    // Los electrodos se siguen viendo a través de la banda
+    [-5.25, 5.25].forEach((d) => g.appendChild(el('circle', { cx, cy: cy + d, r: 3.2, class: 'guia-electrodo guia-electrodo--encima' })));
+    svg.appendChild(g);
+    $('guia-escala').textContent = 'Vista acercada. Electrodos a escala aproximada.';
   }
-  document.addEventListener('astronauta-elegido', dibujar);
-  document.addEventListener('astronauta-actualizado', dibujar);
+
+  function irA(n) {
+    paso = (n + 5) % 5;
+    $('guia-svg').dataset.paso = String(paso + 1);
+    $('guia-leyenda').textContent = `${paso + 1}. ${LEYENDA[paso]}`;
+    document.querySelectorAll('#guia-pasos li').forEach((li, i) => { li.classList.toggle('es-hecho', i < paso); if (i === paso) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current'); });
+  }
+  function programar() {
+    clearInterval(temporizador); temporizador = null;
+    if (pausado || quieto()) return;
+    temporizador = setInterval(() => irA(paso + 1), DURACION);
+  }
+
+  function abrir(grupo) {
+    const a = Sesion.astronauta; if (!a || !GUIA[grupo]) return;
+    grupoActual = grupo;
+    const gu = GUIA[grupo], est = estadoBanda(a, grupo), e = ESTADOS[est.estado];
+    const tarea = ((Sesion.datos.Catalogos || []).find((c) => c.lista === 'tarea' && c.musculos === grupo) || {}).etiqueta || 'contracción estandarizada';
+    $('guia-banda-n').textContent = `Banda ${gu.n} de 6 · ${gu.segmento}`;
+    $('guia-titulo').textContent = Erdm.etiqueta(grupo);
+    $('guia-estado').innerHTML = `<span class="estado estado--${e.clase}">${e.texto}</span><span class="nota">Batería ${est.bateria} %</span>`;
+    $('guia-postura').innerHTML = `<strong>Postura:</strong> ${esc(gu.postura)}`;
+    $('guia-pasos').innerHTML = PASOS(gu).map((x, i) => `<li><button type="button" data-paso="${i}"><span class="guia-num" aria-hidden="true">${i + 1}</span><span><strong>${esc(x.t)}</strong><span class="pequeno texto-2">${esc(x.d)}</span></span></button></li>`).join('');
+    $('guia-mide').innerHTML = [
+      ['EMG', '2.000 Hz', `El par de electrodos capta la actividad eléctrica del ${esc(Erdm.etiqueta(grupo).toLowerCase())} durante la tarea (${esc(tarea.toLowerCase())}). De ahí salen el RMS y la frecuencia mediana, que alimentan la dimensión EMG de la escala.`],
+      ['IMU', '100 Hz', `El acelerómetro y el giroscopio miden ${esc(gu.imu)}. Eso da la coordinación: cuánto varían las repeticiones entre sí.`],
+      ['Fuerza', 'Dinamómetro', 'Durante el mismo ejercicio se registra la fuerza, que se compara con la basal para la dimensión de fuerza.']
+    ].map(([t, f, d]) => `<div class="guia-mide-item"><p><strong>${t}</strong> <span class="nota">${f}</span></p><p class="pequeno texto-2">${d}</p></div>`).join('');
+    dibujar(grupo);
+    pausado = false; $('guia-pausa').textContent = 'Pausar'; $('guia-pausa').hidden = quieto();
+    irA(quieto() ? 4 : 0);
+    if (!$('guia-banda').open) $('guia-banda').showModal();
+    programar();
+  }
+  function cerrar() { clearInterval(temporizador); temporizador = null; if ($('guia-banda').open) $('guia-banda').close(); }
+
+  $('guia-banda').addEventListener('click', (e) => { if (e.target === $('guia-banda') || e.target.closest('[data-cerrar]')) cerrar(); });
+  $('guia-banda').addEventListener('close', () => { clearInterval(temporizador); temporizador = null; });
+  $('guia-pasos').addEventListener('click', (e) => { const b = e.target.closest('[data-paso]'); if (!b) return; irA(Number(b.dataset.paso)); programar(); });
+  $('guia-pausa').addEventListener('click', () => { pausado = !pausado; $('guia-pausa').textContent = pausado ? 'Reanudar' : 'Pausar'; programar(); });
+  $('guia-medir').addEventListener('click', () => { const g = grupoActual; cerrar(); if (window.Monitoreo) window.Monitoreo.elegir(g); });
+
+  window.GuiaBanda = { abrir, cerrar, GUIA };
 })();
 </script>

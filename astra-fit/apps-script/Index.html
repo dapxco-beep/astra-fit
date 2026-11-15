@@ -29,7 +29,7 @@
     <div class="tablero">
       <!-- Escritorio: barra lateral. Los enlaces los dibuja el selector de vistas (más abajo). -->
       <nav class="barra-lateral" aria-label="Vistas del tablero">
-        <a class="nav-marca" href="#hoy">ASTRA-FIT</a>
+        <a class="nav-marca" href="#inicio">ASTRA-FIT</a>
         <span class="nav-etiqueta">Datos simulados</span>
         <div class="nav-astronauta" aria-label="Astronauta activo"><span id="nav-avatar"></span><span id="nav-nombre"></span></div>
         <ul class="nav-lista" id="nav-lateral"></ul>
@@ -39,21 +39,20 @@
       <div class="tablero-cuerpo">
         <!-- Celular: barra superior con el astronauta, y barra inferior con las vistas principales -->
         <header class="barra-superior">
-          <a class="nav-marca" href="#hoy">ASTRA-FIT</a>
+          <a class="nav-marca" href="#inicio">ASTRA-FIT</a>
           <span class="nav-etiqueta">Datos simulados</span>
           <span class="nav-astronauta"><span id="nav-avatar-m"></span><span id="nav-nombre-m"></span></span>
           <button type="button" class="enlace nav-cambiar-m" onclick="Sesion.salir()">Cambiar</button>
         </header>
 
         <main id="contenido">
-          <?!= include('SeccionHoy'); ?>
+          <!-- Orden del panel: Perfil (resumen del astronauta y su estado de hoy), Destinos, Monitoreo, Cuerpo, Evolución, Alertas -->
+          <div id="inicio-vista"><?!= include('SeccionInicio'); ?></div>
+          <?!= include('SeccionMision'); ?>
           <?!= include('SeccionMonitoreo'); ?>
-          <?!= include('SeccionSensores'); ?>
           <?!= include('SeccionCuerpo'); ?>
           <?!= include('SeccionEvolucion'); ?>
-          <?!= include('SeccionMision'); ?>
           <?!= include('SeccionAlertas'); ?>
-          <div id="inicio-vista"><?!= include('SeccionInicio'); ?></div>
         </main>
 
         <footer class="pie">
@@ -112,25 +111,28 @@
     });
   </script>
   <script>
-    /* Tablero: se ve una vista a la vez. Escritorio: barra lateral. Celular: barra inferior (4 vistas + "Más"). */
+    /* Tablero: se ve una vista a la vez. Escritorio: barra lateral. Celular: barra inferior con las seis vistas. */
     (() => {
       const I = (d) => '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
       const VISTAS = [
-        { id: 'hoy', t: 'Hoy', i: I('<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>') },
+        { id: 'inicio', t: 'Perfil', i: I('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>') },
+        { id: 'mision', t: 'Destinos', i: I('<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/>') },
         { id: 'monitoreo', t: 'Monitoreo', i: I('<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>') },
         { id: 'cuerpo', t: 'Cuerpo', i: I('<circle cx="12" cy="5" r="3"/><path d="M6 21l2-9h8l2 9M9 12l-3-3M15 12l3-3"/>') },
-        { id: 'alertas', t: 'Alertas', i: I('<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>') },
-        { id: 'sensores', t: 'Bandas', i: I('<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/>') },
         { id: 'evolucion', t: 'Evolución', i: I('<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>') },
-        { id: 'mision', t: 'Destinos', i: I('<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/>') },
-        { id: 'inicio', t: 'Perfil', i: I('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>') }
+        { id: 'alertas', t: 'Alertas', i: I('<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>') }
       ];
-      const PRINCIPALES = ['hoy', 'monitoreo', 'cuerpo', 'alertas'];
+      // Enlaces viejos que ya no son vistas propias: "Hoy" vive dentro del Perfil y las bandas, dentro del Monitoreo
+      const ALIAS = { hoy: 'inicio', sensores: 'monitoreo' };
+      // Celular: las seis vistas caben en la barra inferior; "Más" solo aparece si alguna queda por fuera
+      const PRINCIPALES = VISTAS.map((v) => v.id);
       const $ = (id) => document.getElementById(id);
       const item = (v, clase) => '<a class="' + clase + '" href="#' + v.id + '" data-vista="' + v.id + '">' + v.i + '<span>' + v.t + '</span>' + (v.id === 'alertas' ? '<span class="nav-badge" hidden></span>' : '') + '</a>';
       $('nav-lateral').innerHTML = VISTAS.map((v) => '<li>' + item(v, 'nav-item') + '</li>').join('');
+      const extras = VISTAS.filter((v) => !PRINCIPALES.includes(v.id));
       $('nav-inferior').innerHTML = VISTAS.filter((v) => PRINCIPALES.includes(v.id)).map((v) => item(v, 'tab')).join('') +
         '<button type="button" class="tab" id="tab-mas" aria-expanded="false" aria-controls="hoja-mas">' + I('<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>') + '<span>Más</span></button>';
+      $('tab-mas').hidden = !extras.length;
       $('nav-mas').innerHTML = VISTAS.filter((v) => !PRINCIPALES.includes(v.id)).map((v) => '<li>' + item(v, 'nav-item') + '</li>').join('');
 
       const hoja = $('hoja-mas'), botonMas = $('tab-mas');
@@ -141,7 +143,8 @@
 
       let primera = true;
       function ir(id) {
-        if (!VISTAS.some((v) => v.id === id)) id = 'hoy';
+        if (ALIAS[id]) id = ALIAS[id];
+        if (!VISTAS.some((v) => v.id === id)) id = 'inicio';
         const elDe = (x) => $(x === 'inicio' ? 'inicio-vista' : x);
         VISTAS.forEach((v) => { const el = elDe(v.id); if (el) el.hidden = v.id !== id; });
         document.querySelectorAll('[data-vista]').forEach((a) => { if (a.dataset.vista === id) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
@@ -156,11 +159,11 @@
       // Los enlaces #vista cambian de vista sin depender del hash (en Apps Script la página va dentro de un iframe)
       document.addEventListener('click', (e) => {
         const a = e.target.closest('a[href^="#"]'); if (!a) return;
-        const id = a.getAttribute('href').slice(1); if (!VISTAS.some((v) => v.id === id)) return;
+        const id = a.getAttribute('href').slice(1); if (!VISTAS.some((v) => v.id === id) && !ALIAS[id]) return;
         e.preventDefault(); ir(id);
         try { history.replaceState(null, '', '#' + id); } catch (err) { /* iframe sin permiso: no pasa nada */ }
       });
-      const desdeHash = () => ir((location.hash || '#hoy').slice(1));
+      const desdeHash = () => ir((location.hash || '#inicio').slice(1));
       window.addEventListener('hashchange', desdeHash);
       document.addEventListener('astronauta-elegido', () => { primera = true; desdeHash(); contarAlertas(); });
       desdeHash();

@@ -6,6 +6,9 @@
      la luz del sensor dice si está conectado o midiendo) y, al lado, una gráfica pequeña por músculo con su puntaje
      ERDM-A en cada evaluación. Al tocar un músculo se abre el detalle: señales en vivo (EMG, RMS, aceleración y
      giroscopio), indicadores y la escala ERDM-A del músculo.
+     Al tocar un músculo en la figura (o en su etiqueta) se abre primero la guía de su banda (SeccionSensores.html):
+     qué mide y una animación de dónde ponerla; desde ahí, "Ver señales y medir" abre el detalle. Las gráficas pequeñas
+     abren el detalle directamente.
 
      "Iniciar medición" graba 10 s (6 repeticiones de la tarea del músculo). Con esa señal se calcula, como en el
      documento: RMS, frecuencia mediana (FFT), fatiga (caída de la frecuencia mediana), coordinación (coeficiente de
@@ -17,7 +20,7 @@
   <div class="contenedor contenedor--ancho">
     <div class="seccion-cabecera">
       <h2 class="titulo">Monitoreo neuromuscular.</h2>
-      <p class="subtitulo">Cada músculo lleva una banda con EMG, IMU y dinamómetro. Mira los seis de un vistazo y toca el que necesite atención.</p>
+      <p class="subtitulo">Cada músculo lleva una banda con EMG, IMU y dinamómetro. Toca un músculo para ver cómo se pone su banda, o una gráfica para ver sus señales.</p>
     </div>
 
     <div class="mon-rejilla">
@@ -58,6 +61,7 @@
             <div>
               <h3 class="titulo-tarjeta" id="mon-titulo">Cuádriceps</h3>
               <p class="pequeno texto-2" id="mon-tarea"></p>
+              <button type="button" class="enlace enlace--simple pequeno" id="mon-guia">Cómo ponerse la banda</button>
             </div>
             <div class="mon-control">
               <div class="campo mon-fase">
@@ -84,6 +88,7 @@
       <!-- ---------- Escala ERDM-A del músculo ---------- -->
       <div class="tarjeta mon-erdm" id="mon-erdm"></div>
     </div>
+    <?!= include('SeccionSensores'); ?>
     <p class="nota mon-aviso">Señales simuladas que representan el funcionamiento de los sensores EMG e IMU. ASTRA-FIT es un prototipo y no es un dispositivo médico validado. Anatomía: BodyParts3D © DBCLS (CC BY 4.0).</p>
   </div>
 </section>
@@ -101,7 +106,7 @@
      gastrocnemio y abajo sóleo (aproximación visual). Para regenerar: publicar/herramientas/render-anatomia.js.
      La vista anterior lleva los sensores del lado izquierdo de la pantalla y la posterior del derecho. */
   const BASE_IMG = (typeof API !== 'undefined' && API.modo === 'local') ? '/assets/anatomia2d/' : 'https://astra-fit-modelos.dapxco.workers.dev/assets/anatomia2d/';
-  const CX = { anterior: 250, posterior: 510 };
+  const CX = { anterior: 262, posterior: 498 };
   const IMG_H = 560, IMG_W = IMG_H * 0.64, IMG_Y = 4;                 // las imágenes son de 640 × 1000
   const ARCHIVO_VISTA = { anterior: 'front', posterior: 'back' };
   // Músculo: vista, máscara y lado de su banda (-1 izquierda / 1 derecha de la pantalla)
@@ -117,7 +122,7 @@
   const BANDAS = {"M": {"biceps": {"y": 0.297, "x0": 0.3047, "x1": 0.3578}, "antebrazo": {"y": 0.398, "x0": 0.2688, "x1": 0.3422}, "cuadriceps": {"y": 0.618, "x0": 0.3656, "x1": 0.4703}, "triceps": {"y": 0.29, "x0": 0.6391, "x1": 0.6922}, "gastrocnemio": {"y": 0.757, "x0": 0.5281, "x1": 0.5969}, "soleo": {"y": 0.867, "x0": 0.5375, "x1": 0.5812}}, "F": {"biceps": {"y": 0.3, "x0": 0.3203, "x1": 0.3625}, "antebrazo": {"y": 0.382, "x0": 0.2984, "x1": 0.3516}, "cuadriceps": {"y": 0.579, "x0": 0.3375, "x1": 0.4656}, "triceps": {"y": 0.294, "x0": 0.6344, "x1": 0.6781}, "gastrocnemio": {"y": 0.736, "x0": 0.5719, "x1": 0.6422}, "soleo": {"y": 0.849, "x0": 0.5953, "x1": 0.6453}}};
   const NOMBRE = { soleo: 'Sóleo', gastrocnemio: 'Gastrocnemio', cuadriceps: 'Cuádriceps', biceps_braquial: 'Bíceps braquial', triceps_braquial: 'Tríceps braquial', flexores_antebrazo: 'Flexores del antebrazo' };
   const ORDEN_LISTA = ['soleo', 'gastrocnemio', 'cuadriceps', 'biceps_braquial', 'triceps_braquial', 'flexores_antebrazo'];
-  const ANCLA_CHIP = { anterior: 132, posterior: 628 };   // borde de la columna de etiquetas, en unidades del SVG
+  const ANCLA_CHIP = { anterior: 146, posterior: 614 };   // borde de la columna de etiquetas, en unidades del SVG
   const COLOR_RIESGO = { verde: '#34c759', amarillo: '#ff9f0a', rojo: '#ff3b30', gris: '#c7c7cc' };
 
   const el = (tag, attrs) => { const n = document.createElementNS(NS, tag); Object.entries(attrs).forEach(([k, v]) => n.setAttribute(k, v)); return n; };
@@ -125,7 +130,10 @@
   const imgX = (vista) => CX[vista] - IMG_W / 2;
   const aX = (vista, f) => imgX(vista) + f * IMG_W, aY = (f) => IMG_Y + f * IMG_H;
   let sexoFigura = null;
-  let chipsY = {};
+  let chipsY = {};          // centro de cada etiqueta, en unidades del SVG (lo fija acomodarChips)
+  const guias = {};         // línea punteada de cada músculo hacia su etiqueta
+  const extremos = {};      // dónde está la luz del sensor de cada músculo (unidades del SVG)
+  window.FiguraMon = { BASE_IMG, BANDAS, MUSCULOS, ARCHIVO_VISTA, COLOR_RIESGO, nivel: (g) => nivelDe(g).nivel };
 
   function dibujarCuerpo(sexo) {
     const sx = String(sexo).toUpperCase() === 'F' ? 'F' : 'M', p = sx.toLowerCase();
@@ -141,13 +149,9 @@
       g.appendChild(el('text', { x: CX[vista], y: 574, 'text-anchor': 'middle', class: 'mon-vista' })).textContent = vista === 'anterior' ? 'Vista anterior' : 'Vista posterior';
       svg.appendChild(g);
     });
-    // Separa las etiquetas para que no se pisen (mínimo 90 unidades entre una y otra)
+    // Primera posición de cada etiqueta: a la altura de su banda. acomodarChips() la corrige con el tamaño real.
     chipsY = {};
-    ['anterior', 'posterior'].forEach((vista) => {
-      const lista = Object.entries(MUSCULOS).filter(([, m]) => m.vista === vista).map(([g]) => [g, aY(BANDAS[sx][MUSCULOS[g].mascara].y)]).sort((x, y) => x[1] - y[1]);
-      let ultimo = -Infinity;
-      lista.forEach(([g, y]) => { const yy = Math.max(y, ultimo + 90); chipsY[g] = Math.min(yy, 532); ultimo = yy; });
-    });
+    Object.entries(MUSCULOS).forEach(([g, m]) => { chipsY[g] = aY(BANDAS[sx][m.mascara].y); });
     Object.entries(MUSCULOS).forEach(([grupo, m]) => {
       const vista = m.vista, b = BANDAS[sx][m.mascara];
       const g = el('g', { class: 'mon-musculo', 'data-grupo': grupo });
@@ -165,19 +169,55 @@
       const xa = aX(vista, b.x0) - 3, xb = aX(vista, b.x1) + 3;
       g.appendChild(linea(xa, yb, xb, yb, 7, '#1d1d1f', { class: 'mon-banda' }));
       const ext = m.lado < 0 ? [xa, yb] : [xb, yb];
-      const ancla = ANCLA_CHIP[vista], cy = chipsY[grupo];
-      g.appendChild(el('path', { d: `M${ext[0]} ${ext[1]} L${ancla + (m.lado === -1 ? 14 : -14)} ${cy} L${ancla} ${cy}`, class: 'mon-guia', fill: 'none' }));
+      extremos[grupo] = ext;
+      guias[grupo] = g.appendChild(el('path', { d: '', class: 'mon-guia', fill: 'none' }));
       g.appendChild(el('circle', { cx: ext[0], cy: ext[1], r: 4.5, class: 'mon-led-pulso' }));
       g.appendChild(el('circle', { cx: ext[0], cy: ext[1], r: 4.5, class: 'mon-led' }));
-      g.addEventListener('click', () => elegir(grupo));
+      g.addEventListener('click', () => tocar(grupo));
       svg.appendChild(g);
     });
     // Etiquetas (HTML encima del SVG, para que el texto se lea nítido)
     $('mon-chips').innerHTML = Object.entries(MUSCULOS).map(([grupo, m]) =>
-      `<button type="button" class="mon-chip mon-chip--${m.vista}" data-grupo="${grupo}" style="top:${(chipsY[grupo] / 580 * 100).toFixed(2)}%">
+      `<button type="button" class="mon-chip mon-chip--${m.vista}" data-grupo="${grupo}" aria-label="${esc(NOMBRE[grupo])}: cómo ponerse la banda">
          <span class="mon-chip-nombre">${esc(NOMBRE[grupo])}</span><span class="mon-chip-estado"></span></button>`).join('');
+    acomodarChips();
   }
-  $('mon-chips').addEventListener('click', (e) => { const b = e.target.closest('[data-grupo]'); if (b) elegir(b.dataset.grupo); });
+  $('mon-chips').addEventListener('click', (e) => { const b = e.target.closest('[data-grupo]'); if (b) tocar(b.dataset.grupo); });
+
+  /* Etiquetas sin encimarse: se miden en píxeles (el texto puede ocupar una, dos o tres líneas según el ancho) y,
+     en cada columna, cada una baja lo justo para quedar debajo de la anterior con 8 px de aire. Si la última se sale
+     por abajo, la columna se corre hacia arriba. Después se redibuja la línea de cada banda hasta su etiqueta. */
+  const AIRE = 8;
+  function acomodarChips() {
+    const caja = $('mon-cuerpo'), H = caja.clientHeight;
+    if (!H || !sexoFigura) return;
+    const k = H / 580;   // píxeles por unidad del SVG
+    ['anterior', 'posterior'].forEach((vista) => {
+      const chips = Object.entries(MUSCULOS).filter(([, m]) => m.vista === vista)
+        .map(([g, m]) => ({ g, n: document.querySelector(`.mon-chip[data-grupo="${g}"]`), y: aY(BANDAS[sexoFigura][m.mascara].y) * k }))
+        .sort((p, q) => p.y - q.y);
+      chips.forEach((c) => { c.h = c.n.offsetHeight; });
+      let abajo = -Infinity;
+      chips.forEach((c) => { c.top = Math.max(c.y - c.h / 2, abajo + AIRE, 0); abajo = c.top + c.h; });
+      const limite = H - 30 * k;          // deja libre el rótulo "Vista anterior / posterior"
+      if (abajo > limite) {
+        let tope = limite;
+        for (let i = chips.length - 1; i >= 0; i--) { const c = chips[i]; c.top = Math.min(c.top, tope - c.h); tope = c.top - AIRE; }
+      }
+      chips.forEach((c) => { c.n.style.top = c.top + 'px'; chipsY[c.g] = (c.top + c.h / 2) / k; });
+    });
+    Object.entries(MUSCULOS).forEach(([g, m]) => {
+      const [ex, ey] = extremos[g], ancla = ANCLA_CHIP[m.vista], cy = chipsY[g];
+      const codo = ancla + (m.lado === -1 ? 14 : -14);
+      guias[g].setAttribute('d', `M${ex} ${ey} L${codo} ${cy} L${ancla} ${cy}`);
+    });
+  }
+  if (window.ResizeObserver) new ResizeObserver(() => acomodarChips()).observe($('mon-cuerpo'));
+
+  /* Tocar un músculo en la figura o en la lista: guía de su banda (si está) y, si no, el detalle. */
+  function tocar(g) {
+    if (window.GuiaBanda && !midiendo) window.GuiaBanda.abrir(g); else elegir(g);
+  }
 
   /* ======================================================== ESTADO */
   let grupo = 'cuadriceps';
@@ -212,13 +252,15 @@
         ? '<span class="estado estado--azul">Midiendo</span>'
         : `<span class="estado estado--${n.nivel}">${n.riesgo ? CORTO[n.riesgo] : 'Sin evaluar'}</span>`;
     });
+    acomodarChips();
     $('mon-lista').innerHTML = ORDEN_LISTA.map((g) => {
       const n = nivelDe(g);
       return `<li><button type="button" data-grupo="${g}" aria-pressed="${abierto && g === grupo}">
         <span>${esc(Erdm.etiqueta(g))}</span><span class="estado estado--${n.nivel}">${n.riesgo ? TEXTO_RIESGO[n.riesgo] : 'Sin evaluar'}</span></button></li>`;
     }).join('');
   }
-  $('mon-lista').addEventListener('click', (e) => { const b = e.target.closest('[data-grupo]'); if (b) elegir(b.dataset.grupo); });
+  $('mon-lista').addEventListener('click', (e) => { const b = e.target.closest('[data-grupo]'); if (b) tocar(b.dataset.grupo); });
+  $('mon-guia').addEventListener('click', () => { if (window.GuiaBanda) window.GuiaBanda.abrir(grupo); });
 
   function elegir(g) {
     if (midiendo) { UI.aviso('Espera a que termine la medición en curso.', 'advertencia'); return; }
@@ -230,6 +272,7 @@
     const quietoYa = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     $('mon-detalle').scrollIntoView({ behavior: quietoYa ? 'auto' : 'smooth', block: 'start' });
   }
+  window.Monitoreo = { elegir };
   function cerrar() {
     if (midiendo) { UI.aviso('Espera a que termine la medición en curso.', 'advertencia'); return; }
     abierto = false;

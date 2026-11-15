@@ -440,7 +440,7 @@ a { color: var(--azul-enlace); }
 .estado--azul::before { background: var(--azul); }
 @media (prefers-reduced-motion: no-preference) { .estado--azul::before { animation: parpadeo 1.2s ease-in-out infinite; } }
 @keyframes parpadeo { 50% { opacity: .25; } }
-.mon-rejilla { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: var(--e-5); align-items: start; }
+.mon-rejilla { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: var(--e-5); align-items: start; }
 .mon-tarjeta-cuerpo { display: grid; gap: var(--e-4); padding: var(--e-5); }
 .mon-cuerpo { position: relative; aspect-ratio: 760 / 580; }
 .mon-cuerpo svg { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -461,12 +461,12 @@ a { color: var(--azul-enlace); }
 .mon-musculo.esta-midiendo .mon-led { fill: var(--azul); }
 .mon-musculo.esta-midiendo .mon-led-pulso { stroke: var(--azul); }
 @media (prefers-reduced-motion: no-preference) { .mon-musculo.esta-midiendo .mon-led-pulso { animation: pulso 1.2s ease-out infinite; } }
-.mon-chip { position: absolute; width: 18.5%; transform: translateY(-50%); display: grid; gap: 1px; padding: 6px 9px; border: 1px solid var(--linea); border-radius: 12px; background: var(--blanco); text-align: left; font: inherit; color: var(--tinta); cursor: pointer; transition: border-color .2s, box-shadow .2s; }
+.mon-chip { position: absolute; top: 0; width: 19.2%; display: grid; gap: 1px; padding: 6px 8px; border: 1px solid var(--linea); border-radius: 12px; background: var(--blanco); text-align: left; font: inherit; color: var(--tinta); cursor: pointer; transition: border-color .2s, box-shadow .2s; }
 .mon-chip--anterior { left: 0; }
 .mon-chip--posterior { right: 0; }
 .mon-chip:hover { border-color: #aeaeb2; }
 .mon-chip[aria-pressed="true"] { border-color: var(--azul); box-shadow: 0 0 0 3px rgba(0, 113, 227, .15); }
-.mon-chip-nombre { font-size: .8125rem; font-weight: 600; line-height: 1.2; }
+.mon-chip-nombre { font-size: .75rem; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
 .mon-chip .estado { font-size: .6875rem; gap: 5px; }
 .mon-chip .estado::before { width: 7px; height: 7px; }
 .mon-leyenda { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--e-2) var(--e-5); }
@@ -552,6 +552,10 @@ a { color: var(--azul-enlace); }
 @media (max-width: 1100px) { .mon-rejilla { grid-template-columns: 1fr; } .mon-tarjeta-cuerpo { max-width: 760px; width: 100%; justify-self: center; } }
 @media (max-width: 760px) {
   .mon-chip, .mon-guia { display: none; }
+  /* Sin etiquetas sobre la figura: los seis músculos van debajo, para tocar y abrir la guía de su banda */
+  .mon-lista { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--e-2); }
+  .mon-lista button, .mon-lista li:first-child button { min-height: 52px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; padding: var(--e-2) var(--e-3); border: 1px solid var(--linea); border-radius: 14px; font-size: var(--t-pequeno); font-weight: 600; }
+  .mon-lista .estado { font-size: .6875rem; font-weight: 500; }
   .mon-minis { grid-template-columns: 1fr; }
   .mon-graficas { grid-template-columns: 1fr; }
   .mon-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -699,7 +703,9 @@ details.tarjeta > summary { min-height: 44px; display: flex; align-items: center
 .tablero .contenedor--ancho { width: min(1280px, 100% - 48px); }
 /* Vista "Hoy" */
 .hoy-cabecera { display: flex; flex-wrap: wrap; gap: var(--e-4); align-items: end; justify-content: space-between; }
-.hoy-cabecera .titulo { font-size: clamp(2rem, 4vw, 3rem); }
+.hoy-titulo { font-size: clamp(1.5rem, 2.4vw, 2rem); }
+.tablero .seccion.hoy { padding-bottom: var(--e-6); }
+.tablero .hoy + .seccion { padding-top: 0; }
 .hoy-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--e-4); }
 .hoy-cifra { font-size: clamp(1.75rem, 3vw, 2.5rem); }
 .hoy-kpi[data-nivel="rojo"] .hoy-cifra { color: var(--rojo-texto); } .hoy-kpi[data-nivel="amarillo"] .hoy-cifra { color: var(--amarillo-texto); } .hoy-kpi[data-nivel="verde"] .hoy-cifra { color: var(--verde-texto); }
@@ -712,9 +718,6 @@ details.tarjeta > summary { min-height: 44px; display: flex; align-items: center
 .hoy-alerta { display: grid; gap: 4px; padding: var(--e-3) var(--e-4); border-radius: 14px; background: var(--fondo); border-left: 4px solid var(--amarillo); }
 .hoy-alerta[data-nivel="rojo"] { border-left-color: var(--rojo); }
 .hoy-plan { display: grid; gap: 2px; padding-top: var(--e-3); border-top: 1px solid var(--linea-suave); }
-.hoy-atajos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--e-4); }
-.hoy-atajo { display: grid; gap: 4px; padding: var(--e-5); border-radius: 20px; background: var(--blanco); color: inherit; text-decoration: none; min-height: 96px; }
-.hoy-atajo:hover { box-shadow: 0 2px 14px rgba(0, 0, 0, .08); }
 .nota--centro { text-align: center; }
 
 @media (max-width: 899px) {
@@ -730,6 +733,7 @@ details.tarjeta > summary { min-height: 44px; display: flex; align-items: center
   .tab { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; background: transparent; color: var(--tinta-2); text-decoration: none; font-size: var(--t-nota); font-weight: 500; cursor: pointer; }
   .tab span:not(.nav-badge) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tab[data-activa] { color: var(--azul-enlace); }
+  .tab[hidden] { display: none; }
   .tab .nav-badge { position: absolute; top: 4px; left: 54%; margin: 0; min-width: 18px; padding: 0 5px; font-size: 11px; }
   .hoja-mas { position: fixed; left: var(--e-3); right: var(--e-3); bottom: calc(72px + env(safe-area-inset-bottom)); z-index: 60; padding: var(--e-2); background: var(--blanco); border-radius: 18px; box-shadow: 0 8px 32px rgba(0, 0, 0, .22); }
   .hoja-mas[hidden] { display: none; }
@@ -739,7 +743,75 @@ details.tarjeta > summary { min-height: 44px; display: flex; align-items: center
   .hoy-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hoy-rejilla { grid-template-columns: minmax(0, 1fr); }
   .hoy-musculos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .hoy-atajos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .hoy-cabecera .acciones .boton { min-height: 44px; }
+}
+
+/* ================================================================ GUÍA DE LA BANDA (SeccionSensores.html, dentro del Monitoreo) */
+.guia { width: min(920px, 100% - 32px); overflow-y: auto; }
+.guia-hoja { display: grid; gap: var(--e-6); padding: clamp(20px, 3.5vw, 36px); }
+.guia-cabecera { display: flex; justify-content: space-between; align-items: start; gap: var(--e-4); }
+.guia-titulos { display: grid; gap: 6px; }
+.guia-estado { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e-3); }
+.guia-cerrar { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 50%; background: var(--fondo); color: var(--tinta-2); cursor: pointer; }
+.guia-cerrar:hover { background: #e8e8ed; color: var(--tinta); }
+.guia-cuerpo { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: var(--e-6); align-items: start; }
+.guia-figura { margin: 0; display: grid; gap: var(--e-2); }
+.guia-figura svg { width: 100%; aspect-ratio: 290 / 348; border-radius: 20px; background: var(--fondo); }
+.guia-leyenda { font-size: var(--t-pequeno); font-weight: 600; min-height: 1.4em; }
+.guia-controles { display: flex; justify-content: space-between; align-items: baseline; gap: var(--e-3); }
+.guia-pasos { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.guia-pasos button { width: 100%; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: var(--e-3); align-items: start; padding: var(--e-3); border: 0; border-radius: 14px; background: none; font: inherit; color: var(--tinta); text-align: left; cursor: pointer; transition: background .2s; }
+.guia-pasos button > span:last-child { display: grid; gap: 2px; }
+.guia-pasos button:hover { background: var(--fondo); }
+.guia-pasos li[aria-current] button { background: var(--fondo); }
+.guia-num { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--fondo); color: var(--tinta-2); font-size: var(--t-nota); font-weight: 600; transition: background .25s, color .25s; }
+.guia-pasos li[aria-current] .guia-num { background: var(--azul); color: #fff; }
+.guia-pasos li.es-hecho .guia-num { background: var(--verde-fondo); color: var(--verde-texto); }
+.guia-subtitulo { font-size: 1.1875rem; }
+.guia-funciona { display: grid; gap: var(--e-3); padding-top: var(--e-5); border-top: 1px solid var(--linea-suave); }
+.guia-mide { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--e-4); }
+.guia-mide-item { display: grid; gap: 4px; align-content: start; }
+.guia-pie { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--e-4); }
+.guia-pie .nota { max-width: 46ch; }
+
+/* Dibujo: cada elemento aparece en su paso (data-paso del svg) */
+.guia-fondo { fill: var(--fondo); }
+.guia-musculo { opacity: .6; }
+.guia-piel { fill: rgba(0, 113, 227, .12); stroke: var(--azul); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0; transition: opacity .4s; }
+.guia-linea { stroke: var(--tinta); stroke-width: .9; stroke-dasharray: 3 3; opacity: 0; transition: opacity .4s; }
+.guia-cruz { stroke: var(--rojo); stroke-width: 1.6; stroke-linecap: round; fill: none; opacity: 0; transition: opacity .4s; }
+.guia-electrodo { fill: #d4a017; stroke: #fff; stroke-width: .9; opacity: 0; transform-box: fill-box; transform-origin: center; transform: scale(.2); transition: opacity .35s, transform .35s cubic-bezier(.2, .8, .2, 1.4); }
+.guia-electrodo--encima { fill: none; stroke: #f5c542; stroke-width: .9; }
+.guia-banda { opacity: 0; transform: translateX(var(--desde)); transition: opacity .5s, transform .7s cubic-bezier(.2, .8, .2, 1); }
+.guia-tela { fill: rgba(29, 29, 31, .78); }
+.guia-modulo { fill: #2c2c2e; stroke: #48484a; stroke-width: .8; }
+.guia-luz { fill: #636366; transition: fill .3s; }
+.guia-luz-pulso { fill: none; stroke: var(--verde); stroke-width: 1.2; opacity: 0; transform-box: fill-box; transform-origin: center; }
+[data-paso="1"] .guia-piel, [data-paso="2"] .guia-piel { opacity: 1; }
+[data-paso="2"] .guia-linea, [data-paso="3"] .guia-linea { opacity: 1; }
+[data-paso="2"] .guia-cruz { opacity: 1; }
+[data-paso="3"] .guia-electrodo:not(.guia-electrodo--encima), [data-paso="4"] .guia-electrodo:not(.guia-electrodo--encima), [data-paso="5"] .guia-electrodo:not(.guia-electrodo--encima) { opacity: 1; transform: scale(1); }
+[data-paso="4"] .guia-electrodo--encima, [data-paso="5"] .guia-electrodo--encima { opacity: 1; transform: scale(1); }
+[data-paso="4"] .guia-banda, [data-paso="5"] .guia-banda { opacity: 1; transform: none; }
+[data-paso="5"] .guia-luz { fill: var(--verde); }
+@media (prefers-reduced-motion: no-preference) {
+  [data-paso="1"] .guia-piel { animation: guia-limpiar 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  [data-paso="5"] .guia-luz { animation: guia-calibrar 3.2s steps(1) forwards; }
+  [data-paso="5"] .guia-luz-pulso { animation: pulso 1.4s ease-out 1.6s infinite; }
+}
+@keyframes guia-limpiar { 0%, 100% { transform: scale(.85); } 50% { transform: scale(1.08); } }
+@keyframes guia-calibrar { 0% { fill: var(--azul); } 15% { fill: #636366; } 30% { fill: var(--azul); } 45% { fill: #636366; } 50%, 100% { fill: var(--verde); } }
+@media (prefers-reduced-motion: reduce) {
+  .guia-piel, .guia-linea, .guia-cruz, .guia-electrodo, .guia-banda { transition: none; }
+}
+
+.mon-bandas-info { margin-top: var(--e-6); }
+.mon-bandas-info > summary { cursor: pointer; }
+
+@media (max-width: 760px) {
+  .guia { width: 100%; max-width: 100%; max-height: 92vh; margin: auto auto 0; border-radius: 24px 24px 0 0; }
+  .guia-cuerpo { grid-template-columns: minmax(0, 1fr); }
+  .guia-figura { max-width: 300px; justify-self: center; width: 100%; }
+  .guia-mide { grid-template-columns: minmax(0, 1fr); }
+  .guia-pie .boton { width: 100%; min-height: 44px; }
 }
 </style>
