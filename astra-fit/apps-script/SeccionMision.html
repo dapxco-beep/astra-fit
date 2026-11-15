@@ -409,7 +409,17 @@ const B = {
     motor.alCambiarGiro((on) => { const b = $('mision-girar'); b.setAttribute('aria-pressed', String(on)); b.textContent = on ? 'Detener giro' : 'Girar'; });
     $('mision-carga').hidden = true;
   }
-  document.addEventListener('astronauta-elegido', (e) => { astronauta = e.detail; elegido = true; dibujarInfo(); if (motor) motor.ponerAstronauta(astronauta); iniciar(); });
+  // Entorno del astronauta -> destino que se abre primero, marcado como "(actual)"
+  const POR_ENTORNO = { orbita: 'iss', luna: 'moon', marte: 'mars' };
+  function marcarDestinos() {
+    document.querySelectorAll('#ctl-mision-escenario button').forEach((b) => {
+      if (!b.dataset.base) b.dataset.base = b.textContent;
+      b.textContent = b.dataset.base + (astronauta && POR_ENTORNO[astronauta.entorno] === b.dataset.valor ? ' (actual)' : '');
+      b.setAttribute('aria-pressed', String(b.dataset.valor === escenario));
+    });
+  }
+  document.addEventListener('astronauta-elegido', (e) => { astronauta = e.detail; elegido = true;
+    escenario = POR_ENTORNO[astronauta.entorno] || 'iss'; marcarDestinos(); if (motor) motor.escenario(escenario); dibujarInfo(); if (motor) motor.ponerAstronauta(astronauta); iniciar(); });
   // Si se edita el perfil (estatura o avatar), la figura se ajusta sin recargar
   document.addEventListener('astronauta-actualizado', (e) => {
     if (astronauta && e.detail.id_astronauta === astronauta.id_astronauta) { astronauta = e.detail; dibujarInfo(); if (motor) motor.ponerAstronauta(astronauta); }

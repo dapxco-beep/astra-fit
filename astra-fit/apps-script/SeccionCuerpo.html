@@ -20,6 +20,8 @@
       <p class="subtitulo">El color de cada zona muestra su estado frente a la evaluación basal.</p>
     </div>
 
+    <article class="tarjeta cuerpo-hacer" id="cuerpo-hacer" aria-live="polite" hidden></article>
+
     <div class="cuerpo-rejilla">
       <div class="visor" id="visor-cuerpo">
         <canvas id="cuerpo-lienzo" aria-label="Cuerpo del astronauta en 3D. Arrastra para girar." role="img"></canvas>
@@ -137,11 +139,28 @@
      ============================================================ */
   let grupoActivo = null;
 
+  // El músculo con más riesgo en la escala ERDM-A (el que abre el panel)
+  const ORDEN_RIESGO = { bajo: 0, moderado: 1, alto: 2 };
+  function peorGrupo(a, grupos) {
+    let mejor = null, max = -1;
+    grupos.forEach((g) => { const u = Erdm.ultima(a.id_astronauta, g.valor); if (!u) return; const k = ORDEN_RIESGO[u.riesgo] * 100 + Number(u.puntaje_erdm); if (k > max) { max = k; mejor = g.valor; } });
+    return mejor;
+  }
+  // "Qué hacer": ejercicio y dosis del plan del músculo elegido (pestaña PlanFortalecimiento), arriba del visor
+  function dibujarHacer() {
+    const a = Sesion.astronauta, caja = $('cuerpo-hacer');
+    if (!a || !grupoActivo) { caja.hidden = true; return; }
+    const u = Erdm.ultima(a.id_astronauta, grupoActivo), nombre = UI.esc(etiquetaGrupo(grupoActivo));
+    caja.hidden = false;
+    if (!u) { caja.innerHTML = '<div><p class="nota">Qué hacer · ' + nombre + '</p><h3 class="titulo-tarjeta">Todavía sin evaluar</h3><p class="texto-2">Haz primero la evaluación basal en el monitoreo.</p></div><a class="boton" href="#monitoreo">Ir al monitoreo</a>'; return; }
+    const p = Erdm.plan(grupoActivo, u.fase === 'basal' ? 'bajo' : u.riesgo);
+    caja.innerHTML = '<div><p class="nota">Qué hacer · ' + nombre + '</p><h3 class="titulo-tarjeta">' + (p ? UI.esc(p.ejercicio) : 'Sin plan definido para este músculo') + '</h3>' + (p ? '<p class="texto-2">' + UI.esc(p.dosificacion) + '</p>' : '') + '</div><a class="boton boton--secundario" href="#alertas">Ver las alertas</a>';
+  }
   function dibujarPanel() {
     const a = Sesion.astronauta;
     if (!a) return;
     const grupos = gruposCatalogo();
-    if (!grupoActivo || !grupos.some((g) => g.valor === grupoActivo)) grupoActivo = grupos[0] && grupos[0].valor;
+    if (!grupoActivo || !grupos.some((g) => g.valor === grupoActivo)) grupoActivo = peorGrupo(a, grupos) || (grupos[0] && grupos[0].valor);
     $('cuerpo-grupos').innerHTML = grupos.map((g) => {
       const n = NOMBRE_NIVEL[nivelGrupo(a.id_astronauta, g.valor)];
       const texto = { verde: 'Estable', amarillo: 'Vigilar', rojo: 'Atender' }[n];
@@ -149,7 +168,7 @@
         <button type="button" data-grupo="${UI.esc(g.valor)}"><span class="texto">${UI.esc(g.etiqueta)}</span>
         <span class="estado estado--${n}">${texto}</span></button></li>`;
     }).join('');
-    dibujarDetalle();
+    dibujarDetalle(); dibujarHacer();
   }
 
   function dibujarDetalle() {

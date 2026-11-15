@@ -72,7 +72,7 @@ const Sesion = { datos: null, astronauta: null };
     API.obtenerDatos()
       .then((datos) => { Sesion.datos = datos; dibujarPerfiles(); })
       .catch(() => {
-        $('perfiles').innerHTML = '<div class="pila" style="grid-column:1/-1; justify-items:center"><p class="texto-2">No pudimos cargar la tripulación. Revisa tu conexión e inténtalo de nuevo.</p><button type="button" class="boton" id="reintentar-carga">Reintentar</button></div>';
+        $('perfiles').innerHTML = '<div class="pila" style="grid-column:1/-1; justify-items:center"><p class="texto" role="alert" style="color: var(--rojo-texto)">No pudimos cargar la tripulación. Revisa tu conexión e inténtalo de nuevo.</p><button type="button" class="boton" id="reintentar-carga">Reintentar</button></div>';
         $('reintentar-carga').addEventListener('click', () => { $('perfiles').innerHTML = '<p class="texto-2" style="grid-column:1/-1">Cargando…</p>'; cargar(); });
         UI.aviso('Sin conexión con la base de datos. Tus datos no se perdieron.', 'error');
       });
