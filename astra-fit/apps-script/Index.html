@@ -41,7 +41,7 @@
         <header class="barra-superior">
           <a class="nav-marca" href="#inicio">ASTRA-FIT</a>
           <span class="nav-etiqueta">Datos simulados</span>
-          <span class="nav-astronauta"><span id="nav-avatar-m"></span><span id="nav-nombre-m"></span></span>
+          <a class="nav-astronauta" href="#inicio" aria-label="Mi perfil"><span id="nav-avatar-m"></span><span id="nav-nombre-m"></span></a>
           <button type="button" class="enlace nav-cambiar-m" onclick="Sesion.salir()">Cambiar</button>
         </header>
 
@@ -58,6 +58,7 @@
         <footer class="pie">
           <div class="contenedor">
             Prototipo de Sinergia Cósmica para NASA Space Apps Challenge 2026, con datos simulados. Las alertas son indicadores de seguimiento, no diagnósticos médicos.
+            <span class="nota" id="version-app" data-version="{{VERSION}}"></span>
           </div>
         </footer>
       </div>
@@ -135,6 +136,7 @@
       $('tab-mas').hidden = !extras.length;
       $('nav-mas').innerHTML = VISTAS.filter((v) => !PRINCIPALES.includes(v.id)).map((v) => '<li>' + item(v, 'nav-item') + '</li>').join('');
 
+      const ver = $('version-app'); if (ver) ver.textContent = ver.dataset.version && !ver.dataset.version.includes('{{') ? ' Versión ' + ver.dataset.version + '.' : '';
       const hoja = $('hoja-mas'), botonMas = $('tab-mas');
       const cerrarHoja = () => { hoja.hidden = true; botonMas.setAttribute('aria-expanded', 'false'); };
       botonMas.addEventListener('click', () => { hoja.hidden = !hoja.hidden; botonMas.setAttribute('aria-expanded', String(!hoja.hidden)); });
@@ -153,7 +155,10 @@
         window.scrollTo(0, 0);
         // Los lienzos y visores miden su tamaño al mostrarse
         requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
-        if (!primera) { const t = elDe(id).querySelector('h1, h2'); if (t) { t.setAttribute('tabindex', '-1'); t.focus({ preventScroll: true }); } }
+        // Cada vista tiene un título de nivel 1: las que solo traen h2 reciben uno visible solo para lectores de pantalla
+        const vista = elDe(id);
+        if (vista && !vista.querySelector('h1')) { const h1 = document.createElement('h1'); h1.className = 'solo-lector'; h1.textContent = VISTAS.find((x) => x.id === id).t; vista.prepend(h1); }
+        if (!primera) { const t = elDe(id).querySelector('h2, h1'); if (t) { t.setAttribute('tabindex', '-1'); t.focus({ preventScroll: true }); } }
         primera = false;
       }
       // Los enlaces #vista cambian de vista sin depender del hash (en Apps Script la página va dentro de un iframe)

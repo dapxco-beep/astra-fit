@@ -125,7 +125,7 @@
     $('resumen-registrado').textContent = a.registrado_en ? `Registrado el ${Calc.fechaCorta(a.registrado_en)}` : '';
     $('resumen-datos').innerHTML = [
       fila('Sexo', a.sexo === 'F' ? 'Femenino' : a.sexo === 'M' ? 'Masculino' : '—'),
-      fila('Edad', a.edad ? `${a.edad} años` : '—'),
+      fila('Edad', a.edad ? `${esc(a.edad)} años` : '—'),
       fila('Talla', a.talla_cm ? `${Calc.numero(a.talla_cm, 0)} cm` : '—', `Actualizada ${Calc.relativo(a.talla_actualizada_en || a.registrado_en).toLowerCase()}`),
       fila('Peso', `${Calc.decimal(peso.valor)} kg`, `${peso.fuente === 'seguimiento' ? 'Seguimiento diario' : 'Perfil'}, ${Calc.relativo(peso.fecha).toLowerCase()}`),
       fila('Mano dominante', a.mano_dominante === 'izquierda' ? 'Izquierda' : 'Derecha'),

@@ -69,6 +69,23 @@ function ahora() {
   return p.replace('T', ' ');
 }
 const mayorNumero = (filas, campo) => Math.max(0, ...filas.map((f) => parseInt(String(f[campo]).replace(/\D/g, ''), 10) || 0));
+/* ---- Validación (demo pública: cualquiera con el enlace puede escribir, así que se limita qué y cuánto) ---- */
+const CAMPOS_PERFIL = { nombre: 60, rol: 60, entorno: 20, fecha_inicio_mision: 10, sexo: 1, mano_dominante: 10, avatar: 40, emoji: 30, activo: 2, escenario: 20 };
+const RANGOS_PERFIL = { edad: [21, 70], peso_kg: [40, 150], talla_cm: [140, 210] };   // los mismos del formulario de perfil
+const ESTADOS_ALERTA = ['abierta', 'en_seguimiento', 'atendida'];
+const TOPES = { Astronautas: 50, Seguimiento: 3000, Alertas: 1500, Evaluaciones: 3000, Monitoreo: 3000, Intervenciones: 500 };
+function limpiarPerfil(obj) {
+  const salida = {};
+  for (const [k, max] of Object.entries(CAMPOS_PERFIL)) if (obj[k] !== undefined && obj[k] !== null) salida[k] = String(obj[k]).slice(0, max);
+  for (const [k, [min, max]] of Object.entries(RANGOS_PERFIL)) {
+    if (obj[k] === undefined) continue;
+    const n = Number(obj[k]);
+    if (!(n >= min && n <= max)) throw new Error(k + ' debe estar entre ' + min + ' y ' + max);
+    salida[k] = n;
+  }
+  return salida;
+}
+function hayEspacio(bd, tabla) { if ((bd[tabla] || []).length >= TOPES[tabla]) throw new Error('La demostración está llena (' + tabla + '). Avisa al equipo.'); }
 const objeto = (v, nombre) => { if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error('Falta ' + nombre); return v; };
 
 /* Igual que guardarOActualizar_ de Code.gs: si la fila existe cambia los campos enviados, si no la agrega */
@@ -86,7 +103,10 @@ const funciones = {
 
   async guardarAstronauta(env, astronauta) {
     objeto(astronauta, 'el astronauta');
+    astronauta = limpiarPerfil(astronauta);
+    if (!astronauta.nombre) throw new Error('Falta el nombre');
     const bd = await leerBD(env), t = ahora();
+    hayEspacio(bd, 'Astronautas');
     astronauta.id_astronauta = 'AST-' + String(mayorNumero(bd.Astronautas, 'id_astronauta') + 1).padStart(3, '0');
     astronauta.activo = astronauta.activo || 'SI';
     Object.assign(astronauta, { registrado_en: t, actualizado_en: t, peso_actualizado_en: t, talla_actualizada_en: t });
@@ -97,6 +117,7 @@ const funciones = {
 
   async actualizarAstronauta(env, idAstronauta, cambios) {
     objeto(cambios, 'los cambios');
+    cambios = limpiarPerfil(cambios);
     const bd = await leerBD(env), a = bd.Astronautas.find((x) => x.id_astronauta === idAstronauta);
     if (!a) throw new Error('No existe el astronauta ' + idAstronauta);
     const t = ahora();
@@ -111,6 +132,7 @@ const funciones = {
   async guardarAlertas(env, lista) {
     if (!Array.isArray(lista) || lista.length > MAX_ALERTAS) throw new Error('Lista de alertas no válida');
     const bd = await leerBD(env);
+    if (bd.Alertas.length + lista.length > TOPES.Alertas) throw new Error('La demostración está llena (Alertas). Avisa al equipo.');
     let mayor = mayorNumero(bd.Alertas, 'id_alerta');
     const guardadas = lista.map((a) => { mayor += 1; a.id_alerta = 'ALR-' + String(mayor).padStart(4, '0'); bd.Alertas.push(objeto(a, 'la alerta')); return a; });
     await escribirBD(env, bd);
@@ -120,6 +142,7 @@ const funciones = {
   async guardarSeguimiento(env, registro) {
     objeto(registro, 'el registro');
     const bd = await leerBD(env);
+    hayEspacio(bd, 'Seguimiento');
     registro.registrado_en = ahora();
     bd.Seguimiento.push(registro);
     await escribirBD(env, bd);
@@ -130,6 +153,7 @@ const funciones = {
     if (!Array.isArray(filas) || filas.length > MAX_FILAS) throw new Error('Filas de evaluación no válidas');
     filas.forEach((f) => { objeto(f, 'la evaluación'); if (!f.id_evaluacion) throw new Error('Falta id_evaluacion'); });
     const bd = await leerBD(env), t = ahora();
+    hayEspacio(bd, 'Evaluaciones');
     const guardadas = filas.map((f) => guardarOActualizar(bd, 'Evaluaciones', 'id_evaluacion', { ...f, actualizado_en: t }, t));
     await escribirBD(env, bd);
     return { ok: true, evaluaciones: guardadas };
@@ -139,6 +163,7 @@ const funciones = {
     objeto(medicion, 'la medición'); objeto(evaluacion, 'la evaluación');
     if (!evaluacion.id_evaluacion) throw new Error('Falta id_evaluacion');
     const bd = await leerBD(env), t = ahora();
+    hayEspacio(bd, 'Monitoreo');
     medicion.registrado_en = t;
     (bd.Monitoreo = bd.Monitoreo || []).push(medicion);
     const fila = guardarOActualizar(bd, 'Evaluaciones', 'id_evaluacion', { ...evaluacion, actualizado_en: t }, t);
@@ -150,7 +175,10 @@ const funciones = {
     objeto(cambios, 'los cambios');
     const bd = await leerBD(env), alerta = bd.Alertas.find((a) => a.id_alerta === idAlerta);
     if (!alerta) throw new Error('No existe la alerta ' + idAlerta);
-    Object.assign(alerta, cambios);
+    // Solo se puede cambiar el estado y quién la atendió y por qué
+    if ('estado' in cambios) { if (!ESTADOS_ALERTA.includes(cambios.estado)) throw new Error('Estado de alerta no válido'); alerta.estado = cambios.estado; }
+    if ('atendida_por' in cambios) alerta.atendida_por = String(cambios.atendida_por || '').slice(0, 60);
+    if ('nota_cierre' in cambios) alerta.nota_cierre = String(cambios.nota_cierre || '').slice(0, 300);
     await escribirBD(env, bd);
     return { ok: true };
   }
@@ -164,6 +192,11 @@ export default {
     const url = new URL(request.url);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);       // por si algún día se llama sin run_worker_first
     if (request.method !== 'POST') return responder({ error: 'Usa POST' }, 405);
+
+    // Solo se aceptan peticiones de la propia página: JSON y, si el navegador manda Origin, del mismo origen
+    if (!(request.headers.get('Content-Type') || '').toLowerCase().startsWith('application/json')) return responder({ error: 'Se esperaba application/json' }, 415);
+    const origen = request.headers.get('Origin');
+    if (origen && origen !== url.origin) return responder({ error: 'Origen no permitido' }, 403);
 
     const nombre = decodeURIComponent(url.pathname.slice(5));
     if (!Object.prototype.hasOwnProperty.call(funciones, nombre)) return responder({ error: 'Función no encontrada: ' + nombre }, 404);

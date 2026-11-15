@@ -1,0 +1,15 @@
+{
+  "name": "astra-fit",
+  "private": true,
+  "version": "1.0.0",
+  "description": "ASTRA-FIT: monitoreo neuromuscular de astronautas (NASA Space Apps 2026)",
+  "scripts": {
+    "build": "node astra-fit/publicar/construir-cloudflare.js",
+    "local": "node astra-fit/local/server.js",
+    "humo": "node scripts/humo.js",
+    "desplegar": "node scripts/desplegar.js"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.49.0"
+  }
+}

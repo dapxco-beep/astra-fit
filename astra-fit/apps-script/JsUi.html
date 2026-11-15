@@ -8,22 +8,27 @@
 -->
 <script>
 const UI = (() => {
-  /* Aviso flotante (toast) */
+  /* Aviso flotante (toast). Opciones: { accion: { texto, fn }, duracion: ms, persistente: true }.
+     Los errores no se cierran solos: quedan hasta que la persona los cierre. */
   let temporizador;
-  function aviso(texto, tipo = 'estado') {
+  function aviso(texto, tipo = 'estado', opciones = {}) {
     let el = document.getElementById('aviso');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'aviso';
-      el.setAttribute('role', 'status');
-      el.setAttribute('aria-live', 'polite');
-      document.body.appendChild(el);
-    }
+    if (!el) { el = document.createElement('div'); el.id = 'aviso'; document.body.appendChild(el); }
+    const persistente = opciones.persistente ?? tipo === 'error';
+    el.setAttribute('role', tipo === 'error' ? 'alert' : 'status');
+    el.setAttribute('aria-live', tipo === 'error' ? 'assertive' : 'polite');
     el.className = `aviso aviso--${tipo}`;
-    el.textContent = texto;
+    el.textContent = '';
+    const t = document.createElement('span'); t.textContent = texto; el.appendChild(t);
+    const cerrar = () => { clearTimeout(temporizador); el.classList.remove('visible'); };
+    if (opciones.accion) {
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = opciones.accion.texto;
+      b.addEventListener('click', () => { cerrar(); opciones.accion.fn(); }); el.appendChild(b);
+    }
+    if (persistente) { const x = document.createElement('button'); x.type = 'button'; x.textContent = 'Cerrar'; x.addEventListener('click', cerrar); el.appendChild(x); }
     requestAnimationFrame(() => el.classList.add('visible'));
     clearTimeout(temporizador);
-    temporizador = setTimeout(() => el.classList.remove('visible'), 3200);
+    if (!persistente) temporizador = setTimeout(() => el.classList.remove('visible'), opciones.duracion || 3200);
   }
 
   /* Controles segmentados: un clic marca el botón y avisa con el evento "cambio" */

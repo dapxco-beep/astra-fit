@@ -17,6 +17,14 @@ const NASA = path.join(__dirname, '..', '..');
 const APPS = path.join(NASA, 'astra-fit', 'apps-script');
 const SALIDA = path.join(NASA, 'publicar-cloudflare');
 
+// Versión que se muestra en el pie: commit corto y fecha. Si hay cambios sin guardar se marca "+local".
+const VERSION = (() => {
+  try {
+    const sh = (c) => require('child_process').execSync(c, { cwd: NASA, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+    return sh('git rev-parse --short HEAD') + (sh('git status --porcelain') ? '+local' : '') + ' · ' + new Date().toISOString().slice(0, 10);
+  } catch (e) { return ''; }
+})();
+
 function renderizar(nombre, profundidad = 0) {
   if (profundidad > 10) throw new Error('include() anidado demasiadas veces');
   const archivo = path.join(APPS, nombre + '.html');
@@ -27,8 +35,12 @@ function renderizar(nombre, profundidad = 0) {
 
 fs.mkdirSync(SALIDA, { recursive: true });
 for (const [pagina, archivo] of [['Index', 'index.html'], ['Componentes', 'componentes.html']]) {
-  const html = renderizar(pagina);
+  let html = renderizar(pagina).split('{{VERSION}}').join(VERSION);
   if (/<\?/.test(html)) throw new Error(`${pagina}: quedó una marca de plantilla sin resolver`);
+  if (pagina === 'Index') {   // el logo (WebP en base64) no comprime: se saca del HTML y se sirve aparte
+    const m = html.match(/src="data:image\/webp;base64,([^"]+)"/);
+    if (m) { fs.mkdirSync(path.join(SALIDA, 'assets'), { recursive: true }); fs.writeFileSync(path.join(SALIDA, 'assets', 'logo.webp'), Buffer.from(m[1], 'base64')); html = html.replace(m[0], 'src="/assets/logo.webp" fetchpriority="high"'); }
+  }
   fs.writeFileSync(path.join(SALIDA, archivo), html);
   console.log(`${archivo.padEnd(18)} ${(html.length / 1024).toFixed(0)} KB`);
 }

@@ -68,11 +68,15 @@ const Sesion = { datos: null, astronauta: null };
   };
 
   /* ---------------- Carga inicial ---------------- */
-  API.obtenerDatos()
-    .then((datos) => { Sesion.datos = datos; dibujarPerfiles(); })
-    .catch((err) => {
-      $('perfiles').innerHTML = `<p class="texto-2" style="grid-column:1/-1">No se pudo cargar la tripulación. ${UI.esc(err.message)}</p>`;
-      UI.aviso('No se pudo conectar con la base de datos.', 'error');
-    });
+  function cargar() {
+    API.obtenerDatos()
+      .then((datos) => { Sesion.datos = datos; dibujarPerfiles(); })
+      .catch(() => {
+        $('perfiles').innerHTML = '<div class="pila" style="grid-column:1/-1; justify-items:center"><p class="texto-2">No pudimos cargar la tripulación. Revisa tu conexión e inténtalo de nuevo.</p><button type="button" class="boton" id="reintentar-carga">Reintentar</button></div>';
+        $('reintentar-carga').addEventListener('click', () => { $('perfiles').innerHTML = '<p class="texto-2" style="grid-column:1/-1">Cargando…</p>'; cargar(); });
+        UI.aviso('Sin conexión con la base de datos. Tus datos no se perdieron.', 'error');
+      });
+  }
+  cargar();
 })();
 </script>

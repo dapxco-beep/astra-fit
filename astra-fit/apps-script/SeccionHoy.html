@@ -14,6 +14,8 @@
       </div>
     </div>
 
+    <div class="hoy-siguiente" id="hoy-siguiente" aria-live="polite"></div>
+
     <div class="hoy-kpis" id="hoy-kpis" aria-live="polite"></div>
 
     <div class="hoy-rejilla">
@@ -21,6 +23,7 @@
         <div class="tarjeta-cabecera"><h3 class="titulo-tarjeta" id="hoy-t-musculos">Los seis músculos</h3><a class="enlace" href="#monitoreo">Ver el monitoreo</a></div>
         <div class="hoy-musculos" id="hoy-musculos"></div>
         <p class="nota">Puntaje ERDM-A de 0 a 10 frente a la evaluación basal del astronauta. 0 a 3 bajo, 4 a 6 moderado, 7 a 10 alto.</p>
+        <div id="hoy-plan"></div>
       </article>
 
       <article class="tarjeta pila" aria-labelledby="hoy-t-hacer">
@@ -79,13 +82,25 @@
     }).join('');
 
     const top = alertas.slice(0, 3);
+    let planHtml = '';
     let html = top.map((x) => `<div class="hoy-alerta" data-nivel="${UI.esc(x.nivel)}"><span class="estado estado--${x.nivel === 'rojo' ? 'rojo' : 'amarillo'}">${x.nivel === 'rojo' ? 'Alerta' : 'Precaución'}</span>
       <p class="texto">${UI.esc(x.mensaje)}</p>${x.recomendacion ? `<p class="pequeno texto-2">${UI.esc(x.recomendacion)}</p>` : ''}</div>`).join('');
     if (alertas.length > top.length) html += `<a class="enlace" href="#alertas">Ver las ${alertas.length - top.length} alertas restantes</a>`;
     if (!alertas.length) html = '<p class="texto-2">No hay alertas abiertas. Mantén tu programa de ejercicio y repite las mediciones en las fechas previstas.</p>';
     const pl = p && p.u.riesgo !== 'bajo' ? Erdm.plan(p.g, p.u.riesgo) : null;
-    if (pl) html += `<div class="hoy-plan"><p class="nota">Plan para ${UI.esc(Erdm.etiqueta(p.g).toLowerCase())}</p><p class="texto"><strong>${UI.esc(pl.ejercicio)}</strong></p><p class="pequeno texto-2">${UI.esc(pl.dosificacion)}</p></div>`;
+    if (pl) planHtml = `<div class="hoy-plan"><p class="nota">Plan para ${UI.esc(Erdm.etiqueta(p.g).toLowerCase())}</p><p class="texto"><strong>${UI.esc(pl.ejercicio)}</strong></p><p class="pequeno texto-2">${UI.esc(pl.dosificacion)}</p></div>`;
     $('hoy-hacer').innerHTML = html;
+    $('hoy-plan').innerHTML = planHtml;
+
+    // Siguiente paso: lo primero que conviene hacer, con un botón que lleva ahí
+    const sig = $('hoy-siguiente');
+    let paso;
+    if (!p) paso = { nivel: '', titulo: 'Empieza por tu evaluación basal', texto: 'Es tu punto de comparación para todo lo demás.', boton: 'Ir al monitoreo', ir: '#monitoreo' };
+    else if (rojas) paso = { nivel: 'rojo', titulo: rojas === 1 ? 'Tienes 1 alerta que revisar ahora' : 'Tienes ' + rojas + ' alertas que revisar ahora', texto: 'Ábrelas, lee la recomendación y decide si avisas al médico de vuelo.', boton: 'Ver las alertas', ir: '#alertas' };
+    else if (alertas.length) paso = { nivel: 'amarillo', titulo: 'Tienes ' + alertas.length + (alertas.length === 1 ? ' alerta en seguimiento' : ' alertas en seguimiento'), texto: 'Revísalas y repite la medición cuando corresponda.', boton: 'Ver las alertas', ir: '#alertas' };
+    else paso = { nivel: 'verde', titulo: 'Sin alertas abiertas', texto: 'Mantén tu programa y repite las mediciones en las fechas previstas.', boton: 'Ir al monitoreo', ir: '#monitoreo' };
+    if (paso.nivel) sig.dataset.nivel = paso.nivel; else delete sig.dataset.nivel;
+    sig.innerHTML = '<div><p class="nota">Siguiente paso</p><h3 class="titulo-tarjeta">' + paso.titulo + '</h3><p class="texto-2">' + paso.texto + '</p></div><a class="boton" href="' + paso.ir + '">' + paso.boton + '</a>';
   }
   document.addEventListener('astronauta-elegido', dibujar);
   document.addEventListener('astronauta-actualizado', dibujar);

@@ -103,43 +103,9 @@ a { color: var(--azul-enlace); }
 .cifra small { font-size: .45em; font-weight: 600; margin-left: 2px; letter-spacing: 0; }
 
 /* ================================================================ 4. BARRA SUPERIOR (material translúcido) */
-.nav {
-  position: sticky; top: 0; z-index: 50; height: 48px;
-  background: var(--material-claro);
-  backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border-bottom: 1px solid var(--linea-suave);
-}
-.nav .contenedor { height: 100%; display: flex; align-items: center; gap: var(--e-8); }
 .nav-marca { margin-right: auto; font-size: 1.1875rem; font-weight: 600; letter-spacing: -0.015em; color: var(--tinta); text-decoration: none; white-space: nowrap; }
-.nav-enlace { font-size: var(--t-nota); color: var(--tinta); opacity: .8; text-decoration: none; transition: opacity .15s; }
-.nav-enlace:hover, .nav-enlace[aria-current="true"] { opacity: 1; }
 .nav-etiqueta { font-size: 11px; padding: 3px 10px; border-radius: var(--radio-pildora); background: var(--amarillo-fondo); color: var(--amarillo-texto); }
-.nav-enlace, .nav-etiqueta, .nav-marca { white-space: nowrap; }
-.nav .contenedor { gap: var(--e-6); }
-@media (max-width: 1180px) { .nav .contenedor { gap: var(--e-4); } }
-.nav-enlaces { display: contents; }
-.nav-boton, .nav-cambiar { display: none; }
-@media (max-width: 640px) {
-  .nav .contenedor { gap: var(--e-2); }
-  .nav-boton, .nav-cambiar {
-    display: inline-flex; align-items: center; justify-content: center; gap: var(--e-1);
-    min-height: 44px; min-width: 44px; padding: 0 var(--e-3);
-    font-size: var(--t-pequeno); font-weight: 600; color: var(--azul-enlace);
-    background: transparent; border: 1px solid var(--linea); border-radius: var(--radio-pildora); cursor: pointer;
-  }
-  .nav-boton[aria-expanded="true"] { background: var(--azul); border-color: var(--azul); color: var(--blanco); }
-  .nav-cambiar { border-color: transparent; }
-  #nav-nombre, .nav-etiqueta { display: none; }
-  /* backdrop-filter hace que un hijo fixed se ancle a la barra: por eso el panel es absolute */
-  .nav-enlaces {
-    display: none; position: absolute; top: 100%; left: 0; right: 0; flex-direction: column;
-    background: var(--blanco); border-bottom: 1px solid var(--linea); box-shadow: var(--sombra-suave);
-    max-height: calc(100dvh - 48px); overflow-y: auto; padding: var(--e-2) var(--e-4);
-  }
-  .nav-enlaces.abierto { display: flex; }
-  .nav-enlace { display: flex; align-items: center; min-height: 48px; padding: 0 var(--e-2); font-size: var(--t-cuerpo); opacity: 1; border-bottom: 1px solid var(--linea-suave); }
-  .nav-enlace:last-child { border-bottom: 0; }
-}
+.nav-marca, .nav-etiqueta { white-space: nowrap; }
 
 /* ================================================================ 5. SECCIONES */
 .seccion { padding: var(--seccion-y) 0; }
@@ -570,7 +536,7 @@ a { color: var(--azul-enlace); }
   .boton:active, .segmentado button:active { transform: none; }
 }
 @media (prefers-reduced-transparency: reduce) {
-  .nav { background: var(--blanco); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .barra-superior { background: var(--blanco); backdrop-filter: none; -webkit-backdrop-filter: none; }
   .aviso { background: var(--carbon); backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
 /* ==========================================================================
@@ -637,7 +603,7 @@ a { color: var(--azul-enlace); }
 
 @media (prefers-contrast: more) {
   :root { --tinta-2: #3a3a3c; --tinta-3: #48484a; --linea: #8e8e93; --linea-suave: rgba(0, 0, 0, .3); }
-  .nav { background: var(--blanco); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .barra-superior { background: var(--blanco); backdrop-filter: none; -webkit-backdrop-filter: none; }
   .tarjeta { box-shadow: inset 0 0 0 1px var(--linea); }
 }
 
@@ -729,13 +695,14 @@ details.tarjeta > summary { min-height: 44px; display: flex; align-items: center
   .barra-superior .nav-etiqueta { font-size: var(--t-nota); }
   .nav-cambiar-m { min-height: 44px; min-width: 44px; font-size: var(--t-pequeno); }
   #nav-nombre-m { display: none; }
-  .barra-inferior { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: flex; height: calc(64px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: var(--material-claro); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-top: 1px solid var(--linea); }
+  .barra-inferior { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: flex; height: calc(64px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: var(--blanco); border-top: 1px solid var(--linea); }
   .tab { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; background: transparent; color: var(--tinta-2); text-decoration: none; font-size: var(--t-nota); font-weight: 500; cursor: pointer; }
   .tab span:not(.nav-badge) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tab[data-activa] { color: var(--azul-enlace); }
   .tab[hidden] { display: none; }
   .tab .nav-badge { position: absolute; top: 4px; left: 54%; margin: 0; min-width: 18px; padding: 0 5px; font-size: 11px; }
   .hoja-mas { position: fixed; left: var(--e-3); right: var(--e-3); bottom: calc(72px + env(safe-area-inset-bottom)); z-index: 60; padding: var(--e-2); background: var(--blanco); border-radius: 18px; box-shadow: 0 8px 32px rgba(0, 0, 0, .22); }
+  .hoja-mas:not([hidden]) { display: block; }
   .hoja-mas[hidden] { display: none; }
   .hoja-mas .nav-item { min-height: 52px; font-size: var(--t-cuerpo); }
   .tablero .seccion { padding: var(--e-6) 0 var(--e-8); }
@@ -813,5 +780,50 @@ details.tarjeta > summary { min-height: 44px; display: flex; align-items: center
   .guia-figura { max-width: 300px; justify-self: center; width: 100%; }
   .guia-mide { grid-template-columns: minmax(0, 1fr); }
   .guia-pie .boton { width: 100%; min-height: 44px; }
+}
+
+/* ---- Correcciones tras la auditoría del tablero ---- */
+.tarjeta-cabecera .enlace, .hoy-musculos ~ .enlace { display: inline-flex; align-items: center; min-height: 44px; }
+.hoy-alerta ~ .enlace { display: inline-flex; align-items: center; min-height: 44px; }
+.mon-chip .estado, .mon-chip-estado { font-size: var(--t-nota); }
+
+/* ================================================================ 101. MEJORAS DE DISEÑO (auditorías del 14-nov) */
+/* Plegables con indicador */
+details > summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: var(--e-3); }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::after { content: "›"; color: var(--tinta-3); font-size: 1.25em; line-height: 1; transform: rotate(90deg); transition: transform .15s; }
+details[open] > summary::after { transform: rotate(-90deg); }
+/* Hoy */
+.hoy-rejilla { align-items: stretch; }
+.hoy-kpi { padding: var(--e-4) var(--e-5); }
+.hoy-alerta p { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.hoy-atajo { align-content: start; }
+.hoy-siguiente { display: flex; flex-wrap: wrap; gap: var(--e-4); align-items: center; justify-content: space-between; padding: var(--e-5) var(--e-6); border-radius: 20px; background: var(--blanco); border-left: 6px solid var(--azul); }
+.hoy-siguiente[data-nivel="rojo"] { border-left-color: var(--rojo); } .hoy-siguiente[data-nivel="amarillo"] { border-left-color: var(--amarillo); } .hoy-siguiente[data-nivel="verde"] { border-left-color: var(--verde); }
+.hoy-siguiente .nota { margin: 0 0 2px; }
+.hoy-plan:empty { display: none; }
+/* Alertas */
+.alr-alerta { display: flex; flex-direction: column; }
+.alr-alerta .alr-acciones { margin-top: auto; }
+.alr-lista > *:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.alr-cierre { display: grid; gap: var(--e-2); margin-top: var(--e-2); }
+.alr-cierre input { width: 100%; min-height: 44px; padding: 0 var(--e-3); border: 1px solid var(--linea); border-radius: 12px; background: var(--blanco); }
+.alr-atendidas { display: grid; gap: var(--e-3); margin-top: var(--e-3); }
+.alr-atendida { display: grid; gap: 4px; padding: var(--e-3) var(--e-4); border-radius: 14px; background: var(--fondo); border-left: 4px solid var(--linea); }
+.alr-atendida-pie { display: flex; flex-wrap: wrap; gap: var(--e-3); align-items: center; justify-content: space-between; }
+/* Evolución */
+.evo-controles { justify-content: flex-start; }
+/* Avisos con acción ("Deshacer", "Reintentar", "Cerrar") */
+.aviso.visible { pointer-events: auto; }
+.aviso button { margin-left: var(--e-3); min-height: 32px; padding: 0 var(--e-3); border: 1px solid rgba(255, 255, 255, .45); border-radius: 999px; background: transparent; color: inherit; font: inherit; font-weight: 600; cursor: pointer; }
+.aviso button:hover { background: rgba(255, 255, 255, .15); }
+a.nav-astronauta { color: inherit; text-decoration: none; }
+@media (max-width: 899px) {
+  .hoy-atajos { display: none; }
+  .hoy-kpis { gap: var(--e-2); }
+  .hoy-cabecera .acciones { display: grid; grid-template-columns: minmax(0, 1fr); width: 100%; }
+  .hoy-cabecera .acciones .boton { width: 100%; min-height: 48px; }
+  .tab[aria-current="page"], .tab[data-activa] { box-shadow: inset 0 3px 0 var(--azul-enlace); }
+  a.nav-astronauta { min-height: 44px; min-width: 44px; justify-content: center; }
 }
 </style>

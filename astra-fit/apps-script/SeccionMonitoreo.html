@@ -105,6 +105,9 @@
      pieza (el bíceps se ve de frente y el tríceps de espalda) y la pantorrilla en otra: se parte a media altura, arriba
      gastrocnemio y abajo sóleo (aproximación visual). Para regenerar: publicar/herramientas/render-anatomia.js.
      La vista anterior lleva los sensores del lado izquierdo de la pantalla y la posterior del derecho. */
+  // Las imágenes de anatomía (≈750 KB) se piden cuando la figura está cerca de verse, no al elegir astronauta
+  let figuraVisible = false; const diferidas = [];
+  const ponerHref = (nodo, url) => { if (figuraVisible) nodo.setAttribute('href', url); else { nodo.dataset.src = url; diferidas.push(nodo); } };
   const BASE_IMG = (typeof API !== 'undefined' && API.modo === 'local') ? '/assets/anatomia2d/' : 'https://astra-fit-modelos.dapxco.workers.dev/assets/anatomia2d/';
   const CX = { anterior: 262, posterior: 498 };
   const IMG_H = 560, IMG_W = IMG_H * 0.64, IMG_Y = 4;                 // las imágenes son de 640 × 1000
@@ -144,7 +147,7 @@
     Object.entries(CX).forEach(([vista]) => {
       const g = el('g', { class: 'mon-figura' });
       const img = el('image', { x: imgX(vista), y: IMG_Y, width: IMG_W, height: IMG_H, preserveAspectRatio: 'xMidYMid meet' });
-      img.setAttribute('href', `${BASE_IMG}${p}-${ARCHIVO_VISTA[vista]}-base.png`);
+      ponerHref(img, `${BASE_IMG}${p}-${ARCHIVO_VISTA[vista]}-base.png`);
       g.appendChild(img);
       g.appendChild(el('text', { x: CX[vista], y: 574, 'text-anchor': 'middle', class: 'mon-vista' })).textContent = vista === 'anterior' ? 'Vista anterior' : 'Vista posterior';
       svg.appendChild(g);
@@ -158,7 +161,7 @@
       // Máscara del músculo, teñida con su riesgo (relleno) y con el azul de selección (halo)
       const mask = el('mask', { id: `mon-mascara-${grupo}`, maskUnits: 'userSpaceOnUse', x: imgX(vista), y: IMG_Y, width: IMG_W, height: IMG_H });
       const mimg = el('image', { x: imgX(vista), y: IMG_Y, width: IMG_W, height: IMG_H, preserveAspectRatio: 'xMidYMid meet' });
-      mimg.setAttribute('href', `${BASE_IMG}${p}-${ARCHIVO_VISTA[vista]}-${m.mascara}.png`);
+      ponerHref(mimg, `${BASE_IMG}${p}-${ARCHIVO_VISTA[vista]}-${m.mascara}.png`);
       mask.appendChild(mimg); defs.appendChild(mask);
       g.appendChild(el('rect', { x: imgX(vista), y: IMG_Y, width: IMG_W, height: IMG_H, fill: 'var(--azul)', mask: `url(#mon-mascara-${grupo})`, class: 'mon-halo' }));
       g.appendChild(el('rect', { x: imgX(vista), y: IMG_Y, width: IMG_W, height: IMG_H, fill: COLOR_RIESGO.gris, mask: `url(#mon-mascara-${grupo})`, class: 'mon-relleno' }));
@@ -775,5 +778,6 @@
     if (sexoFigura !== (String(astronauta().sexo).toUpperCase() === 'F' ? 'F' : 'M')) { dibujarCuerpo(astronauta().sexo); pintarCuerpo(); }
     pintarCabecera();
   });
+  new IntersectionObserver((e) => { if (!e[0].isIntersecting) return; figuraVisible = true; diferidas.splice(0).forEach((n) => n.setAttribute('href', n.dataset.src)); }, { rootMargin: '200px' }).observe(document.getElementById('mon-svg'));
 })();
 </script>
