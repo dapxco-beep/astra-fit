@@ -12,7 +12,6 @@
   <?!= include('JsUi'); ?>
   <?!= include('JsApi'); ?>
   <?!= include('JsCalculos'); ?>
-  <?!= include('JsAvatares'); ?>
   <?!= include('JsAnimacionCuerpo'); ?>
   <?!= include('JsAlertas'); ?>
   <?!= include('JsErdm'); ?>
@@ -91,7 +90,7 @@
       const alPasar = (e) => {
         const t = e.target.closest && e.target.closest('.perfil[data-id]'); if (!t || typeof Sesion === 'undefined' || !Sesion.datos) return;
         const a = Sesion.datos.Astronautas.find((x) => x.id_astronauta === t.dataset.id); if (!a) return;
-        ['Xbot-animaciones.glb', ...porSexo[String(a.sexo).toUpperCase() === 'F' ? 'F' : 'M']].forEach((f) => calentar(base() + f));
+        ['Xbot-astronauta.glb', ...porSexo[String(a.sexo).toUpperCase() === 'F' ? 'F' : 'M']].forEach((f) => calentar(base() + f));
       };
       document.addEventListener('pointerover', alPasar); document.addEventListener('focusin', alPasar); document.addEventListener('touchstart', alPasar, { passive: true });
     })();
