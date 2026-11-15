@@ -136,11 +136,15 @@
   let chipsY = {};          // centro de cada etiqueta, en unidades del SVG (lo fija acomodarChips)
   const guias = {};         // línea punteada de cada músculo hacia su etiqueta
   const extremos = {};      // dónde está la luz del sensor de cada músculo (unidades del SVG)
-  window.FiguraMon = { BASE_IMG, BANDAS, MUSCULOS, ARCHIVO_VISTA, COLOR_RIESGO, nivel: (g) => nivelDe(g).nivel };
+  /* Figura de anatomía: la misma para todos. El modelo femenino del atlas (open-anatomy-3d) trae los muslos y los hombros
+     deformados, así que se usa la figura masculina, que es la de referencia de los atlas. sexoFigura solo recuerda para
+     qué astronauta se dibujó. */
+  const FIGURA = 'M';
+  window.FiguraMon = { BASE_IMG, BANDAS, MUSCULOS, ARCHIVO_VISTA, COLOR_RIESGO, FIGURA, nivel: (g) => nivelDe(g).nivel };
 
   function dibujarCuerpo(sexo) {
-    const sx = String(sexo).toUpperCase() === 'F' ? 'F' : 'M', p = sx.toLowerCase();
-    sexoFigura = sx;
+    const sx = FIGURA, p = sx.toLowerCase();
+    sexoFigura = String(sexo).toUpperCase() === 'F' ? 'F' : 'M';
     const svg = $('mon-svg');
     svg.innerHTML = '';
     const defs = el('defs', {}); svg.appendChild(defs);
@@ -197,7 +201,7 @@
     const k = H / 580;   // píxeles por unidad del SVG
     ['anterior', 'posterior'].forEach((vista) => {
       const chips = Object.entries(MUSCULOS).filter(([, m]) => m.vista === vista)
-        .map(([g, m]) => ({ g, n: document.querySelector(`.mon-chip[data-grupo="${g}"]`), y: aY(BANDAS[sexoFigura][m.mascara].y) * k }))
+        .map(([g, m]) => ({ g, n: document.querySelector(`.mon-chip[data-grupo="${g}"]`), y: aY(BANDAS[FIGURA][m.mascara].y) * k }))
         .sort((p, q) => p.y - q.y);
       chips.forEach((c) => { c.h = c.n.offsetHeight; });
       let abajo = -Infinity;
