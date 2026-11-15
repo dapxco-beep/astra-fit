@@ -180,15 +180,42 @@ const funciones = {
     if ('atendida_por' in cambios) alerta.atendida_por = String(cambios.atendida_por || '').slice(0, 60);
     if ('nota_cierre' in cambios) alerta.nota_cierre = String(cambios.nota_cierre || '').slice(0, 300);
     await escribirBD(env, bd);
-    return { ok: true };
+    return { ok: true, alerta };
   }
 };
+
+/* ---- Copia en Google Sheets (astra-fit/sheets-espejo/Espejo.gs) ----
+ * Después de cada guardado se mandan al Sheet las filas que cambiaron. Va por ctx.waitUntil, así que la página no
+ * espera a Google, y si el envío falla no pasa nada: el Sheet se pone al día solo cada 5 minutos (traerTodo).
+ * Se activa con dos secretos del Worker: SHEETS_URL (la URL /exec del Apps Script) y SHEETS_CLAVE. */
+const ESPEJO = {
+  guardarAstronauta: (r) => [{ tabla: 'Astronautas', filas: [r.astronauta] }],
+  actualizarAstronauta: (r) => [{ tabla: 'Astronautas', filas: [r.astronauta] }],
+  guardarAlertas: (r) => [{ tabla: 'Alertas', filas: r.alertas }],
+  actualizarAlerta: (r) => [{ tabla: 'Alertas', filas: [r.alerta] }],
+  guardarSeguimiento: (r) => [{ tabla: 'Seguimiento', filas: [r.registro] }],
+  guardarEvaluaciones: (r) => [{ tabla: 'Evaluaciones', filas: r.evaluaciones }],
+  guardarMedicion: (r) => [{ tabla: 'Monitoreo', filas: [r.medicion] }, { tabla: 'Evaluaciones', filas: [r.evaluacion] }]
+};
+
+async function enviarAlSheet(env, cambios) {
+  try {
+    const r = await fetch(env.SHEETS_URL, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ clave: env.SHEETS_CLAVE, cambios })
+    });
+    const texto = await r.text();
+    if (!r.ok || texto.includes('"error"')) console.error('Sheet: ' + r.status + ' ' + texto.slice(0, 200));
+  } catch (e) {
+    console.error('Sheet: ' + e.message);
+  }
+}
 
 const JSON_UTF8 = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' };
 const responder = (cuerpo, estado = 200) => new Response(JSON.stringify(cuerpo), { status: estado, headers: JSON_UTF8 });
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);       // por si algún día se llama sin run_worker_first
     if (request.method !== 'POST') return responder({ error: 'Usa POST' }, 405);
@@ -206,7 +233,9 @@ export default {
       if (texto.length > MAX_CUERPO) return responder({ error: 'La petición es demasiado grande' }, 413);
       const args = texto ? JSON.parse(texto) : [];
       if (!Array.isArray(args)) return responder({ error: 'El cuerpo debe ser una lista de argumentos' }, 400);
-      return responder(await funciones[nombre](env, ...args));
+      const resultado = await funciones[nombre](env, ...args);
+      if (ESPEJO[nombre] && env.SHEETS_URL && env.SHEETS_CLAVE) ctx.waitUntil(enviarAlSheet(env, ESPEJO[nombre](resultado)));
+      return responder(resultado);
     } catch (e) {
       return responder({ error: e.message }, 500);
     }
