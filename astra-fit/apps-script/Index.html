@@ -46,13 +46,13 @@
         </header>
 
         <main id="contenido">
-          <!-- Orden del panel: Perfil (resumen del astronauta y su estado de hoy), Destinos, Monitoreo, Cuerpo, Evolución, Alertas -->
+          <!-- Orden del panel (sigue el recorrido): Perfil, Destinos (elegir entorno), Monitoreo, Alertas (revisar) y Cuerpo (qué hacer), luego Evolución -->
           <div id="inicio-vista"><?!= include('SeccionInicio'); ?></div>
           <?!= include('SeccionMision'); ?>
           <?!= include('SeccionMonitoreo'); ?>
+          <?!= include('SeccionAlertas'); ?>
           <?!= include('SeccionCuerpo'); ?>
           <?!= include('SeccionEvolucion'); ?>
-          <?!= include('SeccionAlertas'); ?>
         </main>
 
         <footer class="pie">
@@ -119,9 +119,9 @@
         { id: 'inicio', t: 'Perfil', i: I('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>') },
         { id: 'mision', t: 'Destinos', i: I('<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/>') },
         { id: 'monitoreo', t: 'Monitoreo', i: I('<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>') },
+        { id: 'alertas', t: 'Alertas', i: I('<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>') },
         { id: 'cuerpo', t: 'Cuerpo', i: I('<circle cx="12" cy="5" r="3"/><path d="M6 21l2-9h8l2 9M9 12l-3-3M15 12l3-3"/>') },
-        { id: 'evolucion', t: 'Evolución', i: I('<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>') },
-        { id: 'alertas', t: 'Alertas', i: I('<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>') }
+        { id: 'evolucion', t: 'Evolución', i: I('<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>') }
       ];
       // Enlaces viejos que ya no son vistas propias: "Hoy" vive dentro del Perfil y las bandas, dentro del Monitoreo
       const ALIAS = { hoy: 'inicio', sensores: 'monitoreo' };
