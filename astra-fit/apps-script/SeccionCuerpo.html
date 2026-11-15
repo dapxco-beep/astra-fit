@@ -368,9 +368,20 @@
     }
     function huesosPermitidos(hueso, lado, nombres) {
       let base;
-      if (TRONCO.includes(hueso) && hueso !== 'Head') { base = TRONCO.slice(0, 5); if (hueso === 'Neck') base.push('Head'); if (hueso === 'Hips') (lado ? [lado + 'UpLeg'] : ['LeftUpLeg', 'RightUpLeg']).forEach((x) => base.push(x)); }
+      if (TRONCO.includes(hueso) && hueso !== 'Head') { base = TRONCO.slice(0, 5); if (hueso === 'Hips') (lado ? [lado + 'UpLeg'] : ['LeftUpLeg', 'RightUpLeg']).forEach((x) => base.push(x)); }
       else base = [PADRE[hueso], hueso, FIN_SEGMENTO[hueso]];
       return [...new Set(base.filter((x) => x && nombres.includes(x)))];
+    }
+    /* Quita los triángulos que pasan la prueba "sobra(x, y, z)" (en coordenadas del mundo, en la postura de reposo):
+       el modelo trae los músculos cortados en bordes rotos (cuello) y con tendones finos que se abren como puntas (muñeca), y al animar se ven como espinas. */
+    function recortar(g, sobra) {
+      const P = g.attributes.position, I = g.index; if (!I) return g; const a = I.array, nuevo = [];
+      for (let t = 0; t < a.length; t += 3) {
+        let cx = 0, cy = 0, cz = 0, fuera = false;
+        for (let k = 0; k < 3; k++) { const x = P.getX(a[t + k]), y = P.getY(a[t + k]), z = P.getZ(a[t + k]); cx += x; cy += y; cz += z; if (sobra(x, y, z, true)) fuera = true; }
+        if (!fuera && !sobra(cx / 3, cy / 3, cz / 3, false)) nuevo.push(a[t], a[t + 1], a[t + 2]);
+      }
+      g.setIndex(new THREE.BufferAttribute(a instanceof Uint32Array ? new Uint32Array(nuevo) : new Uint16Array(nuevo), 1)); return g;
     }
     function geometriaConPesos(o, hueso, lado, nombres, segs, todos = false) {
       const pos = o.geometry.attributes.position, nor = o.geometry.attributes.normal, n = pos.count, mw = o.matrixWorld, nmat = new THREE.Matrix3().getNormalMatrix(mw);
@@ -407,7 +418,7 @@
     function pegarAnatomia(ch, gltf, sexo) {
       ch.raiz.updateMatrixWorld(true);
       const huesos = ch.huesos, cab = new THREE.Vector3(), tl = new THREE.Vector3(), tr = new THREE.Vector3();
-      huesos.HeadTop_End.getWorldPosition(cab); huesos.LeftToeBase.getWorldPosition(tl); huesos.RightToeBase.getWorldPosition(tr);
+      huesos.HeadTop_End.getWorldPosition(cab); const hCabeza = new THREE.Vector3(); huesos.Head.getWorldPosition(hCabeza); huesos.LeftToeBase.getWorldPosition(tl); huesos.RightToeBase.getWorldPosition(tr);
       const nombres = PRINCIPALES.filter((n) => huesos[n]), esqueleto = new THREE.Skeleton(nombres.map((n) => huesos[n]));   // la postura de reposo es la «de enlace»
       const segs = nombres.map((n) => { const a = new THREE.Vector3(), b = new THREE.Vector3(); huesos[n].getWorldPosition(a); huesos[FIN_SEGMENTO[n]].getWorldPosition(b); return { a, b }; });
       const suelo = Math.min(tl.y, tr.y) - 0.02, tope = cab.y + 0.02, raiz = gltf.scene; escena.add(raiz); raiz.updateMatrixWorld(true);
@@ -418,11 +429,18 @@
       lista.forEach((o) => {
         const nombre = o.name.replace(/_\d+$/, ''), sis = sistemaDe(o);
         if (!sis || sis === 'skin' || OCULTAR.test(nombre)) return;
+        if (sis === 'muscles' && /^hand_muscles/.test(nombre)) return;   // los dedos son hilos finos que sobresalen como puntas
         if (!o.geometry.attributes.normal) o.geometry.computeVertexNormals();
         const centro = new THREE.Box3().setFromObject(o).getCenter(new THREE.Vector3()), hueso = huesoPara(huesos, nombre, centro);
         const prefijo = Object.keys(MALLA_DE_PREFIJO).find((k) => nombre.startsWith(k)), lado = /_l$/.test(nombre) ? 'L' : /_r$/.test(nombre) ? 'R' : null;
         const base = colorDe(nombre, sis), mon = prefijo && lado ? { malla: MALLA_DE_PREFIJO[prefijo], lado } : null;
-        const m = new THREE.SkinnedMesh(geometriaConPesos(o, hueso, lado === 'L' ? 'Left' : lado === 'R' ? 'Right' : '', nombres, segs), materialAnat(base, 0.95));
+        let geo = geometriaConPesos(o, hueso, lado === 'L' ? 'Left' : lado === 'R' ? 'Right' : '', nombres, segs);
+        if (sis === 'muscles' && true) { const yCorte = hCabeza.y - 0.09; geo = recortar(geo, (x, y) => y > yCorte); }   // borde roto del cuello
+        if (sis === 'muscles' && /^forearm_muscles/.test(nombre) && lado) {   // tendones que pasan la muñeca
+          const mano = new THREE.Vector3(), codo = new THREE.Vector3(); huesos[(lado === 'L' ? 'Left' : 'Right') + 'Hand'].getWorldPosition(mano); huesos[(lado === 'L' ? 'Left' : 'Right') + 'ForeArm'].getWorldPosition(codo);
+          const eje = mano.clone().sub(codo).normalize(), corte = mano.clone().sub(eje.clone().multiplyScalar(0.04)); geo = recortar(geo, (x, y, z) => (x - corte.x) * eje.x + (y - corte.y) * eje.y + (z - corte.z) * eje.z > 0);
+        }
+        const m = new THREE.SkinnedMesh(geo, materialAnat(base, 0.95));
         m.bind(esqueleto, new THREE.Matrix4()); m.renderOrder = 3; m.frustumCulled = false; m.visible = false; m.name = nombre;
         m.userData = { sexo, sis, base: new THREE.Color(base), col: new THREE.Color(base), op: 0.95, mon };
         if (mon) { const k = sexo + mon.malla + mon.lado; (monitores[k] = monitores[k] || {}).local = huesos[hueso].worldToLocal(centro.clone()); Object.assign(monitores[k], { hueso, sexo, malla: mon.malla, lado: mon.lado, act: 0 }); }   // la luz sigue a su hueso
