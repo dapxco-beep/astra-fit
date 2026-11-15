@@ -19,20 +19,27 @@ const modelos = {};
 async function cargar(sexo) {
   if (modelos[sexo]) return modelos[sexo];
   const g = await new Promise((ok, mal) => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load('/assets/anatomy-' + (sexo === 'F' ? 'female' : 'male') + '.glb', ok, undefined, mal));
-  const raiz = g.scene, mallas = [];
+  const raiz = g.scene, mallas = [], huesos = [];
   raiz.updateMatrixWorld(true);
   raiz.traverse((o) => {
     if (!o.isMesh) return;
     let sis = ''; for (let n = o; n; n = n.parent) if (['skin', 'skeleton', 'muscles', 'organs', 'vessels', 'nerves'].includes(n.name)) { sis = n.name; break; }
+    if (sis === 'skeleton') { if (!o.geometry.attributes.normal) o.geometry.computeVertexNormals(); o.visible = false; huesos.push(o); return; }
     if (sis !== 'muscles') { o.visible = false; return; }
     if (!o.geometry.attributes.normal) o.geometry.computeVertexNormals();
     const nombre = o.name.replace(/_\d+$/, ''), pref = Object.keys(GRUPO_DE).find((k) => nombre.startsWith(k));
     mallas.push({ o, grupo: pref ? GRUPO_DE[pref] : null });
   });
-  modelos[sexo] = { raiz, mallas }; return modelos[sexo];
+  // Color natural de cada músculo: el mismo tono con una leve variación, para que se distingan unos de otros
+  mallas.forEach((m, i) => { const r = Math.sin(i * 12.9898) * 43758.5453; const k = (r - Math.floor(r)) * 2 - 1;
+    m.natural = new THREE.MeshStandardMaterial({ color: new THREE.Color(0xa65a4e).offsetHSL(k * .012, k * .05, k * .035), roughness: .55, metalness: 0 }); });
+  modelos[sexo] = { raiz, mallas, huesos }; return modelos[sexo];
 }
 
+// Capa base "realista": músculos en su color natural (rojo apagado) y esqueleto marfil donde asoma (cráneo, manos, pies,
+// rodillas). Así la figura se lee como un atlas de anatomía y no como un maniquí. Las máscaras no cambian.
 const matBase = new THREE.MeshStandardMaterial({ color: 0x9eaac2, roughness: .46, metalness: .08 });
+const matHueso = new THREE.MeshStandardMaterial({ color: 0xe6dccb, roughness: .62, metalness: 0 });
 const matMasc = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
 // Músculos de la escala ERDM-A. El modelo junta bíceps y tríceps ("upper_arm") y gastrocnemio y sóleo ("calf"):
@@ -40,7 +47,7 @@ const matMasc = new THREE.MeshBasicMaterial({ color: 0xffffff });
 // (arriba gastrocnemio, abajo sóleo), que es una aproximación visual, no anatómica exacta.
 const ERDM = { biceps: ['brazo'], triceps: ['brazo'], antebrazo: ['antebrazo'], cuadriceps: ['quad'], gastrocnemio: ['gastro', 'arriba'], soleo: ['gastro', 'abajo'] };
 window.dibujar = async (sexo, vista, modoPedido) => {      // modo: 'base', un grupo ('quad', 'glute', 'gastro', 'back', 'brazo', 'antebrazo') o un músculo de ERDM
-  const { raiz, mallas } = await cargar(sexo);
+  const { raiz, mallas, huesos } = await cargar(sexo);
   const [modo, mitad] = ERDM[modoPedido] || [modoPedido];
   renderer.clippingPlanes = [];
   if (mitad) {   // plano horizontal a media altura de la pantorrilla
@@ -49,19 +56,22 @@ window.dibujar = async (sexo, vista, modoPedido) => {      // modo: 'base', un g
     renderer.clippingPlanes = [mitad === 'arriba' ? new THREE.Plane(new THREE.Vector3(0, 1, 0), -y) : new THREE.Plane(new THREE.Vector3(0, -1, 0), y)];
   }
   const escena = new THREE.Scene(); escena.add(raiz);
-  mallas.forEach(({ o, grupo }) => { o.visible = modo === 'base' ? true : grupo === modo; o.material = modo === 'base' ? matBase : matMasc; });
+  mallas.forEach((m) => { const { o, grupo } = m; o.visible = modo === 'base' ? true : grupo === modo; o.material = modo === 'base' ? m.natural : matMasc; });
+  huesos.forEach((o) => { o.material = matHueso; o.visible = false; });
   // Encuadre fijo: el de todos los músculos, igual en todas las imágenes
   const caja = new THREE.Box3(); mallas.forEach(({ o }) => { o.visible = true; });
   caja.setFromObject(raiz); mallas.forEach(({ o, grupo }) => { o.visible = modo === 'base' ? true : grupo === modo; });
+  if (modo === 'base') huesos.forEach((o) => { o.visible = true; });
   const centro = caja.getCenter(new THREE.Vector3()), alto = (caja.max.y - caja.min.y) * 1.06, ancho = alto * (W / H);
   const cam = new THREE.OrthographicCamera(-ancho / 2, ancho / 2, alto / 2, -alto / 2, .01, 100);
   const lado = vista === 'back' ? -1 : 1;
   cam.position.set(centro.x, centro.y, centro.z + lado * 10); cam.lookAt(centro.x, centro.y, centro.z);
   if (modo === 'base') {
-    escena.add(new THREE.HemisphereLight(0xffffff, 0x4d587a, .62));
-    const clave = new THREE.DirectionalLight(0xffffff, 3.0); clave.position.set(-2.5, 4, lado * 4); escena.add(clave);
-    const relleno = new THREE.DirectionalLight(0xa9bcff, .55); relleno.position.set(3, 1, lado * 3); escena.add(relleno);
-    const borde = new THREE.DirectionalLight(0xdfe8ff, 1.5); borde.position.set(0, 2, -lado * 5); escena.add(borde);
+    // Luz de estudio: principal cálida arriba a la izquierda, relleno frío suave y un contorno por detrás
+    escena.add(new THREE.HemisphereLight(0xfff6ee, 0x3a3030, .75));
+    const clave = new THREE.DirectionalLight(0xfff1e6, 2.6); clave.position.set(-2.5, 4, lado * 4); escena.add(clave);
+    const relleno = new THREE.DirectionalLight(0xdfe8ff, .55); relleno.position.set(3, 1, lado * 3); escena.add(relleno);
+    const borde = new THREE.DirectionalLight(0xffffff, 1.6); borde.position.set(0, 2, -lado * 5); escena.add(borde);
   }
   renderer.render(escena, cam);
   escena.remove(raiz);
