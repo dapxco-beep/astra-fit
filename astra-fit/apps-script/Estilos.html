@@ -278,6 +278,7 @@ a { color: var(--azul-enlace); }
   .perfiles { gap: var(--e-3); }
   .perfil { grid-template-columns: 56px minmax(0, 1fr); justify-items: start; text-align: left; column-gap: var(--e-4); row-gap: 2px; padding: var(--e-4) var(--e-5); border-radius: 20px; }
   .perfil .avatar { grid-row: span 4; width: 56px; height: 56px; font-size: 1.25rem; margin: 0; align-self: center; }
+  .perfil .avatar--emoji { font-size: 2rem; }
   .perfil .titulo-tarjeta { font-size: 1.1875rem; }
   .perfil .enlace { margin-top: 0; }
 }
@@ -298,10 +299,6 @@ a { color: var(--azul-enlace); }
 .avatar--grande.avatar--0, .avatar--grande.avatar--1, .avatar--grande.avatar--2 { font-size: 2.5rem; }
 .seccion--gris .avatar--emoji, .hero .avatar--emoji { background: var(--fondo); }
 .nav-astronauta .avatar--emoji { font-size: 15px; background: transparent; }
-/* Avatar serio: busto de astronauta con casco (JsAvatares.html). La ilustración trae su propio fondo. */
-.avatar--serio { display: block; padding: 0; overflow: hidden; background: transparent; }
-.avatar--serio svg { display: block; width: 100%; height: 100%; }
-.emoji-opcion .avatar--serio { width: 40px; height: 40px; margin: 0; border-radius: 50%; }
 
 .dialogo {
   width: min(760px, 100% - 32px); max-height: min(92vh, 900px); padding: 0; border: 0; border-radius: var(--radio-tarjeta);
@@ -379,7 +376,7 @@ a { color: var(--azul-enlace); }
 .hero-centro { display: grid; justify-items: center; gap: var(--e-4); padding: clamp(8px, 3vw, 40px) 0 clamp(24px, 6vw, 96px); }
 .hero-id { color: var(--tinta-clara-2); }
 .escena .subtitulo { color: var(--tinta-clara-2); max-width: 720px; }
-.escena .avatar--emoji, .escena .avatar--serio { background: rgba(255, 255, 255, .12); box-shadow: 0 0 0 1px rgba(255, 255, 255, .14), 0 20px 60px rgba(90, 200, 250, .18); }
+.escena .avatar--emoji { background: rgba(255, 255, 255, .12); box-shadow: 0 0 0 1px rgba(255, 255, 255, .14), 0 20px 60px rgba(90, 200, 250, .18); }
 .escena .enlace { color: #2997ff; }
 .escena-tarjetas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--e-3); text-align: left; }
 .vidrio { display: grid; align-content: start; gap: var(--e-2); padding: var(--e-5); border-radius: 18px; background: rgba(20, 22, 30, .42); border: 1px solid rgba(255, 255, 255, .14); -webkit-backdrop-filter: blur(22px) saturate(160%); backdrop-filter: blur(22px) saturate(160%); }

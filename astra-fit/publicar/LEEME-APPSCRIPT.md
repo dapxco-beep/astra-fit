@@ -21,10 +21,10 @@ llena solo la primera vez (`prepararBase_` en Code.gs con `DatosEjemplo.gs`); lo
 1. En el Sheet: **Extensiones → Apps Script**. Tiene que abrirse desde el Sheet, porque `Code.gs` usa
    `SpreadsheetApp.getActive()`.
 2. Crea un archivo por cada uno de `apps-script/`, con el mismo nombre y sin `.html`, y pega su contenido:
-   `Estilos`, `Index`, `JsUi`, `JsApi`, `JsCalculos`, `JsAlertas`, `JsAvatares`, `Logo`, `Componentes`, `FormPerfil`,
+   `Estilos`, `Index`, `JsUi`, `JsApi`, `JsCalculos`, `JsAlertas`, `Logo`, `Componentes`, `FormPerfil`,
    `SeccionAcceso`, `SeccionInicio`, `SeccionHoy`, `SeccionEntorno`, `SeccionMonitoreo`, `SeccionSensores`,
    `SeccionCuerpo`, `SeccionEvolucion`, `SeccionMision`, `SeccionAlertas`, `JsErdm`. `Code.gs` y `DatosEjemplo.gs` van como
-   archivos de script. Si existen `SeccionRegistro` y `SeccionErdm` de una versión anterior, bórralos.
+   archivos de script. Si existen `SeccionRegistro`, `SeccionErdm` o `JsAvatares` de una versión anterior, bórralos.
    `Logo.html` pesa 123 KB: pégalo completo.
 3. **Implementar → Nueva implementación → Aplicación web.** Ejecutar como: yo. Quién tiene acceso: cualquier usuario.
    Cualquiera con el enlace puede leer y escribir en el Sheet. Sirve para la demo, no para datos reales.

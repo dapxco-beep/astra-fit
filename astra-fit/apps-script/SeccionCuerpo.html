@@ -62,7 +62,7 @@
         </div></div>
     </div>
     <p class="nota" style="margin-top: var(--e-5); color: var(--tinta-clara-2)">
-      Anatomía: BodyParts3D © DBCLS (CC BY 4.0), adaptada por open-anatomy-3d (CC BY 4.0). Astronauta: modelo propio de ASTRA-FIT, armado con formas simples.
+      Anatomía: BodyParts3D © DBCLS (CC BY 4.0), adaptada por open-anatomy-3d (CC BY 4.0). Astronauta: silueta Xbot vestida con traje, casco y mochila de ASTRA-FIT.
       Esqueleto y animaciones: Xbot de Mixamo, de los ejemplos de three.js. Arrastra para girar, rueda para acercar y botón derecho para mover. Estados calculados con datos simulados.
     </p>
   </div>
@@ -183,8 +183,13 @@
         <div><p class="nota">Frecuencia mediana</p><p class="titulo-tarjeta">${num(emg.frec, 1)} Hz</p><p class="pequeno texto-2">${pct(emg.cambioFrec)} vs. basal</p></div>
       </div><p class="nota">EMG de la evaluación del ${UI.esc(Calc.fechaCorta(emg.fecha))}, medido por la banda del sensor.</p>`
         : '<p class="pequeno texto-2">Todavía no hay registros de EMG para este grupo.</p>'}
-      <p class="estado estado--${n}" style="margin-top: var(--e-4)">${alerta && n !== 'verde' ? UI.esc(alerta.mensaje) : n === 'verde' ? 'Riesgo bajo en la escala ERDM-A.' : 'Sin alertas para este músculo.'}</p>
-      ${alerta && n !== 'verde' ? `<p class="pequeno texto-2" style="margin-top: var(--e-2)">${UI.esc(alerta.recomendacion)}</p>` : ''}`;
+      ${(() => {   // nota clínica breve (Erdm.nota), igual que en Alertas
+        if (!(alerta && n !== 'verde')) return `<p class="estado estado--${n}" style="margin-top: var(--e-4)">${n === 'verde' ? 'Riesgo bajo en la escala ERDM-A.' : 'Sin alertas para este músculo.'}</p>`;
+        const nt = Erdm.nota(alerta);
+        return `<p class="estado estado--${n}" style="margin-top: var(--e-4)">${UI.esc(nt.texto || nt.resumen)}</p>
+          ${nt.hallazgos.length ? `<p class="pequeno texto-2" style="margin-top: var(--e-2)">${nt.hallazgos.map((h) => UI.esc(h.nombre + ' ' + h.valor)).join(' · ')}</p>` : ''}
+          ${nt.conducta ? `<p class="pequeno" style="margin-top: var(--e-2)">Conducta: ${UI.esc(nt.conducta)}</p>` : ''}`;
+      })()}`;
   }
 
   $('cuerpo-grupos').addEventListener('click', (e) => {
@@ -200,9 +205,10 @@
 
   async function crearMotor(sexoPrimero) {
     // Las librerías se piden todas a la vez: antes iban una tras otra y cada una esperaba a la anterior
-    const [THREE, { OrbitControls }, { GLTFLoader }, { MeshoptDecoder }, { RoomEnvironment }] = await Promise.all([
+    const [THREE, { OrbitControls }, { GLTFLoader }, { MeshoptDecoder }, { RoomEnvironment }, SkeletonUtils, { RoundedBoxGeometry }] = await Promise.all([
       import('three'), import('three/addons/controls/OrbitControls.js'), import('three/addons/loaders/GLTFLoader.js'),
-      import('three/addons/libs/meshopt_decoder.module.js'), import('three/addons/environments/RoomEnvironment.js')]);
+      import('three/addons/libs/meshopt_decoder.module.js'), import('three/addons/environments/RoomEnvironment.js'),
+      import('three/addons/utils/SkeletonUtils.js'), import('three/addons/geometries/RoundedBoxGeometry.js')]);
 
     const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
     // Los colores de estado salen de Estilos.html, para que el visor y el resto de la página coincidan
@@ -439,67 +445,62 @@
     const ANATOMIA = { M: 'anatomy-male-musculos.glb', F: 'anatomy-female-musculos.glb' };
     const CAJA_ANATOMIA = {"M":{"min":[-0.3332456428535917,1.5747070314375833e-9,-0.1459949897316245],"max":[0.33323267884335306,1.7194311618804932,0.14597299561770238]},"F":{"min":[-0.2396741805521228,0,-0.14763779537212526],"max":[0.23943464634890857,1.6200000047683716,0.14761779801380312]}};   // caja del modelo completo (con piel), para colocar cada parte igual que antes
     const cargarSexo = (sexo) => Promise.all([null, cargar(ANATOMIA[sexo], sexo + 'm')]);   // el astronauta se construye en el navegador: no hay nada que bajar
-    const [gx, [gAstro, gAnat]] = await Promise.all([cargar('Xbot-animaciones.glb', 'x'), cargarSexo(sexoInicial)]);
+    const [gx, [gAstro, gAnat]] = await Promise.all([cargar('Xbot-astronauta.glb', 'x'), cargarSexo(sexoInicial)]);
     $('cuerpo-carga-texto').textContent = 'Preparando animaciones…';
     await new Promise((r) => setTimeout(r, 30));   // deja que el navegador pinte el aviso antes del cálculo pesado
 
     const clipsOrigen = {}; gx.animations.forEach((c) => { clipsOrigen[c.name] = c; });
-    // El astronauta se arma con piezas sencillas (casco con visor, torso, mochila, brazos, piernas y botas), cada una pegada al hueso
-    // que la mueve. Al ser rígidas no se deforman: los brazos y las piernas se balancean limpios al caminar. Las franjas toman el
-    // color del avatar de cada astronauta. Se construye en el navegador, así que no hay modelo que descargar.
+    /* El astronauta es la silueta del Xbot (Xbot-astronauta.glb, 0,25 MB con meshopt) vestida como traje de actividad
+       extravehicular: tela blanca mate, articulaciones grises, casco con visor dorado, mochila de soporte vital y unidad
+       de control en el pecho. Al ser una malla con piel se dobla con naturalidad en cada ejercicio. Las piezas rígidas
+       (casco, mochila, panel) van pegadas a su hueso. */
     function vestirAstronauta(ch) {
       const huesos = ch.huesos, P = (n) => { const v = new THREE.Vector3(); huesos[n].getWorldPosition(v); return v; };
       ch.raiz.updateMatrixWorld(true);
-      const traje = new THREE.MeshStandardMaterial({ color: 0xe9edf3, roughness: .55, metalness: .04 });
-      const gris = new THREE.MeshStandardMaterial({ color: 0x59606c, roughness: .6, metalness: .15 });
-      const visor = new THREE.MeshStandardMaterial({ color: 0xc89b3c, roughness: .12, metalness: .95 });
-      const acento = new THREE.MeshStandardMaterial({ color: 0x0071e3, roughness: .5, metalness: .05 });
-      [traje, gris, visor, acento].forEach((m) => { ch.materiales.push(m); });
+      const mat = (color, roughness, metalness = 0) => { const m = new THREE.MeshStandardMaterial({ color, roughness, metalness }); ch.materiales.push(m); return m; };
+      const tela = mat(0xeef0f3, .82), juntas = mat(0xcfd4db, .6, .15), casco = mat(0xf6f7f9, .28, .05);
+      const visor = mat(0xc99a3a, .16, .85), gris = mat(0x5b626d, .55, .2), metal = mat(0xc4c9d0, .3, .8), acento = mat(0x1f56c8, .5, .05);
+      visor.emissive = new THREE.Color(0x3d2a08); visor.envMapIntensity = 1.6;
       ch.acento = [acento];
-      const arriba = new THREE.Vector3(0, 1, 0), q = new THREE.Quaternion();
+      // La tela se infla unos 2 cm hacia afuera (en la postura de enlace, antes de la piel): el traje se ve abultado, no ceñido
+      const inflar = (m, cuanto) => { m.onBeforeCompile = (sh) => { sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed += normalize(objectNormal) * ' + cuanto.toFixed(4) + ';'); }; };
+      // Silueta: la superficie es la tela del traje y las uniones, los rodamientos del traje
+      let altoLocal = 0;
+      ch.raiz.traverse((o) => {
+        if (!o.isSkinnedMesh) return;
+        o.material = /Joints/i.test(o.material.name) ? juntas : tela;
+        o.frustumCulled = false; o.castShadow = false;
+        o.geometry.computeBoundingBox(); const b = o.geometry.boundingBox; altoLocal = Math.max(altoLocal, b.max.y - b.min.y);
+      });
+      inflar(tela, altoLocal * .012); inflar(juntas, altoLocal * .012);
       const poner = (mesh, hueso) => { mesh.castShadow = false; escena.add(mesh); mesh.updateMatrixWorld(true); huesos[hueso].attach(mesh); ch.pieles.push(mesh); return mesh; };
-      // Cápsula entre dos puntos
-      const capsula = (a, b, r, mat, hueso, extra = 0.02) => {
-        const dir = b.clone().sub(a), largo = Math.max(0.001, dir.length() - 2 * r + extra), m = new THREE.Mesh(new THREE.CapsuleGeometry(r, largo, 6, 14), mat);
-        m.position.copy(a).add(b).multiplyScalar(.5); m.quaternion.copy(q.setFromUnitVectors(arriba, dir.normalize())); return poner(m, hueso);
-      };
-      const esfera = (c, r, mat, hueso, esc = [1, 1, 1]) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 24, 16), mat); m.position.copy(c); m.scale.set(...esc); return poner(m, hueso); };
-      const caja = (c, w, h, d, mat, hueso, r = .03) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d, 2, 2, 2), mat); m.position.copy(c); return poner(m, hueso); };
-      const anillo = (c, dir, r, grosor, mat, hueso) => { const m = new THREE.Mesh(new THREE.TorusGeometry(r, grosor, 10, 28), mat); m.position.copy(c); m.quaternion.copy(q.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir.clone().normalize())); return poner(m, hueso); };
+      const esfera = (c, r, m, hueso, esc = [1, 1, 1], seg) => { const g = seg ? new THREE.SphereGeometry(r, 48, 32, ...seg) : new THREE.SphereGeometry(r, 48, 32); const o = new THREE.Mesh(g, m); o.position.copy(c); o.scale.set(...esc); return poner(o, hueso); };
+      const caja = (c, w, h, d, m, hueso, r = .03) => { const o = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 4, r), m); o.position.copy(c); return poner(o, hueso); };
+      const anillo = (c, r, grosor, m, hueso) => { const o = new THREE.Mesh(new THREE.TorusGeometry(r, grosor, 14, 40), m); o.position.copy(c); o.rotation.x = Math.PI / 2; return poner(o, hueso); };
 
-      // Tronco, mochila y cuello
-      const cad = P('Hips'), esp = P('Spine1'), pec = P('Spine2'), cue = P('Neck'), cab = P('Head'), tope = P('HeadTop_End');
-      esfera(cad.clone().add(new THREE.Vector3(0, .0, 0)), .17, traje, 'Hips', [1.05, .72, .78]);                // cadera
-      esfera(esp.clone().add(new THREE.Vector3(0, .1, 0)), .19, traje, 'Spine1', [1, 1.05, .78]);               // abdomen
-      esfera(pec.clone().add(new THREE.Vector3(0, .06, 0)), .21, traje, 'Spine2', [1.08, .92, .8]);             // pecho
-      caja(pec.clone().add(new THREE.Vector3(0, -.02, -.2)), .34, .46, .16, gris, 'Spine2');                 // mochila
-      caja(pec.clone().add(new THREE.Vector3(0, -.03, .145)), .2, .13, .04, acento, 'Spine2');              // panel del pecho
-      caja(esp.clone().add(new THREE.Vector3(0, .02, .0)), .4, .045, .27, acento, 'Spine1');               // cinturón
-      capsula(pec.clone().add(new THREE.Vector3(0, .12, 0)), cue.clone().add(new THREE.Vector3(0, .03, 0)), .075, traje, 'Neck', 0);
-      // Casco: esfera con visor dorado al frente
-      const centroCasco = cab.clone().lerp(tope, .45).add(new THREE.Vector3(0, .03, .0));
-      esfera(centroCasco, .16, traje, 'Head', [1, 1.06, 1.04]);
-      esfera(centroCasco.clone().add(new THREE.Vector3(0, .005, .105)), .135, visor, 'Head', [1, .82, .55]);   // visor: sobresale del casco
-      anillo(cab.clone().add(new THREE.Vector3(0, .02, 0)), arriba, .1, .018, acento, 'Head');             // aro del cuello del casco
-
-      // Brazos, piernas y botas (izquierda y derecha)
-      ['Left', 'Right'].forEach((lado) => {
-        const s = lado === 'Left' ? 1 : -1, br = P(lado + 'Arm'), co = P(lado + 'ForeArm'), mu = P(lado + 'Hand'), mano = P(lado + 'HandMiddle2');
-        esfera(br, .085, traje, lado + 'Arm');                                                                // hombro
-        capsula(br, co, .068, traje, lado + 'Arm');                                                           // brazo
-        anillo(br.clone().lerp(co, .5), co.clone().sub(br), .072, .014, acento, lado + 'Arm');               // franja del brazo
-        capsula(co, mu, .056, traje, lado + 'ForeArm');                                                       // antebrazo
-        esfera(mu.clone().lerp(mano, .5), .058, gris, lado + 'Hand', [1, 1.2, .9]);                          // guante
-        const mus = P(lado + 'UpLeg'), ro = P(lado + 'Leg'), to = P(lado + 'Foot'), de = P(lado + 'ToeBase');
-        capsula(mus, ro, .092, traje, lado + 'UpLeg', .03);                                                   // muslo
-        esfera(ro, .08, traje, lado + 'Leg');                                                                 // rodilla
-        capsula(ro, to, .072, traje, lado + 'Leg');                                                           // pierna
-        anillo(ro.clone().lerp(to, .55), to.clone().sub(ro), .075, .014, acento, lado + 'Leg');
-        caja(to.clone().lerp(de, .5).add(new THREE.Vector3(0, -.015, .03)), .115, .09, .27, gris, lado + 'Foot');   // bota
+      const cue = P('Neck'), cab = P('Head'), tope = P('HeadTop_End'), pec = P('Spine2');
+      const alto = cab.distanceTo(tope);
+      // Casco: burbuja blanca con visor dorado al frente y aro metálico en el cuello
+      const centro = cab.clone().lerp(tope, .42).add(new THREE.Vector3(0, 0, .012));
+      const R = alto * .92;
+      esfera(centro, R, casco, 'Head', [1, 1.04, 1.02]);
+      esfera(centro.clone().add(new THREE.Vector3(0, -R * .04, R * .06)), R * 1.012, visor, 'Head', [.96, 1, 1.02], [Math.PI * .18, Math.PI * .64, Math.PI * .3, Math.PI * .42]);   // casquete frontal
+      anillo(cue.clone().lerp(cab, .55), R * .62, R * .09, metal, 'Neck');
+      // Mochila de soporte vital (PLSS) y unidad de control en el pecho (DCM)
+      caja(pec.clone().add(new THREE.Vector3(0, .02, -.2)), .4, .56, .2, casco, 'Spine2', .05);
+      caja(pec.clone().add(new THREE.Vector3(0, .1, -.305)), .3, .2, .02, gris, 'Spine2', .008);
+      caja(pec.clone().add(new THREE.Vector3(0, .0, .155)), .22, .11, .07, gris, 'Spine2', .02);
+      caja(pec.clone().add(new THREE.Vector3(.055, .018, .192)), .035, .018, .01, acento, 'Spine2', .004);
+      caja(pec.clone().add(new THREE.Vector3(-.03, .018, .192)), .06, .018, .01, metal, 'Spine2', .004);
+      // Aros metálicos de muñeca (donde se conectan los guantes)
+      ['Left', 'Right'].forEach((l) => {
+        const mu = P(l + 'Hand'), an = P(l + 'ForeArm'), dir = mu.clone().sub(an).normalize();
+        const o = new THREE.Mesh(new THREE.TorusGeometry(.042, .011, 12, 32), metal); o.position.copy(mu.clone().addScaledVector(dir, -.015));
+        o.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir); poner(o, l + 'Hand');
       });
     }
     const montar = (sexo, g, anat) => {
-      const raiz = gx.scene.clone(true), huesos = {};      // esqueleto Xbot propio (sin malla)
+      const raiz = SkeletonUtils.clone(gx.scene), huesos = {};      // esqueleto y silueta propios (la piel se reenlaza al clon)
       raiz.traverse((o) => { if (o.isBone) huesos[nm(o.name)] = o; });
       raiz.updateMatrixWorld(true);
       const ch = personajes[sexo] = { raiz, huesos, materiales: [], pieles: [], mezclador: new THREE.AnimationMixer(raiz), acciones: {}, actual: null, altura: 0, caras: [], ropa: [] };
@@ -561,9 +562,6 @@
       Object.keys(personajes).forEach((s) => { personajes[s].raiz.visible = (s === estado.sexo); });
       const ch = actual();
       ch.raiz.scale.setScalar(clamp((Number(a.talla_cm) || ch.altura) / ch.altura, 0.85, 1.15));   // la estatura real escala a la persona
-      const n = (parseInt(String(a.id_astronauta).replace(/\D/g, ''), 10) || 0) % 3;                // cada astronauta con el acento de su avatar
-      const clave = typeof Avatares !== 'undefined' ? Avatares.claveDe(a) : 'azul', vars = { turquesa: '--marca-turquesa', azul: '--marca-azul', morado: '--marca-morado' };   // el mismo color que su avatar
-      ch.acento.forEach((m) => { m.color.set(vars[clave] ? css(vars[clave]) : (clave === 'plata' ? '#aeb4c0' : '#3a3f4a')); });
       ch.actual = null; fijarActividad(estado.actividad, true); actualizarNiveles(a); aplicarVisibilidad();
     }
     function mallaElegida() { return Object.keys(MALLAS).find((m) => MALLAS[m].grupos.includes(grupoActivo)) || null; }

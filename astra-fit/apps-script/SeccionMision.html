@@ -361,10 +361,10 @@ const B = {
       girar: (on) => { S.spin = on; controls.autoRotate = on && !reducir; },
       saltar: () => { if (!SCEN[S.sc].float && !S.jump) S.jump = { t: 0, v: 2.6 }; },
       entrenar: (on) => { S.trained = on; },
-      // Ajusta la figura al perfil: la estatura real escala el cuerpo y el acento del avatar tiñe la luz de contorno
+      // Ajusta la figura al perfil: la estatura real escala el cuerpo y un acento de la marca por astronauta tiñe la luz de contorno
       ponerAstronauta: (a) => {
         S.escala = clamp((Number(a.talla_cm) || 178) / 178, .9, 1.1);
-        const clave = Avatares.claveDe(a);
+        const clave = ['turquesa', 'azul', 'morado'][(parseInt(String(a.id_astronauta).replace(/\D/g, ''), 10) || 0) % 3];   // un acento de la marca por astronauta
         const css = COLOR_ACENTO[clave] ? getComputedStyle(document.documentElement).getPropertyValue(COLOR_ACENTO[clave]).trim() : FIJO_ACENTO[clave];
         acento.color.set(css || '#ffffff'); acento.intensity = 1.6;
       },
