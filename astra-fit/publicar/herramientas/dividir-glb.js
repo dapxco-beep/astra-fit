@@ -5,7 +5,9 @@
  *
  * Qué hace (los bytes comprimidos con meshopt se copian tal cual, no se vuelven a comprimir ni se pierde calidad):
  *   - anatomy-male/female.glb  →  *-musculos.glb  (solo los músculos; huesos, órganos, vasos y nervios no se usan)
- *   - Xbot.glb                 →  Xbot-animaciones.glb  (solo los huesos y las animaciones idle, walk y run: la silueta del Xbot nunca se muestra)
+ *   - Xbot.glb                 →  Xbot-animaciones.glb  (solo los huesos y las animaciones idle, walk y run)
+ *   - Xbot.glb                 →  Xbot-astronauta.glb   (huesos, la silueta y idle, walk y run: SeccionCuerpo la viste de astronauta)
+ *     Después se comprime con meshopt (≈ 4 veces menos):  npx gltfpack -i assets/Xbot-astronauta.glb -o assets/Xbot-astronauta.glb -cc -kn -km
  * Los archivos originales no se tocan.
  */
 const fs = require('fs');
@@ -117,3 +119,5 @@ for (const sx of ['male', 'female']) {
 }
 const xo = path.join(ASSETS, 'Xbot.glb'), xd = path.join(ASSETS, 'Xbot-animaciones.glb');
 informe('Xbot-animaciones.glb', xo, xd, extraer(xo, xd, { sinMallas: true, soloAnimaciones: ['idle', 'walk', 'run'] }));
+const xa = path.join(ASSETS, 'Xbot-astronauta.glb');
+informe('Xbot-astronauta.glb', xo, xa, extraer(xo, xa, { soloAnimaciones: ['idle', 'walk', 'run'] }));

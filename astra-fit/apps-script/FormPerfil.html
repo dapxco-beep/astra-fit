@@ -41,11 +41,11 @@ const Perfil = (() => {
   let modo = 'crear', editando = null;
 
   /* ---------- Selector de emoji (radio buttons nativos: accesibles con teclado) ---------- */
-  // Avatares serios (JsAvatares.html): busto de astronauta con casco, con el acento de color a elegir
-  $('perfil-emojis').innerHTML = Avatares.LISTA.map((e, i) => `
-    <label class="emoji-opcion" title="${UI.esc(e.etiqueta)}">
-      <input type="radio" name="avatar" value="${UI.esc(e.valor)}" ${i === 0 ? 'checked' : ''} aria-label="${UI.esc(e.etiqueta)}">
-      <span class="avatar avatar--serio" aria-hidden="true">${Avatares.svg(e.valor, '')}</span>
+  // Emojis de astronauta (UI.EMOJIS): en Mac, iPhone e iPad se ven los de Apple
+  $('perfil-emojis').innerHTML = UI.EMOJIS.map((e, i) => `
+    <label class="emoji-opcion">
+      <input type="radio" name="emoji" value="${e}" ${i === 0 ? 'checked' : ''} aria-label="Avatar ${i + 1}">
+      <span aria-hidden="true">${e}</span>
     </label>`).join('');
 
   function opcionesEntorno() {
@@ -68,7 +68,7 @@ const Perfil = (() => {
     if (e.target.name === 'peso_kg' || e.target.name === 'talla_cm') mostrarImc();
   });
   function marcarAvatar(valor) {
-    const radio = [...form.querySelectorAll('input[name="avatar"]')].find((r) => r.value === valor);
+    const radio = [...form.querySelectorAll('input[name="emoji"]')].find((r) => r.value === valor);
     if (radio) radio.checked = true;
   }
 
@@ -83,10 +83,10 @@ const Perfil = (() => {
     $('perfil-guardar').textContent = modo === 'editar' ? 'Guardar cambios' : 'Guardar astronauta';
     if (modo === 'editar' && editando) {
       CAMPOS.forEach((k) => { if (editando[k] != null) form.elements[k].value = editando[k]; });
-      marcarAvatar(Avatares.claveDe(editando));
+      marcarAvatar(UI.emojiDe(editando));
     } else {
       form.elements.entorno.value = 'orbita';
-      marcarAvatar(Avatares.LISTA[0].valor);
+      marcarAvatar(UI.EMOJIS[0]);
     }
     mostrarImc();
     dialogo.showModal();
@@ -115,7 +115,7 @@ const Perfil = (() => {
     const datos = {
       nombre: v('nombre'), rol: v('rol') || 'Tripulante', entorno: v('entorno'), fecha_inicio_mision: v('fecha_inicio_mision'),
       sexo: v('sexo'), mano_dominante: v('mano_dominante'),
-      avatar: (form.querySelector('input[name="avatar"]:checked') || {}).value || ''
+      emoji: (form.querySelector('input[name="emoji"]:checked') || {}).value || ''
     };
     Object.entries(RANGOS).forEach(([campo, [min, max]]) => {
       const t = v(campo);

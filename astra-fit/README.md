@@ -34,7 +34,6 @@ Todo lo que se sube a Apps Script está en `apps-script/`, con los mismos nombre
 | `SeccionEntorno.html` | Lógica del exterior (órbita, Luna o Marte) que se ve en el encabezado oscuro de SeccionInicio: escena animada, días desde el despegue, gravedad, temperatura y duración del día | Dashboard |
 | `FormPerfil.html` | Ventana para registrar o editar un astronauta, con emoji de perfil | Dashboard |
 | `JsCalculos.html` | IMC, fechas, peso más reciente y datos de cada entorno | Dashboard |
-| `JsAvatares.html` | Avatares de astronauta con casco (en lugar de emojis) | Dashboard |
 | `JsErdm.html` | Escala ERDM-A: compara cada músculo con su basal, da de 0 a 10 puntos, nivel de riesgo, alertas y plan sugerido. Lee los cortes de la pestaña `EscalaERDM` | Dashboard |
 | `SeccionMonitoreo.html` | Monitoreo neuromuscular: figura de frente y espalda con la banda de cada músculo, una gráfica pequeña por músculo (puntaje ERDM-A por semana) y, al tocar uno, señales EMG e IMU en vivo, medición de 10 s (EMG, IMU y dinamómetro) y tarjeta de la ERDM-A. Al tocar un músculo en la figura abre la guía de su banda | Dashboard |
 | `SeccionSensores.html` | Dentro del Monitoreo: guía emergente de cada banda (qué mide, estado y animación de dónde ponerla, según SENIAM) | Dashboard |
