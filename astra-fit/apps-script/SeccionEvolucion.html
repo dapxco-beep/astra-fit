@@ -61,7 +61,10 @@
       const nivel = medida === 'puntaje' ? Erdm.nivel(f.fase === 'basal' ? 'bajo' : f.riesgo) : NIVEL_PUNTOS[p || 0];
       return { semana: (Date.parse(f.fecha) - Date.parse(b.fecha)) / (7 * 864e5), fecha: f.fecha, valor, nivel, fila: f };
     }).filter(Boolean);
-    return { b, pts };
+    // Si se tomó una basal nueva, las evaluaciones anteriores son de otro periodo (semanas negativas): no se dibujan
+    // fuera del eje; la tarjeta lo avisa y siguen en la tabla.
+    const previas = pts.filter((p) => p.semana < -0.01).length;
+    return { b, pts: pts.filter((p) => p.semana >= -0.01), todos: pts, previas };
   }
 
   function cortes() {
@@ -125,7 +128,7 @@
           ${u ? `<span class="estado estado--${u.nivel}">${esc(m.texto(u.valor))}</span>` : '<span class="estado estado--gris">Sin basal</span>'}
         </figcaption>
         ${s.pts.length ? grafica(g, s, escala) : '<p class="nota evo-vacio">Sin evaluación basal.</p>'}
-        <p class="nota evo-pie">${esc(m.eje)} · semanas desde la basal</p>
+        <p class="nota evo-pie">${esc(m.eje)} · semanas desde la basal${s.previas ? ` del ${esc(Calc.fechaCorta(s.b.fecha))} (${s.previas} ${s.previas === 1 ? 'evaluación anterior, en la tabla' : 'evaluaciones anteriores, en la tabla'})` : ''}</p>
         <p class="nota evo-ultima">${esc(ultimaMedicion(medida === 'vo2pico' ? 'vo2pico' : g))}</p>
       </figure>`;
     }).join('');
@@ -134,8 +137,8 @@
 
   function pintarTabla() {
     const m = MEDIDAS[medida];
-    const semanas = [...new Set(Object.values(datos).flatMap((s) => s.pts.map((p) => Math.round(p.semana))))].sort((a, b) => a - b);
-    const celda = (g, w) => { const p = datos[g].pts.find((x) => Math.round(x.semana) === w); return p ? (medida === 'puntaje' ? String(p.valor) : `${n0(p.valor, 1)} %`) : '—'; };
+    const semanas = [...new Set(Object.values(datos).flatMap((s) => (s.todos || s.pts).map((p) => Math.round(p.semana))))].sort((a, b) => a - b);
+    const celda = (g, w) => { const p = (datos[g].todos || datos[g].pts).find((x) => Math.round(x.semana) === w); return p ? (medida === 'puntaje' ? String(p.valor) : `${n0(p.valor, 1)} %`) : '—'; };
     $('evo-tabla').innerHTML = `<caption class="nota">${esc(m.eje)}</caption>
       <thead><tr><th scope="col">Semana</th>${Erdm.GRUPOS.map((g) => `<th scope="col">${esc(Erdm.etiqueta(g))}</th>`).join('')}</tr></thead>
       <tbody>${semanas.map((w) => `<tr><th scope="row">${w}</th>${Erdm.GRUPOS.map((g) => `<td>${celda(g, w)}</td>`).join('')}</tr>`).join('')}</tbody>`;
