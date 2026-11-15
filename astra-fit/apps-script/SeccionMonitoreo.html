@@ -70,7 +70,7 @@
               <button type="button" class="boton" id="mon-medir">Iniciar medición</button>
             </div>
           </div>
-          <div class="mon-estado-sensor pequeno" id="mon-sensor" role="status" aria-live="polite"></div>
+          <div class="mon-estado-sensor pequeno" id="mon-sensor"></div>
         </div>
 
         <div class="mon-graficas">
@@ -277,6 +277,7 @@
     reiniciarReposo();
     const quietoYa = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     $('mon-detalle').scrollIntoView({ behavior: quietoYa ? 'auto' : 'smooth', block: 'start' });
+    const t = $('mon-titulo'); t.setAttribute('tabindex', '-1'); t.focus({ preventScroll: true });
   }
   window.Monitoreo = { elegir };
   function cerrar() {
@@ -286,7 +287,9 @@
     pintarCuerpo(); pintarMinis();
   }
   $('mon-volver').addEventListener('click', () => {
+    const deDonde = grupo;
     cerrar();
+    const b = document.querySelector('#mon-minis [data-grupo="' + deDonde + '"]'); if (b) b.focus({ preventScroll: true });
     const quietoYa = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     $('monitoreo').scrollIntoView({ behavior: quietoYa ? 'auto' : 'smooth', block: 'start' });
   });
@@ -306,7 +309,7 @@
     const d = pts.map((p, i) => `${i ? 'L' : 'M'}${X(p.x).toFixed(1)} ${Y(p.y).toFixed(1)}`).join(' ');
     const ult = pts[pts.length - 1];
     const puntos = pts.map((p) => `<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="7" class="mon-mini-blanco"><title>Semana ${Math.round(p.x)}: ${p.y} de 10</title></circle>`).join('');
-    return `<svg class="mon-mini-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Puntaje ERDM-A por semana, último ${ult.y} de 10">
+    return `<svg class="mon-mini-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true" focusable="false">
       ${guia(c.moderado)}${guia(c.alto)}
       <line x1="${iz}" x2="${W - de}" y1="${Y(0)}" y2="${Y(0)}" class="mon-mini-base"/>
       <path d="${d}" class="mon-mini-linea"/>
@@ -707,6 +710,7 @@
     limpiar();
     fuente = prepararFuente(true);
     midiendo = { grupo, t: 0, fase: $('mon-fase').value };
+    const tt = $('mon-titulo'); tt.setAttribute('tabindex', '-1'); if (document.activeElement === $('mon-medir')) tt.focus({ preventScroll: true });   // el botón se desactiva: el foco no se pierde
     $('mon-medir').disabled = true; $('mon-medir').textContent = 'Midiendo…'; $('mon-fase').disabled = true;
     pintarCuerpo(); pintarMinis(); pintarSensor();
     pintarKpis(null, 'Midiendo 6 repeticiones…');

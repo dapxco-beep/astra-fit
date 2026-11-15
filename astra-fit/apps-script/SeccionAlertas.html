@@ -145,12 +145,26 @@
     lista.after(b);
   }
   new MutationObserver(plegarAlertas).observe($('alr-lista'), { childList: true });
-  async function cambiarEstado(id, cambios, mensaje, deshacer) {
+  // Tras un cambio la tarjeta desaparece: el foco pasa a la alerta que quedó en su lugar (o al conteo si no queda ninguna)
+  function enfocarTras(indice) {
+    const items = [...$('alr-lista').querySelectorAll(':scope > article:not([hidden])')];
+    const destino = items[Math.min(indice, items.length - 1)] || $('alr-conteo') || document.querySelector('#alertas h2, #alertas h1');
+    if (destino) { destino.setAttribute('tabindex', '-1'); destino.focus({ preventScroll: false }); }
+  }
+  const indiceDe = (id) => [...$('alr-lista').querySelectorAll(':scope > article')].findIndex((a) => a.dataset.id === id);
+  async function cambiarEstado(id, cambios, mensaje, deshacer, alVolver) {
+    const indice = Math.max(0, indiceDe(id));
     await API.actualizarAlerta(id, cambios);
     const x = Sesion.datos.Alertas.find((y) => y.id_alerta === id); if (x) Object.assign(x, cambios);
     document.dispatchEvent(new CustomEvent('datos-actualizados'));
+    if (alVolver) alVolver(); else enfocarTras(indice);
     UI.aviso(mensaje, 'completado', deshacer ? { duracion: 8000, accion: { texto: 'Deshacer', fn: async () => {
-      try { await cambiarEstado(id, deshacer, 'Se deshizo el cambio.'); } catch (err) { UI.aviso('No se pudo deshacer. Inténtalo de nuevo.', 'error'); }
+      try {
+        await cambiarEstado(id, deshacer, 'Se deshizo el cambio.', null, () => {
+          const b = document.querySelector('#alertas [data-id="' + CSS.escape(id) + '"] [data-estado]');
+          if (b) b.focus(); else enfocarTras(indice);
+        });
+      } catch (err) { UI.aviso('No se pudo deshacer. Inténtalo de nuevo.', 'error'); }
     } } } : {});
   }
   function pedirConfirmacion(tarjeta) {
@@ -174,8 +188,9 @@
     const id = tarjeta.dataset.id, estado = b.dataset.estado;
     if (estado === 'atendida') { pedirConfirmacion(tarjeta); return; }
     b.disabled = true;
-    const previo = (Sesion.datos.Alertas.find((y) => y.id_alerta === id) || {}).estado || 'abierta';
-    try { await cambiarEstado(id, estado === 'abierta' ? { estado, nota_cierre: '', atendida_por: '' } : { estado }, estado === 'abierta' ? 'Alerta reabierta.' : 'Alerta en seguimiento.', estado === 'abierta' ? null : { estado: previo }); }
+    const antes = Sesion.datos.Alertas.find((y) => y.id_alerta === id) || {}, previo = antes.estado || 'abierta';
+    const volverA = estado === 'abierta' ? { estado: previo, nota_cierre: antes.nota_cierre || '', atendida_por: antes.atendida_por || '' } : { estado: previo };
+    try { await cambiarEstado(id, estado === 'abierta' ? { estado, nota_cierre: '', atendida_por: '' } : { estado }, estado === 'abierta' ? 'Alerta reabierta.' : 'Alerta en seguimiento.', volverA); }
     catch (err) { UI.aviso('No se pudo actualizar la alerta. Inténtalo de nuevo.', 'error'); b.disabled = false; }
   });
 

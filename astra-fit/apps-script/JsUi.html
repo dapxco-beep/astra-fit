@@ -28,7 +28,14 @@ const UI = (() => {
     if (persistente) { const x = document.createElement('button'); x.type = 'button'; x.textContent = 'Cerrar'; x.addEventListener('click', cerrar); el.appendChild(x); }
     requestAnimationFrame(() => el.classList.add('visible'));
     clearTimeout(temporizador);
-    if (!persistente) temporizador = setTimeout(() => el.classList.remove('visible'), opciones.duracion || 3200);
+    if (!persistente) {
+      // El tiempo se detiene mientras el puntero o el foco están sobre el aviso (para alcanzar "Deshacer" con calma)
+      const dur = opciones.duracion || 3200; let fin = Date.now() + dur, pausado = false;
+      const programar = (ms) => { clearTimeout(temporizador); temporizador = setTimeout(() => el.classList.remove('visible'), ms); };
+      el.onmouseenter = el.onfocusin = () => { if (!pausado) { pausado = true; clearTimeout(temporizador); } };
+      el.onmouseleave = el.onfocusout = (e) => { if (e && e.relatedTarget && el.contains(e.relatedTarget)) return; if (pausado) { pausado = false; fin = Date.now() + Math.max(2500, fin - Date.now()); programar(fin - Date.now()); } };
+      programar(dur);
+    } else { el.onmouseenter = el.onfocusin = el.onmouseleave = el.onfocusout = null; }
   }
 
   /* Controles segmentados: un clic marca el botón y avisa con el evento "cambio" */

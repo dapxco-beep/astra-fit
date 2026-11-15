@@ -47,7 +47,7 @@
           <a class="nav-marca" href="#inicio">MYOCARE</a>
           <span class="nav-etiqueta">Datos simulados</span>
           <a class="nav-astronauta" href="#inicio" aria-label="Mi perfil"><span id="nav-avatar-m"></span><span id="nav-nombre-m"></span></a>
-          <button type="button" class="enlace nav-cambiar-m" onclick="Sesion.salir()">Cambiar</button>
+          <button type="button" class="enlace nav-cambiar-m" onclick="Sesion.salir()" aria-label="Cambiar astronauta">Cambiar</button>
         </header>
 
         <main id="contenido" tabindex="-1">
@@ -110,7 +110,7 @@
       document.getElementById('nav-avatar').innerHTML = UI.avatar(a);
       document.getElementById('nav-nombre').textContent = a.nombre;
       document.getElementById('nav-avatar-m').innerHTML = UI.avatar(a);
-      document.getElementById('nav-nombre-m').textContent = a.nombre;
+      document.getElementById('nav-nombre-m').textContent = a.nombre; document.querySelector('.barra-superior .nav-astronauta').setAttribute('aria-label', 'Perfil de ' + a.nombre);
       document.title = a.nombre + ' · MYOCARE';
     }
     document.addEventListener('astronauta-elegido', (e) => pintarNav(e.detail));
@@ -220,10 +220,12 @@
         const id = a.getAttribute('href').slice(1); if (!VISTAS.some((v) => v.id === id) && !ALIAS[id]) return;
         if (a.getAttribute('aria-current') === 'page') { e.preventDefault(); window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); return; }
         e.preventDefault(); ir(id);
-        try { history.replaceState(null, '', '#' + id); } catch (err) { /* iframe sin permiso: no pasa nada */ }
+        // Cada cambio de vista queda en el historial: el botón Atrás (y el gesto de volver del celular) regresa a la vista anterior
+        try { if (location.hash !== '#' + id) history.pushState({ vista: id }, '', '#' + id); } catch (err) { /* iframe sin permiso: no pasa nada */ }
       });
       const desdeHash = () => ir((location.hash || '#inicio').slice(1));
       window.addEventListener('hashchange', desdeHash);
+      window.addEventListener('popstate', () => { if (!$('vista-panel').hidden) desdeHash(); });
       document.addEventListener('astronauta-elegido', () => {
         primera = true; desdeHash(); contarAlertas();
         // El botón pulsado desaparece: el foco pasa al título de la vista (antes se perdía)

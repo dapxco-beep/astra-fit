@@ -1014,4 +1014,18 @@ html[data-ligero] .tablero { transition: none; }
   .nav-marca-largo, .nav-etiqueta-largo, .nav-texto, .barra-lateral #nav-nombre, .nav-item > span:not(.nav-badge) { transition: max-width var(--dur-media) var(--curva-suave), opacity .12s ease; }
   .tablero:not(.tablero--plegado) .nav-marca-largo, .tablero:not(.tablero--plegado) .nav-etiqueta-largo, .tablero:not(.tablero--plegado) .nav-texto, .tablero:not(.tablero--plegado) #nav-nombre, .tablero:not(.tablero--plegado) .nav-item > span:not(.nav-badge) { transition-delay: .1s, .14s; }
 }
+
+/* ================================================================ 106. NAVEGACIÓN, FOCO Y AVISOS (auditoría del 15-nov) */
+@media (max-width: 899px) {
+  .aviso { bottom: calc(84px + env(safe-area-inset-bottom)); width: max-content; max-width: calc(100% - 32px); }
+  .aviso > span { flex: 1 1 auto; min-width: 0; }
+  body.barras-ocultas .aviso, body.teclado .aviso { bottom: calc(16px + env(safe-area-inset-bottom)); }
+  .aviso button { min-height: 44px; }
+  .barra-superior .nav-astronauta { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+  #nav-nombre-m { display: inline-block; max-width: 11ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: var(--t-pequeno); }
+}
+@media (max-width: 359px) { #nav-nombre-m { max-width: 7ch; } }
+.alr-lista > article:focus, #mon-titulo:focus, #acceso-titulo:focus { outline: none; }
+.alr-lista > article:focus-visible { outline: 2px solid var(--azul); outline-offset: 3px; }
+.tabla-envoltura:focus-visible { outline: 2px solid var(--azul); outline-offset: 2px; }
 </style>
