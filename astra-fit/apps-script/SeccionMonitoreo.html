@@ -181,8 +181,8 @@
     });
     // Etiquetas (HTML encima del SVG, para que el texto se lea nítido)
     $('mon-chips').innerHTML = Object.entries(MUSCULOS).map(([grupo, m]) =>
-      `<button type="button" class="mon-chip mon-chip--${m.vista}" data-grupo="${grupo}" aria-label="${esc(NOMBRE[grupo])}: cómo ponerse la banda">
-         <span class="mon-chip-nombre">${esc(NOMBRE[grupo])}</span><span class="mon-chip-estado"></span></button>`).join('');
+      `<button type="button" class="mon-chip mon-chip--${m.vista}" data-grupo="${grupo}">
+         <span class="mon-chip-nombre">${esc(NOMBRE[grupo])}</span><span class="mon-chip-estado"></span><span class="solo-lector">. Cómo ponerse la banda</span></button>`).join('');
     acomodarChips();
   }
   $('mon-chips').addEventListener('click', (e) => { const b = e.target.closest('[data-grupo]'); if (b) tocar(b.dataset.grupo); });
