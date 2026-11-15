@@ -1,6 +1,8 @@
 <!-- FormPerfil.html — Ventana para registrar o editar un astronauta (con emoji de perfil e IMC en vivo).
      Uso:  Perfil.abrir('crear')   o   Perfil.abrir('editar', astronauta)
-     Avisa con eventos:  "astronauta-guardado" (nuevo)  y  "astronauta-actualizado" (editado), detail = astronauta -->
+     Avisa con eventos:  "astronauta-guardado" (nuevo), "astronauta-actualizado" (editado) y "astronauta-eliminado", detail = astronauta
+     Eliminar perfil (solo al editar) no borra datos: marca activo = "NO" y el astronauta deja de salir en la tripulación.
+     Sus evaluaciones, alertas y seguimiento se conservan; para recuperarlo basta poner activo = "SI" en la hoja Astronautas. -->
 <dialog class="dialogo" id="dialogo-perfil" aria-labelledby="perfil-titulo">
   <form class="formulario" id="form-perfil" novalidate>
     <div class="hoja-cabecera">
@@ -16,18 +18,29 @@
     <div class="formulario-filas">
       <div class="campo" data-campo="nombre"><label for="p-nombre">Nombre</label><input id="p-nombre" name="nombre" type="text" autocomplete="off"><span class="error" hidden></span></div>
       <div class="campo" data-campo="rol"><label for="p-rol">Rol en la misión</label><input id="p-rol" name="rol" type="text" placeholder="Especialista de misión"></div>
-      <div class="campo" data-campo="entorno"><label for="p-entorno">Dónde está</label><select id="p-entorno" name="entorno"></select></div>
+      <div class="campo" data-campo="entorno"><label for="p-entorno">Ubicación</label><select id="p-entorno" name="entorno"></select></div>
       <div class="campo" data-campo="fecha_inicio_mision"><label for="p-fecha">Fecha de despegue</label><input id="p-fecha" name="fecha_inicio_mision" type="date"><span class="error" hidden></span></div>
-      <div class="campo" data-campo="sexo"><label for="p-sexo">Sexo</label><select id="p-sexo" name="sexo"><option value="">Elegir</option><option value="F">Femenino</option><option value="M">Masculino</option></select><span class="error" hidden></span></div>
+      <div class="campo" data-campo="sexo"><label for="p-sexo">Sexo</label><select id="p-sexo" name="sexo"><option value="">Seleccionar</option><option value="F">Femenino</option><option value="M">Masculino</option></select><span class="error" hidden></span></div>
       <div class="campo" data-campo="edad"><label for="p-edad">Edad <span class="texto-2">(años)</span></label><input id="p-edad" name="edad" type="number" inputmode="numeric" min="21" max="70"><span class="error" hidden></span></div>
       <div class="campo" data-campo="peso_kg"><label for="p-peso">Peso <span class="texto-2">(kg)</span></label><input id="p-peso" name="peso_kg" type="number" inputmode="decimal" step="0.1" min="40" max="150"><span class="error" hidden></span></div>
       <div class="campo" data-campo="talla_cm"><label for="p-talla">Talla <span class="texto-2">(cm)</span></label><input id="p-talla" name="talla_cm" type="number" inputmode="numeric" min="140" max="210"><span class="error" hidden></span></div>
       <div class="campo" data-campo="mano_dominante"><label for="p-mano">Lateralidad</label><select id="p-mano" name="mano_dominante"><option value="derecha">Diestra</option><option value="izquierda">Zurda</option></select></div>
     </div>
 
-    <div class="imc-vivo" id="perfil-imc" aria-live="polite"><span class="texto-2 pequeno">Escribe peso y talla para calcular el IMC.</span></div>
+    <div class="imc-vivo" id="perfil-imc" aria-live="polite"><span class="texto-2 pequeno">El IMC se calcula con el peso y la talla.</span></div>
 
-    <div><button class="boton" type="submit" id="perfil-guardar">Guardar astronauta</button></div>
+    <div class="perfil-pie">
+      <button class="boton" type="submit" id="perfil-guardar">Guardar astronauta</button>
+      <button type="button" class="enlace enlace--simple perfil-eliminar" id="perfil-eliminar" hidden>Eliminar perfil</button>
+    </div>
+    <div class="perfil-confirmar" id="perfil-confirmar" role="alertdialog" aria-labelledby="perfil-confirmar-t" hidden>
+      <p class="texto" id="perfil-confirmar-t"><strong></strong></p>
+      <p class="pequeno texto-2">El perfil deja de aparecer en la tripulación. Sus evaluaciones, alertas y seguimiento se conservan.</p>
+      <div class="perfil-confirmar-botones">
+        <button type="button" class="boton boton--secundario" id="perfil-eliminar-no">Cancelar</button>
+        <button type="button" class="boton boton--peligro" id="perfil-eliminar-si">Eliminar perfil</button>
+      </div>
+    </div>
   </form>
 </dialog>
 
@@ -41,11 +54,11 @@ const Perfil = (() => {
   let modo = 'crear', editando = null;
 
   /* ---------- Selector de emoji (radio buttons nativos: accesibles con teclado) ---------- */
-  // Avatares serios (JsAvatares.html): busto de astronauta con casco, con el acento de color a elegir
-  $('perfil-emojis').innerHTML = Avatares.LISTA.map((e, i) => `
-    <label class="emoji-opcion" title="${UI.esc(e.etiqueta)}">
-      <input type="radio" name="avatar" value="${UI.esc(e.valor)}" ${i === 0 ? 'checked' : ''} aria-label="${UI.esc(e.etiqueta)}">
-      <span class="avatar avatar--serio" aria-hidden="true">${Avatares.svg(e.valor, '')}</span>
+  // Emojis de astronauta (UI.EMOJIS): en Mac, iPhone e iPad se ven los de Apple
+  $('perfil-emojis').innerHTML = UI.EMOJIS.map((e, i) => `
+    <label class="emoji-opcion">
+      <input type="radio" name="emoji" value="${e}" ${i === 0 ? 'checked' : ''} aria-label="Avatar ${i + 1}">
+      <span aria-hidden="true">${e}</span>
     </label>`).join('');
 
   function opcionesEntorno() {
@@ -60,7 +73,7 @@ const Perfil = (() => {
     const c = Calc.categoriaImc(v);
     $('perfil-imc').innerHTML = c
       ? `<span class="pequeno texto-2">IMC</span> <strong class="titulo-tarjeta">${Calc.decimal(v)}</strong> <span class="estado estado--${c.nivel}">${c.nombre}</span>`
-      : '<span class="texto-2 pequeno">Escribe peso y talla para calcular el IMC.</span>';
+      : '<span class="texto-2 pequeno">El IMC se calcula con el peso y la talla.</span>';
   }
   form.addEventListener('input', (e) => {
     const c = e.target.closest('.campo[data-error]');
@@ -68,7 +81,7 @@ const Perfil = (() => {
     if (e.target.name === 'peso_kg' || e.target.name === 'talla_cm') mostrarImc();
   });
   function marcarAvatar(valor) {
-    const radio = [...form.querySelectorAll('input[name="avatar"]')].find((r) => r.value === valor);
+    const radio = [...form.querySelectorAll('input[name="emoji"]')].find((r) => r.value === valor);
     if (radio) radio.checked = true;
   }
 
@@ -83,12 +96,14 @@ const Perfil = (() => {
     $('perfil-guardar').textContent = modo === 'editar' ? 'Guardar cambios' : 'Guardar astronauta';
     if (modo === 'editar' && editando) {
       CAMPOS.forEach((k) => { if (editando[k] != null) form.elements[k].value = editando[k]; });
-      marcarAvatar(Avatares.claveDe(editando));
+      marcarAvatar(UI.emojiDe(editando));
     } else {
       form.elements.entorno.value = 'orbita';
-      marcarAvatar(Avatares.LISTA[0].valor);
+      marcarAvatar(UI.EMOJIS[0]);
     }
     mostrarImc();
+    $('perfil-eliminar').hidden = !(modo === 'editar' && editando);
+    $('perfil-confirmar').hidden = true;
     dialogo.showModal();
     form.elements.nombre.focus();
   }
@@ -109,17 +124,17 @@ const Perfil = (() => {
   function leerFormulario() {
     const v = (n) => form.elements[n].value.trim();
     let valido = true;
-    if (!v('nombre')) { marcarError('nombre', 'Escribe el nombre.'); valido = false; }
-    if (!v('fecha_inicio_mision')) { marcarError('fecha_inicio_mision', 'Elige la fecha de despegue.'); valido = false; }
-    if (!v('sexo')) { marcarError('sexo', 'Elige una opción.'); valido = false; }
+    if (!v('nombre')) { marcarError('nombre', 'Falta el nombre.'); valido = false; }
+    if (!v('fecha_inicio_mision')) { marcarError('fecha_inicio_mision', 'Falta la fecha de despegue.'); valido = false; }
+    if (!v('sexo')) { marcarError('sexo', 'Falta el sexo.'); valido = false; }
     const datos = {
       nombre: v('nombre'), rol: v('rol') || 'Tripulante', entorno: v('entorno'), fecha_inicio_mision: v('fecha_inicio_mision'),
       sexo: v('sexo'), mano_dominante: v('mano_dominante'),
-      avatar: (form.querySelector('input[name="avatar"]:checked') || {}).value || ''
+      emoji: (form.querySelector('input[name="emoji"]:checked') || {}).value || ''
     };
     Object.entries(RANGOS).forEach(([campo, [min, max]]) => {
       const t = v(campo);
-      if (t === '') { marcarError(campo, 'Escribe un valor.'); valido = false; return; }
+      if (t === '') { marcarError(campo, 'Falta este dato.'); valido = false; return; }
       const n = Number(t.replace(',', '.'));
       if (isNaN(n) || n < min || n > max) { marcarError(campo, `Debe estar entre ${min} y ${max}.`); valido = false; return; }
       datos[campo] = n;
@@ -131,7 +146,7 @@ const Perfil = (() => {
     e.preventDefault();
     limpiarErrores();
     const datos = leerFormulario();
-    if (!datos) { UI.aviso('Revisa los campos marcados.', 'advertencia'); return; }
+    if (!datos) { UI.aviso('Hay campos por completar o corregir.', 'advertencia'); return; }
 
     const boton = $('perfil-guardar');
     const textoBoton = boton.textContent;
@@ -163,6 +178,28 @@ const Perfil = (() => {
       .then(cerrar)
       .catch((err) => UI.aviso('No se pudo guardar: ' + err.message, 'error'))
       .finally(() => { boton.disabled = false; boton.textContent = textoBoton; });
+  });
+
+  /* ---------- Eliminar perfil (con confirmación) ---------- */
+  $('perfil-eliminar').addEventListener('click', () => {
+    $('perfil-confirmar-t').firstElementChild.textContent = `¿Eliminar el perfil de ${editando.nombre}?`;
+    $('perfil-confirmar').hidden = false;
+    $('perfil-eliminar-no').focus();
+  });
+  $('perfil-eliminar-no').addEventListener('click', () => { $('perfil-confirmar').hidden = true; $('perfil-eliminar').focus(); });
+  $('perfil-eliminar-si').addEventListener('click', () => {
+    const boton = $('perfil-eliminar-si'), a = editando;
+    boton.disabled = true; boton.textContent = 'Eliminando…';
+    API.actualizarAstronauta(a.id_astronauta, { activo: 'NO' })
+      .then(() => {
+        a.activo = 'NO';
+        cerrar();
+        document.dispatchEvent(new CustomEvent('astronauta-eliminado', { detail: a }));
+        if (Sesion.astronauta && Sesion.astronauta.id_astronauta === a.id_astronauta && Sesion.salir) Sesion.salir();
+        UI.aviso(`Perfil de ${a.nombre} eliminado.`, 'completado');
+      })
+      .catch((err) => UI.aviso('No se pudo eliminar: ' + err.message, 'error'))
+      .finally(() => { boton.disabled = false; boton.textContent = 'Eliminar perfil'; });
   });
 
   return { abrir };

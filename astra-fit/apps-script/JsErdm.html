@@ -17,7 +17,7 @@
     Erdm.historial(idAstronauta, grupo) → todas sus evaluaciones, de la más antigua a la más reciente
     Erdm.basal(idAstronauta, grupo)     → evaluación basal del músculo (o null)
     Erdm.alertas(filas)                 → alertas nuevas si el riesgo subió (para API.guardarAlertas)
-    Erdm.nota(alerta)                   → nota clínica breve: { musculo, resumen, hallazgos[], conducta, texto }
+    Erdm.nota(alerta)                   → nota clínica: { musculo, resumen, hallazgos[], conducta, pauta, ademas[], control, texto }
     Erdm.plan(grupo, riesgo)            → { ejercicio, dosificacion } de la pestaña PlanFortalecimiento
     Erdm.DIMENSIONES / Erdm.GRUPOS / Erdm.nivel(riesgo) / Erdm.idEvaluacion(id, fecha, grupo)
   Usa Sesion.datos (lo carga SeccionAcceso.html).
@@ -155,7 +155,7 @@ const Erdm = (() => {
     DIMENSIONES.forEach((d) => {
       const v = f[d.cambio];
       if (v === null || v === undefined) return;
-      if (d.clave === 'emg') partes.push(`EMG cambió ${Math.round(v)} %`);
+      if (d.clave === 'emg') partes.push(`EMG ${Math.round(v)} % de cambio`);
       else { const x = d.signo * v; partes.push(`${d.nombre.toLowerCase().replace('vo₂pico', 'VO₂pico')} ${x < 0 ? '−' : '+'}${Math.abs(Math.round(x))} %`); }
     });
     const t = partes.join(', ');
@@ -164,39 +164,69 @@ const Erdm = (() => {
 
   /** Nota clínica breve de una alerta, para mostrarla: músculo, puntaje, hallazgos frente a la basal y conducta.
       Se arma desde la evaluación que la originó (alerta.origen); si no se encuentra, usa el mensaje guardado. */
+  /* Recomendaciones: solo las del documento ASTRA-FIT, y solo las que se pueden seguir con los sensores de la misión.
+       Conducta y control: ERDM-A sección 6.1 (intervención según el nivel) y regla de alerta prioritaria (sección 5).
+       Pauta: sección 6.2 (pestaña PlanFortalecimiento).
+       Además: fase 9 (promover recuperación si hay indicadores de fatiga; nueva evaluación si el resultado es anormal o
+       inconsistente), sección 8 (estandarizar la colocación de electrodos) y la intervención del prototipo (ejercicios de
+       coordinación neuromuscular). No se recomiendan estudios que requieran ir a un centro médico. */
   const CONDUCTA = {
-    prioritaria: 'Evaluación prioritaria por el médico de vuelo antes de continuar la progresión de carga.',
-    alto: 'Valoración por el médico de vuelo antes de intensificar. Carga baja y progresión supervisada.',
-    moderado: 'Aumentar el trabajo específico del músculo. Reevaluar en el próximo control semanal.',
-    bajo: 'Mantener el programa preventivo.'
+    prioritaria: 'Activar la evaluación prioritaria por el equipo médico.',
+    alto: 'Valoración individualizada antes de intensificar el entrenamiento. Priorizar la recuperación de la fuerza y la correcta ejecución.',
+    moderado: 'Incrementar el entrenamiento específico del músculo, aumentar la resistencia de forma progresiva e incorporar ejercicios aislados y multiarticulares.',
+    bajo: 'Mantener el programa preventivo de ejercicio.'
+  };
+  const CONTROL = {
+    alto: 'Seguimiento estrecho mediante dinamometría y las demás variables de la escala.',
+    moderado: 'Reevaluar la respuesta muscular con mayor frecuencia.',
+    bajo: 'Seguimiento periódico de fuerza y función.'
   };
   function nota(alerta) {
     const fila = evaluaciones().find((e) => e.id_evaluacion === alerta.origen);
-    if (!fila) return { musculo: alerta.grupo_muscular ? etiqueta(alerta.grupo_muscular) : '', resumen: '', hallazgos: [], conducta: '', texto: alerta.mensaje || '' };
+    if (!fila) return { musculo: alerta.grupo_muscular ? etiqueta(alerta.grupo_muscular) : '', resumen: '', hallazgos: [], conducta: '', pauta: '', ademas: [], control: '', texto: alerta.mensaje || '' };
     const f = calcular(fila), prior = f.alerta_prioritaria === 'SI';
+    const pts = (clave) => Number(f[DIMENSIONES.find((d) => d.clave === clave).puntos]) || 0;
     const hallazgos = DIMENSIONES.map((d) => {
       const v = f[d.cambio]; if (v === null || v === undefined) return null;
       const x = d.clave === 'emg' ? Math.abs(v) : d.signo * v, r = Math.abs(Math.round(x));
-      const valor = d.clave === 'emg' ? `Δ ${r} %` : `${x < 0 ? '−' : '+'}${r} %`;
-      return { nombre: d.clave === 'coordinacion' ? 'Variabilidad (IMU)' : d.nombre, valor, puntos: Number(f[d.puntos]) || 0 };
+      const valor = d.clave === 'emg' ? `${r} % de cambio` : `${x < 0 ? '−' : '+'}${r} %`;
+      return { nombre: d.nombre, valor, puntos: Number(f[d.puntos]) || 0 };
     }).filter(Boolean);
     const alterados = hallazgos.filter((h) => h.puntos > 0);
+    // Pauta del músculo para ese nivel (6.2)
+    const p = plan(f.grupo_muscular, f.riesgo);
+    const dosis = /carga baja/i.test(p ? p.ejercicio : '') ? String(p.dosificacion || '').replace(/ con carga baja/i, '').replace(/, bajo supervisión/i, '') : String(p ? p.dosificacion || '' : '');
+    const pauta = p ? `${p.ejercicio}. ${dosis.replace(/\s*Reevaluar con más frecuencia\.?/i, '').replace(/\s*Valoración individualizada antes de intensificar\.?/i, '')}`.trim() : '';
+    // Indicaciones según lo que está alterado (máximo dos, en orden de relevancia)
+    const b = basal(f.id_astronauta, f.grupo_muscular, f.fecha);
+    const fm = num(fila.emg_frec_mediana_hz), fb = b ? num(b.emg_frec_mediana_hz) : null;
+    const caidaFm = fm !== null && fb ? (fb - fm) / fb * 100 : null;
+    const ademas = [];
+    if (caidaFm !== null && caidaFm >= 10) ademas.push(`Frecuencia mediana ${Math.round(caidaFm)} % por debajo de la basal, compatible con fatiga: promover la recuperación.`);
+    if (pts('coordinacion')) ademas.push('Incluir ejercicios de coordinación neuromuscular.');
+    if (pts('emg') && !(caidaFm !== null && caidaFm >= 10)) ademas.push('Repetir la evaluación EMG con la misma colocación de electrodos y la misma tarea.');
     return {
       musculo: etiqueta(f.grupo_muscular),
       resumen: `ERDM-A ${f.puntaje_erdm}/10, riesgo ${f.riesgo}${prior ? ', criterio de evaluación prioritaria' : ''}`,
       hallazgos: alterados.length ? alterados : hallazgos,
       conducta: CONDUCTA[prior ? 'prioritaria' : f.riesgo] || '',
+      pauta, ademas: ademas.slice(0, 2),
+      control: CONTROL[prior ? 'alto' : f.riesgo] || '',
       texto: ''
     };
   }
 
-  /** La misma nota en HTML (la usan Alertas y el Estado de hoy del Perfil). */
-  function notaHtml(alerta) {
+  /** La misma nota en HTML. Completa en Alertas; breve (solo conducta) en el Perfil y en Cuerpo. */
+  function notaHtml(alerta, opciones = {}) {
     const n = nota(alerta), e = (t) => UI.esc(t);
     if (n.texto) return `<p class="texto">${e(n.texto)}</p>${alerta.recomendacion ? `<p class="pequeno texto-2">${e(alerta.recomendacion)}</p>` : ''}`;
+    const fila = (t, v) => (v ? `<dt>${t}</dt><dd>${e(v)}</dd>` : '');
+    const plan = opciones.breve
+      ? fila('Conducta', n.conducta)
+      : fila('Conducta', n.conducta) + fila('Pauta', n.pauta) + n.ademas.map((x, i) => fila(i ? '' : 'Además', x)).join('') + fila('Control', n.control);
     return `<p class="texto"><strong>${e(n.musculo)}.</strong> ${e(n.resumen)}.</p>
       <ul class="nota-hallazgos">${n.hallazgos.map((h) => `<li><span>${e(h.nombre)}</span> <strong>${e(h.valor)}</strong></li>`).join('')}</ul>
-      ${n.conducta ? `<p class="pequeno"><span class="texto-2">Conducta:</span> ${e(n.conducta)}</p>` : ''}`;
+      <dl class="nota-plan pequeno">${plan}</dl>`;
   }
 
   /** Alertas para filas recién guardadas: si el riesgo subió frente a la evaluación anterior, o hay alerta prioritaria nueva. */
@@ -216,7 +246,7 @@ const Erdm = (() => {
         indicador: 'puntaje_erdm', valor_actual: f.puntaje_erdm, valor_basal: 0, cambio_pct: null,
         nivel: prior ? 'rojo' : nivel(f.riesgo),
         mensaje: `${etiqueta(f.grupo_muscular)}. ERDM-A ${f.puntaje_erdm}/10, riesgo ${f.riesgo}${prior ? ', criterio de evaluación prioritaria' : ''}. ${resumenCambios(f)} frente a la basal.`,
-        recomendacion: CONDUCTA[prior ? 'prioritaria' : f.riesgo] || '',
+        recomendacion: (() => { const n = nota({ origen: f.id_evaluacion }); return [n.conducta, n.pauta].filter(Boolean).join(' '); })(),
         estado: 'abierta', atendida_por: '', nota_cierre: ''
       });
     });

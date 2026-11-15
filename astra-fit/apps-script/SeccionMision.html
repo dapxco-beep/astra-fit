@@ -7,8 +7,7 @@
 <section class="seccion seccion--negra" id="mision">
   <div class="contenedor">
     <div class="seccion-cabecera">
-      <h2 class="titulo">El mismo astronauta, en cada destino.</h2>
-      <p class="subtitulo">La gravedad cambia cómo se mueve el cuerpo y cuánto trabaja cada músculo. Elige un lugar y míralo desde varios ángulos.</p>
+      <h2 class="titulo">Entornos de misión</h2>
       <div class="segmentado" data-segmentado id="ctl-mision-escenario" role="group" aria-label="Destino">
         <button type="button" data-valor="iss" aria-pressed="true">Estación Espacial</button>
         <button type="button" data-valor="gateway" aria-pressed="false">Gateway</button>
@@ -20,9 +19,9 @@
 
     <div class="cuerpo-rejilla">
       <div class="visor" id="visor-mision">
-        <canvas id="mision-lienzo" aria-label="Astronauta en 3D en el destino elegido. Arrastra para girar." role="img"></canvas>
+        <canvas id="mision-lienzo" aria-label="Astronauta en 3D en el destino elegido" role="img"></canvas>
         <div class="visor-carga" id="mision-carga">
-          <p class="texto" id="mision-carga-texto">Elige un astronauta para ver su destino.</p>
+          <p class="texto" id="mision-carga-texto">Seleccione un astronauta.</p>
         </div>
       </div>
 
@@ -64,7 +63,7 @@
 
   // Datos de cada destino (valores de referencia aproximados, tomados del prototipo; falta citar fuente)
   const SCEN = {
-    iss:     { short: 'Estación Espacial', name: 'Estación Espacial Internacional', sub: 'Órbita terrestre baja, a unos 400 km', float: true,  g: 0,    gtxt: '≈ 0 g', dur: '6 meses típicos', eq: 'Completo', nota: 'Tiene equipo de resistencia (ARED), cinta con arnés y bicicleta.', link: 'Retraso ≈ 0,6 s' },
+    iss:     { short: 'Estación Espacial', name: 'Estación Espacial Internacional', sub: 'Órbita terrestre baja, a unos 400 km', float: true,  g: 0,    gtxt: '≈ 0 g', dur: '6 meses típicos', eq: 'Completo', nota: 'Equipo disponible: dispositivo de resistencia ARED, cinta con arnés y cicloergómetro.', link: 'Retraso ≈ 0,6 s' },
     gateway: { short: 'Gateway', name: 'Gateway', sub: 'Estación en órbita lunar', float: true, g: 0, gtxt: '≈ 0 g', dur: 'Semanas a meses', eq: 'Compacto', link: 'Retraso ≈ 1,3 s' },
     transit: { short: 'Tránsito', name: 'Cápsula en tránsito', sub: 'Viaje entre la Tierra, la Luna o Marte', float: true, g: 0, gtxt: '≈ 0 g', dur: 'Días a meses', eq: 'Mínimo', link: 'Retraso variable' },
     moon:    { short: 'Luna', name: 'Superficie lunar', sub: 'Gravedad parcial', float: false, g: 1.62, gtxt: '0,16 g (1,62 m/s²)', dur: 'Días a semanas', eq: 'En el hábitat', link: 'Retraso ≈ 1,3 s' },
@@ -93,7 +92,7 @@
         <li><span class="pequeno texto-2">Estancia típica</span><span class="texto">${UI.esc(P.dur)}</span></li>
         <li><span class="pequeno texto-2">Equipo de ejercicio</span><span class="texto">${UI.esc(P.eq)}</span></li>
       </ul>
-      <p class="nota" style="margin-top: var(--e-3)">${P.float ? 'Sin gravedad el cuerpo flota: los músculos y los huesos no cargan peso.' : 'Con gravedad parcial el cuerpo carga menos peso que en la Tierra.'}${P.nota ? ' ' + UI.esc(P.nota) : ''}</p>`;
+      <p class="nota" style="margin-top: var(--e-3)">${P.float ? 'En microgravedad no hay carga sobre músculos ni huesos.' : 'Con gravedad parcial, la carga sobre el cuerpo es menor que en la Tierra.'}${P.nota ? ' ' + UI.esc(P.nota) : ''}</p>`;
     $('mision-saltar').disabled = P.float;
   }
   dibujarInfo();
@@ -317,8 +316,8 @@ const B = {
     }
 
     /* ---------- tamaño y bucle (solo dibuja cuando se ve) ---------- */
-    function ajustar() { const r = visor.getBoundingClientRect(); if (!r.width) return; renderer.setSize(r.width, r.height, false); composer.setSize(r.width, r.height); bloom.setSize(r.width, r.height); camera.aspect = r.width / r.height; camera.updateProjectionMatrix(); }
-    new ResizeObserver(ajustar).observe(visor); ajustar();
+    function ajustar() { if (window.__panelMoviendo) { const t = performance.now(); if (t - (ajustar._t || 0) < 90) return; ajustar._t = t; } const r = visor.getBoundingClientRect(); if (!r.width) return; renderer.setSize(r.width, r.height, false); composer.setSize(r.width, r.height); bloom.setSize(r.width, r.height); camera.aspect = r.width / r.height; camera.updateProjectionMatrix(); }
+    new ResizeObserver(ajustar).observe(visor); window.addEventListener('resize', ajustar); ajustar();
     new IntersectionObserver((en) => { S.visible = en[0].isIntersecting; }).observe(visor);
 
     let last = performance.now(), trainPh = 0;
@@ -361,10 +360,10 @@ const B = {
       girar: (on) => { S.spin = on; controls.autoRotate = on && !reducir; },
       saltar: () => { if (!SCEN[S.sc].float && !S.jump) S.jump = { t: 0, v: 2.6 }; },
       entrenar: (on) => { S.trained = on; },
-      // Ajusta la figura al perfil: la estatura real escala el cuerpo y el acento del avatar tiñe la luz de contorno
+      // Ajusta la figura al perfil: la estatura real escala el cuerpo y un acento de la marca por astronauta tiñe la luz de contorno
       ponerAstronauta: (a) => {
         S.escala = clamp((Number(a.talla_cm) || 178) / 178, .9, 1.1);
-        const clave = Avatares.claveDe(a);
+        const clave = ['turquesa', 'azul', 'morado'][(parseInt(String(a.id_astronauta).replace(/\D/g, ''), 10) || 0) % 3];   // un acento de la marca por astronauta
         const css = COLOR_ACENTO[clave] ? getComputedStyle(document.documentElement).getPropertyValue(COLOR_ACENTO[clave]).trim() : FIJO_ACENTO[clave];
         acento.color.set(css || '#ffffff'); acento.intensity = 1.6;
       },
@@ -409,7 +408,17 @@ const B = {
     motor.alCambiarGiro((on) => { const b = $('mision-girar'); b.setAttribute('aria-pressed', String(on)); b.textContent = on ? 'Detener giro' : 'Girar'; });
     $('mision-carga').hidden = true;
   }
-  document.addEventListener('astronauta-elegido', (e) => { astronauta = e.detail; elegido = true; dibujarInfo(); if (motor) motor.ponerAstronauta(astronauta); iniciar(); });
+  // Entorno del astronauta -> destino que se abre primero, marcado como "(actual)"
+  const POR_ENTORNO = { orbita: 'iss', luna: 'moon', marte: 'mars' };
+  function marcarDestinos() {
+    document.querySelectorAll('#ctl-mision-escenario button').forEach((b) => {
+      if (!b.dataset.base) b.dataset.base = b.textContent;
+      b.textContent = b.dataset.base + (astronauta && POR_ENTORNO[astronauta.entorno] === b.dataset.valor ? ' (actual)' : '');
+      b.setAttribute('aria-pressed', String(b.dataset.valor === escenario));
+    });
+  }
+  document.addEventListener('astronauta-elegido', (e) => { astronauta = e.detail; elegido = true;
+    escenario = POR_ENTORNO[astronauta.entorno] || 'iss'; marcarDestinos(); if (motor) motor.escenario(escenario); dibujarInfo(); if (motor) motor.ponerAstronauta(astronauta); iniciar(); });
   // Si se edita el perfil (estatura o avatar), la figura se ajusta sin recargar
   document.addEventListener('astronauta-actualizado', (e) => {
     if (astronauta && e.detail.id_astronauta === astronauta.id_astronauta) { astronauta = e.detail; dibujarInfo(); if (motor) motor.ponerAstronauta(astronauta); }

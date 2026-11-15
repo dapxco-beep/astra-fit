@@ -20,14 +20,14 @@
 
     <div class="hoy-rejilla">
       <article class="tarjeta pila" aria-labelledby="hoy-t-musculos">
-        <div class="tarjeta-cabecera"><h3 class="titulo-tarjeta" id="hoy-t-musculos">Los seis músculos</h3><a class="enlace" href="#monitoreo">Ver el monitoreo</a></div>
+        <div class="tarjeta-cabecera"><h3 class="titulo-tarjeta" id="hoy-t-musculos">Estado por músculo</h3><a class="enlace" href="#monitoreo">Ver el monitoreo</a></div>
         <div class="hoy-musculos" id="hoy-musculos"></div>
-        <p class="nota">Puntaje ERDM-A de 0 a 10 frente a la evaluación basal del astronauta. 0 a 3 bajo, 4 a 6 moderado, 7 a 10 alto.</p>
+        <p class="nota">ERDM-A de 0 a 10 frente a la basal: bajo 0–3, moderado 4–6, alto 7–10.</p>
         <div id="hoy-plan"></div>
       </article>
 
       <article class="tarjeta pila" aria-labelledby="hoy-t-hacer">
-        <div class="tarjeta-cabecera"><h3 class="titulo-tarjeta" id="hoy-t-hacer">Qué hacer hoy</h3><a class="enlace" href="#alertas">Ver alertas</a></div>
+        <div class="tarjeta-cabecera"><h3 class="titulo-tarjeta" id="hoy-t-hacer">Alertas pendientes</h3><a class="enlace" href="#alertas">Ver alertas</a></div>
         <div class="pila" id="hoy-hacer"></div>
       </article>
     </div>
@@ -61,16 +61,16 @@
     const hoy = new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
     $('hoy-fecha').textContent = hoy.charAt(0).toUpperCase() + hoy.slice(1);
     $('hoy-sub').textContent = p
-      ? (p.u.riesgo === 'bajo' ? 'Los seis músculos están dentro de lo esperado.' : `Lo que más pide atención hoy: ${Erdm.etiqueta(p.g).toLowerCase()}.`)
+      ? (p.u.riesgo === 'bajo' ? 'Los seis músculos en riesgo bajo.' : `Mayor puntaje: ${Erdm.etiqueta(p.g).toLowerCase()} (${p.u.puntaje_erdm}/10).`)
       : 'Todavía no hay evaluaciones. Empieza por la evaluación basal en el monitoreo.';
 
     const fechas = lista.filter((x) => x.u).map((x) => String(x.u.fecha)).sort();
     const enRiesgo = lista.filter((x) => x.u && x.u.riesgo !== 'bajo').length;   // el día de misión ya está en el encabezado
     $('hoy-kpis').innerHTML =
       kpi('Riesgo muscular', p ? p.u.riesgo.charAt(0).toUpperCase() + p.u.riesgo.slice(1) : '—', p ? `${p.u.puntaje_erdm} de 10 en ${Erdm.etiqueta(p.g).toLowerCase()}` : 'Sin evaluar', p ? Erdm.nivel(p.u.riesgo) : '') +
-      kpi('Alertas abiertas', String(alertas.length), rojas ? `${rojas} ${rojas === 1 ? 'requiere' : 'requieren'} valoración del médico de vuelo` : alertas.length ? 'Para vigilar o repetir la medición' : 'Todo en orden', rojas ? 'rojo' : alertas.length ? 'amarillo' : 'verde') +
+      kpi('Alertas abiertas', String(alertas.length), rojas ? `${rojas} ${rojas === 1 ? 'requiere' : 'requieren'} valoración del equipo médico` : alertas.length ? 'En vigilancia' : 'Sin alertas', rojas ? 'rojo' : alertas.length ? 'amarillo' : 'verde') +
       kpi('Última evaluación', fechas.length ? Calc.relativo(fechas[fechas.length - 1]).replace('Hace ', 'Hace ').toLowerCase().replace(/^./, (x) => x.toUpperCase()) : '—', fechas.length ? Calc.fechaCorta(fechas[fechas.length - 1]) : 'Sin registros', '') +
-      kpi('Músculos en riesgo', `${enRiesgo}<small> de 6</small>`, enRiesgo ? 'Con riesgo moderado o alto en la ERDM-A' : 'Los seis en riesgo bajo', enRiesgo ? 'amarillo' : (lista.some((x) => x.u) ? 'verde' : ''));
+      kpi('Músculos en riesgo', `${enRiesgo}<small> de 6</small>`, enRiesgo ? 'Riesgo moderado o alto' : 'Todos en riesgo bajo', enRiesgo ? 'amarillo' : (lista.some((x) => x.u) ? 'verde' : ''));
 
     $('hoy-musculos').innerHTML = lista.map(({ g, u }) => {
       if (!u) return `<a class="hoy-musculo" href="#monitoreo"><strong>${UI.esc(Erdm.etiqueta(g))}</strong><span class="estado estado--gris">Sin evaluar</span></a>`;
@@ -84,21 +84,21 @@
     const top = alertas.slice(0, 3);
     let planHtml = '';
     let html = top.map((x) => `<div class="hoy-alerta" data-nivel="${UI.esc(x.nivel)}"><span class="estado estado--${x.nivel === 'rojo' ? 'rojo' : 'amarillo'}">${x.nivel === 'rojo' ? 'Valoración médica' : 'Vigilancia'}</span>
-      ${Erdm.notaHtml(x)}</div>`).join('');
-    if (alertas.length > top.length) html += `<a class="enlace" href="#alertas">Ver las ${alertas.length - top.length} alertas restantes</a>`;
-    if (!alertas.length) html = '<p class="texto-2">No hay alertas abiertas. Mantén tu programa de ejercicio y repite las mediciones en las fechas previstas.</p>';
+      ${Erdm.notaHtml(x, { breve: true })}</div>`).join('');
+    if (alertas.length > top.length) html += `<a class="enlace" href="#alertas">Ver ${alertas.length - top.length} alertas más</a>`;
+    if (!alertas.length) html = '<p class="texto-2">Sin alertas abiertas. Continuar el programa preventivo y los controles programados.</p>';
     const pl = p && p.u.riesgo !== 'bajo' ? Erdm.plan(p.g, p.u.riesgo) : null;
-    if (pl) planHtml = `<div class="hoy-plan"><p class="nota">Plan para ${UI.esc(Erdm.etiqueta(p.g).toLowerCase())}</p><p class="texto"><strong>${UI.esc(pl.ejercicio)}</strong></p><p class="pequeno texto-2">${UI.esc(pl.dosificacion)}</p></div>`;
+    if (pl) planHtml = `<div class="hoy-plan"><p class="nota">Pauta actual, ${UI.esc(Erdm.etiqueta(p.g).toLowerCase())}</p><p class="texto"><strong>${UI.esc(pl.ejercicio)}</strong></p><p class="pequeno texto-2">${UI.esc(pl.dosificacion)}</p></div>`;
     $('hoy-hacer').innerHTML = html;
     $('hoy-plan').innerHTML = planHtml;
 
     // Siguiente paso: lo primero que conviene hacer, con un botón que lleva ahí
     const sig = $('hoy-siguiente');
     let paso;
-    if (!p) paso = { nivel: '', titulo: 'Empieza por tu evaluación basal', texto: 'Es tu punto de comparación para todo lo demás.', boton: 'Ir al monitoreo', ir: '#monitoreo' };
-    else if (rojas) paso = { nivel: 'rojo', titulo: rojas === 1 ? 'Tienes 1 alerta que revisar ahora' : 'Tienes ' + rojas + ' alertas que revisar ahora', texto: 'Requieren valoración por el médico de vuelo.', boton: 'Ver las alertas', ir: '#alertas' };
-    else if (alertas.length) paso = { nivel: 'amarillo', titulo: 'Tienes ' + alertas.length + (alertas.length === 1 ? ' alerta en seguimiento' : ' alertas en seguimiento'), texto: 'Repetir la medición en el próximo control.', boton: 'Ver las alertas', ir: '#alertas' };
-    else paso = { nivel: 'verde', titulo: 'Sin alertas abiertas', texto: 'Mantén tu programa y repite las mediciones en las fechas previstas.', boton: 'Ir al monitoreo', ir: '#monitoreo' };
+    if (!p) paso = { nivel: '', titulo: 'Falta la evaluación basal', texto: 'Es la referencia para todas las comparaciones.', boton: 'Ir al monitoreo', ir: '#monitoreo' };
+    else if (rojas) paso = { nivel: 'rojo', titulo: rojas === 1 ? '1 alerta pendiente de valoración' : rojas + ' alertas pendientes de valoración', texto: 'Riesgo alto en la escala ERDM-A. Requieren valoración por el equipo médico.', boton: 'Ver las alertas', ir: '#alertas' };
+    else if (alertas.length) paso = { nivel: 'amarillo', titulo: alertas.length + (alertas.length === 1 ? ' alerta en seguimiento' : ' alertas en seguimiento'), texto: 'Repetir la medición en el próximo control.', boton: 'Ver las alertas', ir: '#alertas' };
+    else paso = { nivel: 'verde', titulo: 'Sin alertas abiertas', texto: 'Continuar el programa preventivo y los controles programados.', boton: 'Ir al monitoreo', ir: '#monitoreo' };
     if (paso.nivel) sig.dataset.nivel = paso.nivel; else delete sig.dataset.nivel;
     sig.innerHTML = '<div><p class="nota">Siguiente paso</p><h3 class="titulo-tarjeta">' + paso.titulo + '</h3><p class="texto-2">' + paso.texto + '</p></div><a class="boton" href="' + paso.ir + '">' + paso.boton + '</a>';
   }
