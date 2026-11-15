@@ -3,7 +3,7 @@
 <head>
   <base target="_top">
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <title>ASTRA-FIT</title>
   <link rel="icon" href="data:,">
@@ -29,12 +29,17 @@
     <div class="tablero">
       <!-- Escritorio: barra lateral. Los enlaces los dibuja el selector de vistas (más abajo). -->
       <a class="saltar" href="#contenido">Saltar al contenido</a>
-      <nav class="barra-lateral" aria-label="Vistas del tablero">
-        <a class="nav-marca" href="#inicio">ASTRA-FIT</a>
-        <span class="nav-etiqueta">Datos simulados</span>
+      <nav class="barra-lateral" aria-label="Vistas del tablero" id="barra-lateral">
+        <div class="nav-cabeza">
+          <a class="nav-marca" href="#inicio"><span class="nav-marca-largo">ASTRA-FIT</span><span class="nav-marca-corto" aria-hidden="true">AF</span></a>
+          <button type="button" class="nav-plegar" id="nav-plegar" aria-expanded="true" aria-controls="barra-lateral" aria-label="Ocultar el panel" title="Ocultar el panel">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+        </div>
+        <span class="nav-etiqueta"><span class="nav-etiqueta-largo">Datos simulados</span><span class="nav-etiqueta-corto" aria-hidden="true">Sim.</span></span>
         <div class="nav-astronauta" aria-label="Astronauta activo"><span id="nav-avatar"></span><span id="nav-nombre"></span></div>
         <ul class="nav-lista" id="nav-lateral"></ul>
-        <button type="button" class="boton boton--secundario boton--pequeno nav-cambiar" onclick="Sesion.salir()">Cambiar astronauta</button>
+        <button type="button" class="boton boton--secundario boton--pequeno nav-cambiar" onclick="Sesion.salir()" title="Cambiar astronauta"><span class="nav-texto">Cambiar astronauta</span><span class="nav-icono" aria-hidden="true">⇄</span></button>
       </nav>
 
       <div class="tablero-cuerpo">
@@ -131,7 +136,7 @@
       // Celular: las seis vistas caben en la barra inferior; "Más" solo aparece si alguna queda por fuera
       const PRINCIPALES = VISTAS.map((v) => v.id);
       const $ = (id) => document.getElementById(id);
-      const item = (v, clase) => '<a class="' + clase + '" href="#' + v.id + '" data-vista="' + v.id + '">' + v.i + '<span>' + v.t + '</span>' + (v.id === 'alertas' ? '<span class="nav-badge" hidden></span>' : '') + '</a>';
+      const item = (v, clase) => '<a class="' + clase + '" href="#' + v.id + '" data-vista="' + v.id + '" title="' + v.t + '">' + v.i + '<span>' + v.t + '</span>' + (v.id === 'alertas' ? '<span class="nav-badge" hidden></span>' : '') + '</a>';
       $('nav-lateral').innerHTML = VISTAS.map((v) => '<li>' + item(v, 'nav-item') + '</li>').join('');
       const extras = VISTAS.filter((v) => !PRINCIPALES.includes(v.id));
       $('nav-inferior').innerHTML = VISTAS.filter((v) => PRINCIPALES.includes(v.id)).map((v) => item(v, 'tab')).join('') +
@@ -146,6 +151,35 @@
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !hoja.hidden) { cerrarHoja(); botonMas.focus(); } });
       document.addEventListener('click', (e) => { if (!hoja.hidden && !e.target.closest('#hoja-mas, #tab-mas')) cerrarHoja(); });
 
+      // Equipos modestos: sin animaciones de entrada ni plegado animado
+      if ((navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 2) document.documentElement.setAttribute('data-ligero', '');
+      // Panel lateral plegable (escritorio): se recuerda la elección
+      const tablero = document.querySelector('.tablero'), botonPlegar = $('nav-plegar');
+      function plegar(p, guardar) {
+        tablero.classList.toggle('tablero--plegado', p);
+        const t = p ? 'Mostrar el panel' : 'Ocultar el panel';
+        botonPlegar.setAttribute('aria-expanded', String(!p)); botonPlegar.setAttribute('aria-label', t); botonPlegar.title = t;
+        if (guardar) { try { localStorage.setItem('astrafit-panel-plegado', p ? '1' : '0'); } catch (e) { /* sin almacenamiento: no pasa nada */ } }
+      }
+      let plegadoAntes = false; try { plegadoAntes = localStorage.getItem('astrafit-panel-plegado') === '1'; } catch (e) { /* idem */ }
+      tablero.classList.add('sin-transicion'); plegar(plegadoAntes, false);
+      requestAnimationFrame(() => requestAnimationFrame(() => tablero.classList.remove('sin-transicion')));
+      botonPlegar.addEventListener('click', () => plegar(!tablero.classList.contains('tablero--plegado'), true));
+      // Al terminar la animación, los lienzos y gráficas se vuelven a medir (una sola vez)
+      tablero.addEventListener('transitionend', (e) => { if (e.target === tablero && e.propertyName === 'grid-template-columns') window.dispatchEvent(new Event('resize')); });
+      // Celular: las barras se esconden al bajar y vuelven al subir, al enfocar algo o al llegar al final; el teclado esconde la barra inferior
+      if (window.visualViewport) window.visualViewport.addEventListener('resize', () => document.body.classList.toggle('teclado', window.visualViewport.height < window.innerHeight * 0.75));
+      let ultimoY = window.scrollY, esperando = false;
+      const evaluarBarras = () => {
+        esperando = false;
+        const y = window.scrollY, d = y - ultimoY, alFinal = window.innerHeight + y >= document.documentElement.scrollHeight - 8;
+        if (y < 60 || alFinal) document.body.classList.remove('barras-ocultas');
+        else if (d > 8) document.body.classList.add('barras-ocultas');
+        else if (d < -8) document.body.classList.remove('barras-ocultas');
+        if (Math.abs(d) > 8) ultimoY = y;
+      };
+      window.addEventListener('scroll', () => { if (!esperando) { esperando = true; requestAnimationFrame(evaluarBarras); } }, { passive: true });
+      document.addEventListener('focusin', (e) => { if (e.target.closest('.barra-superior, .barra-inferior, input, select, textarea')) document.body.classList.remove('barras-ocultas'); });
       let primera = true;
       // "Siguiente" al pie de cada vista: el recorrido es Perfil, Destinos, Monitoreo, Alertas, Cuerpo, Evolución
       function actualizarSiguiente(id) {
@@ -156,6 +190,7 @@
           : '<a class="boton boton--secundario" href="#' + VISTAS[0].id + '">Volver al perfil</a>');
       }
       function ir(id) {
+        document.body.classList.remove('barras-ocultas');
         if (ALIAS[id]) id = ALIAS[id];
         if (!VISTAS.some((v) => v.id === id)) id = 'inicio';
         const elDe = (x) => $(x === 'inicio' ? 'inicio-vista' : x);
@@ -164,6 +199,12 @@
         botonMas.toggleAttribute('data-activa', !PRINCIPALES.includes(id));
         cerrarHoja();
         window.scrollTo(0, 0);
+        // Entrada suave de la vista nueva (solo opacidad en la vista; las tarjetas suben escalonadas). No se repite en los redibujados.
+        const nueva = elDe(id);
+        if (nueva && !primera && !document.documentElement.hasAttribute('data-ligero')) {
+          nueva.classList.remove('vista-entra'); void nueva.offsetWidth; nueva.classList.add('vista-entra');
+          clearTimeout(nueva._entra); nueva._entra = setTimeout(() => nueva.classList.remove('vista-entra'), 900);
+        }
         // Los lienzos y visores miden su tamaño al mostrarse
         requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
         // Cada vista tiene un título de nivel 1: las que solo traen h2 reciben uno visible solo para lectores de pantalla
@@ -178,6 +219,7 @@
         const a = e.target.closest('a[href^="#"]'); if (!a) return;
         if (a.classList.contains('saltar')) { e.preventDefault(); $('contenido').focus({ preventScroll: true }); return; }
         const id = a.getAttribute('href').slice(1); if (!VISTAS.some((v) => v.id === id) && !ALIAS[id]) return;
+        if (a.getAttribute('aria-current') === 'page') { e.preventDefault(); window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); return; }
         e.preventDefault(); ir(id);
         try { history.replaceState(null, '', '#' + id); } catch (err) { /* iframe sin permiso: no pasa nada */ }
       });
