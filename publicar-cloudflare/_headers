@@ -1,4 +1,9 @@
+# Seguridad básica para todo el sitio
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+
 # Permite que la página de Apps Script (otro dominio) descargue los modelos 3D (CORS).
 /assets/*
   Access-Control-Allow-Origin: *
-  Cache-Control: public, max-age=86400
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800

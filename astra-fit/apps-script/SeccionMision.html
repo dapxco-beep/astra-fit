@@ -271,7 +271,7 @@ const B = {
     const H=buildTerrain(g,'moon'); heights.moon=H;
     const e=makeEarth(7,[-70,32,-190]); e.rotation.set(.2,2.2,.3); g.add(e); g.userData.earth=e;
     const lem=(await loadGLB(BASE+'escenarios/lem.glb')).scene.clone(); fit(lem,7.5); lem.position.x+=-6.5; lem.position.z+=-9; lem.position.y+=H(-6.5,-9); lem.rotation.y=.5; shadowize(lem); g.add(lem);
-    loadGLB(BASE+'escenarios/rover.glb').then(r=>{ const rv=r.scene.clone(); fit(rv,5.2); rv.position.x+=7; rv.position.z+=-8; rv.position.y+=H(7,-8); rv.rotation.y=-.6; shadowize(rv); g.add(rv); }).catch(()=>{});
+    if (!(matchMedia('(max-width: 820px)').matches || (navigator.connection || {}).saveData)) loadGLB(BASE+'escenarios/rover.glb').then(r=>{ const rv=r.scene.clone(); fit(rv,5.2); rv.position.x+=7; rv.position.z+=-8; rv.position.y+=H(7,-8); rv.rotation.y=-.6; shadowize(rv); g.add(rv); }).catch(()=>{});
   },
   async mars(g){
     const H=buildTerrain(g,'mars'); heights.mars=H;

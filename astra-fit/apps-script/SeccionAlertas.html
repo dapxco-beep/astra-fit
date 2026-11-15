@@ -21,6 +21,10 @@
         <p class="pequeno texto-2" id="alr-conteo"></p>
       </div>
       <div class="alr-lista" id="alr-lista"></div>
+      <details class="alr-colapso" id="alr-atendidas-det" hidden>
+        <summary class="pequeno" id="alr-atendidas-resumen"></summary>
+        <div class="alr-atendidas" id="alr-atendidas"></div>
+      </details>
     </div>
 
     <!-- ---------- Plan de intervención ---------- -->
@@ -119,6 +123,21 @@
       </article>`;
     }).join('') || '<p class="alr-vacio texto-2">Todo en orden. Las alertas aparecen cuando un músculo sube de nivel de riesgo o cumple la regla de evaluación prioritaria.</p>';
   }
+  /* Alertas atendidas: quién y qué se hizo, con opción de reabrir */
+  function pintarAtendidas() {
+    const a = astronauta();
+    const lista = (Sesion.datos.Alertas || []).filter((x) => x.id_astronauta === a.id_astronauta && x.estado === 'atendida')
+      .sort((p, q) => String(q.creada_en).localeCompare(String(p.creada_en)));
+    const det = $('alr-atendidas-det');
+    det.hidden = !lista.length;
+    $('alr-atendidas-resumen').textContent = 'Alertas atendidas (' + lista.length + ')';
+    $('alr-atendidas').innerHTML = lista.map((x) => `<article class="alr-atendida" data-id="${esc(x.id_alerta)}">
+      <p class="texto">${esc(x.mensaje)}</p>
+      <div class="alr-atendida-pie"><span class="nota">${fechaHora(x.creada_en)}${x.atendida_por ? ' · Atendida por ' + esc(x.atendida_por) : ''}${x.nota_cierre ? ' · ' + esc(x.nota_cierre) : ''}</span>
+      <button type="button" class="boton boton--secundario boton--pequeno" data-estado="abierta">Reabrir</button></div></article>`).join('');
+  }
+  new MutationObserver(pintarAtendidas).observe($('alr-lista'), { childList: true });
+
   /* En móvil se ven 3 alertas y un botón para el resto; el plan por músculo empieza cerrado */
   const movil = () => matchMedia('(max-width: 640px)').matches;
   if (movil()) $('alr-plan-det').open = false;
@@ -134,16 +153,38 @@
     lista.after(b);
   }
   new MutationObserver(plegarAlertas).observe($('alr-lista'), { childList: true });
-  $('alr-lista').addEventListener('click', async (e) => {
-    const b = e.target.closest('[data-estado]'); if (!b) return;
-    const id = b.closest('[data-id]').dataset.id, estado = b.dataset.estado;
+  async function cambiarEstado(id, cambios, mensaje, deshacer) {
+    await API.actualizarAlerta(id, cambios);
+    const x = Sesion.datos.Alertas.find((y) => y.id_alerta === id); if (x) Object.assign(x, cambios);
+    document.dispatchEvent(new CustomEvent('datos-actualizados'));
+    UI.aviso(mensaje, 'completado', deshacer ? { duracion: 8000, accion: { texto: 'Deshacer', fn: async () => {
+      try { await cambiarEstado(id, deshacer, 'Se deshizo el cambio.'); } catch (err) { UI.aviso('No se pudo deshacer. Inténtalo de nuevo.', 'error'); }
+    } } } : {});
+  }
+  function pedirConfirmacion(tarjeta) {
+    const id = tarjeta.dataset.id, acciones = tarjeta.querySelector('.alr-acciones');
+    acciones.hidden = true;
+    const f = document.createElement('form'); f.className = 'alr-cierre'; f.noValidate = true;
+    f.innerHTML = '<label class="nota" for="nota-' + esc(id) + '">¿Qué se hizo? (opcional)</label><input id="nota-' + esc(id) + '" name="nota" type="text" maxlength="300" autocomplete="off" placeholder="Por ejemplo: avisé al médico de vuelo"><div class="alr-acciones"><button type="submit" class="boton boton--pequeno">Confirmar</button><button type="button" class="boton boton--secundario boton--pequeno" data-cancelar>Cancelar</button></div>';
+    acciones.after(f); f.querySelector('input').focus();
+    f.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const nota = f.elements.nota.value.trim(), boton = f.querySelector('[type="submit"]'); boton.disabled = true;
+      const previo = (Sesion.datos.Alertas.find((y) => y.id_alerta === id) || {}).estado || 'abierta';
+      try { await cambiarEstado(id, { estado: 'atendida', nota_cierre: nota, atendida_por: astronauta().nombre }, 'Alerta marcada como atendida.', { estado: previo, nota_cierre: '', atendida_por: '' }); }
+      catch (err) { UI.aviso('No se pudo guardar el cambio. Inténtalo de nuevo.', 'error'); boton.disabled = false; }
+    });
+    f.querySelector('[data-cancelar]').addEventListener('click', () => { f.remove(); acciones.hidden = false; });
+  }
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('#alertas [data-estado]'); if (!b) return;
+    const tarjeta = b.closest('[data-id]'); if (!tarjeta) return;
+    const id = tarjeta.dataset.id, estado = b.dataset.estado;
+    if (estado === 'atendida') { pedirConfirmacion(tarjeta); return; }
     b.disabled = true;
-    try {
-      await API.actualizarAlerta(id, { estado });
-      const x = Sesion.datos.Alertas.find((y) => y.id_alerta === id); if (x) x.estado = estado;
-      UI.aviso(estado === 'atendida' ? 'Alerta atendida.' : 'Alerta en seguimiento.', 'completado');
-      document.dispatchEvent(new CustomEvent('datos-actualizados'));
-    } catch (err) { UI.aviso('No se pudo actualizar la alerta: ' + err.message, 'error'); b.disabled = false; }
+    const previo = (Sesion.datos.Alertas.find((y) => y.id_alerta === id) || {}).estado || 'abierta';
+    try { await cambiarEstado(id, estado === 'abierta' ? { estado, nota_cierre: '', atendida_por: '' } : { estado }, estado === 'abierta' ? 'Alerta reabierta.' : 'Alerta en seguimiento.', estado === 'abierta' ? null : { estado: previo }); }
+    catch (err) { UI.aviso('No se pudo actualizar la alerta. Inténtalo de nuevo.', 'error'); b.disabled = false; }
   });
 
   /* ---------------- Plan por músculo ---------------- */
