@@ -148,7 +148,7 @@
     const svg = $('guia-svg'), F = window.FiguraMon;
     svg.querySelectorAll(':scope > :not(desc)').forEach((n) => n.remove());
     if (!F) return;
-    const m = F.MUSCULOS[grupo], sx = String((Sesion.astronauta || {}).sexo).toUpperCase() === 'F' ? 'F' : 'M', p = sx.toLowerCase();
+    const m = F.MUSCULOS[grupo], sx = F.FIGURA || 'M', p = sx.toLowerCase();
     const b = F.BANDAS[sx][m.mascara];
     // Coordenadas de la imagen (640 × 1000). Ventana de 290 × 348 centrada en la banda: se ve el músculo y su segmento.
     const cx = (b.x0 + b.x1) / 2 * 640, cy = b.y * 1000, ancho = (b.x1 - b.x0) * 640;
