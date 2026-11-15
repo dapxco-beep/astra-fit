@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <title>ASTRA-FIT</title>
+  <title>MYOCARE</title>
   <link rel="icon" href="data:,">
   <?!= include('Estilos'); ?>
   <!-- Scripts compartidos: van primero porque las secciones los usan -->
@@ -30,7 +30,7 @@
       <a class="saltar" href="#contenido">Saltar al contenido</a>
       <nav class="barra-lateral" aria-label="Vistas del tablero" id="barra-lateral">
         <div class="nav-cabeza">
-          <a class="nav-marca" href="#inicio"><span class="nav-marca-largo">ASTRA-FIT</span><span class="nav-marca-corto" aria-hidden="true">AF</span></a>
+          <a class="nav-marca" href="#inicio"><span class="nav-marca-largo">MYOCARE</span><span class="nav-marca-corto" aria-hidden="true">MC</span></a>
           <button type="button" class="nav-plegar" id="nav-plegar" aria-expanded="true" aria-controls="barra-lateral" aria-label="Ocultar el panel" title="Ocultar el panel">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
@@ -44,7 +44,7 @@
       <div class="tablero-cuerpo">
         <!-- Celular: barra superior con el astronauta, y barra inferior con las vistas principales -->
         <header class="barra-superior">
-          <a class="nav-marca" href="#inicio">ASTRA-FIT</a>
+          <a class="nav-marca" href="#inicio">MYOCARE</a>
           <span class="nav-etiqueta">Datos simulados</span>
           <a class="nav-astronauta" href="#inicio" aria-label="Mi perfil"><span id="nav-avatar-m"></span><span id="nav-nombre-m"></span></a>
           <button type="button" class="enlace nav-cambiar-m" onclick="Sesion.salir()">Cambiar</button>
@@ -111,7 +111,7 @@
       document.getElementById('nav-nombre').textContent = a.nombre;
       document.getElementById('nav-avatar-m').innerHTML = UI.avatar(a);
       document.getElementById('nav-nombre-m').textContent = a.nombre;
-      document.title = a.nombre + ' · ASTRA-FIT';
+      document.title = a.nombre + ' · MYOCARE';
     }
     document.addEventListener('astronauta-elegido', (e) => pintarNav(e.detail));
     document.addEventListener('astronauta-actualizado', (e) => {

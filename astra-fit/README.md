@@ -1,6 +1,6 @@
-# ASTRA-FIT — Sinergia Cósmica
+# MYOCARE — Sinergia Cósmica
 
-Dashboard de monitoreo neuromuscular para astronautas (NASA Space Apps Challenge 2026).
+**MYOCARE** (Muscle Yield Observation, Conditioning and Risk Evaluation) es el dashboard de monitoreo neuromuscular para astronautas (NASA Space Apps Challenge 2026). Antes se llamaba ASTRA-FIT: las carpetas, el Worker de Cloudflare y las URLs conservan ese nombre.
 Se programa en esta carpeta y después se sube a Google Apps Script.
 
 ## Ver la página en tu computador

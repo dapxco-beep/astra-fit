@@ -255,7 +255,14 @@ a { color: var(--azul-enlace); }
 .vista[hidden] { display: none !important; }
 .acceso { min-height: 100vh; background: var(--blanco); padding: clamp(40px, 6vw, 72px) 0 var(--e-16); }
 .acceso .contenedor { display: grid; gap: var(--e-6); justify-items: center; text-align: center; }
-.logo { width: clamp(150px, 18vw, 210px); height: auto; }
+.logo { width: clamp(120px, 14vw, 168px); height: auto; }
+/* Marca MYOCARE en la entrada: el nombre grande y, debajo, su significado con las iniciales resaltadas.
+   En el resto de la app va solo el nombre. */
+.marca { display: grid; gap: var(--e-3); justify-items: center; margin-bottom: var(--e-4); }
+.marca-nombre { font-size: clamp(3.25rem, 9vw, 6rem); line-height: 1; font-weight: 700; letter-spacing: .06em; color: var(--tinta); }
+.marca-significado { max-width: 34ch; font-size: clamp(1rem, 1.6vw, 1.1875rem); line-height: 1.4; color: var(--tinta-2); letter-spacing: .005em; text-wrap: balance; }
+.marca-significado b { font-weight: 700; color: var(--azul); }
+.acceso-tripulacion { margin-top: var(--e-4); }
 .acceso .subtitulo { max-width: 640px; }
 
 .perfiles { width: 100%; display: grid; gap: var(--e-5); grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: var(--e-6); }
@@ -287,6 +294,13 @@ a { color: var(--azul-enlace); }
 .perfil-nuevo .avatar { background: var(--fondo); color: var(--azul); font-weight: 400; font-size: 2.5rem; }
 
 .hoja { width: 100%; max-width: 760px; text-align: left; background: var(--fondo); }
+.perfil-pie { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--e-4); }
+.perfil-eliminar { color: var(--rojo-texto); font-size: var(--t-pequeno); }
+.perfil-confirmar { display: grid; gap: var(--e-2); padding: var(--e-4); border-radius: 16px; background: var(--rojo-fondo); }
+.perfil-confirmar[hidden] { display: none; }
+.perfil-confirmar-botones { display: flex; flex-wrap: wrap; gap: var(--e-3); margin-top: var(--e-2); }
+.boton--peligro { background: var(--rojo-texto); color: #fff; }
+.boton--peligro:hover { background: #b80012; }
 .hoja-cabecera { display: flex; justify-content: space-between; align-items: baseline; gap: var(--e-4); }
 
 /* Barra superior del panel: astronauta activo y botón para cambiarlo */
@@ -851,6 +865,10 @@ a.nav-astronauta { color: inherit; text-decoration: none; }
 .nota-hallazgos { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px var(--e-4); font-size: var(--t-pequeno); font-variant-numeric: tabular-nums; }
 .nota-hallazgos span { color: var(--tinta-2); }
 .alr-mensaje { display: grid; gap: 6px; }
+.nota-plan { margin: 4px 0 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px var(--e-3); }
+.nota-plan dt { color: var(--tinta-2); }
+.nota-plan dd { margin: 0; max-width: 72ch; }
+@media (max-width: 640px) { .nota-plan { grid-template-columns: minmax(0, 1fr); gap: 2px; } .nota-plan dd { margin-bottom: 6px; } .nota-plan dt:empty { display: none; } }
 .alr-tabla th[scope="row"] { font-size: var(--t-pequeno); font-weight: 600; color: var(--tinta); white-space: nowrap; }
 .alr-tabla thead th { white-space: nowrap; }
 .alr-tabla td .estado { white-space: nowrap; }

@@ -14,7 +14,7 @@
 
   <div class="contenedor hero-espacio">
     <div class="escena-cabecera">
-      <p class="escena-titulo" id="entorno-titulo">Afuera de la nave.</p>
+      <p class="escena-titulo" id="entorno-titulo">Entorno de la misión</p>
       <div class="segmentado segmentado--oscuro" data-segmentado id="entorno-selector" role="group" aria-label="Ver entorno">
         <button type="button" data-valor="orbita" aria-pressed="true">Órbita</button>
         <button type="button" data-valor="luna" aria-pressed="false">Luna</button>
@@ -35,7 +35,7 @@
 
     <div class="escena-tarjetas" id="entorno-escena">
       <article class="vidrio">
-        <p class="nota">Desde el despegue</p>
+        <p class="nota">Día de misión</p>
         <p class="cifra"><span id="entorno-dias">0</span><small>días</small></p>
         <p class="nota" id="entorno-lugar">Estación en órbita baja</p>
       </article>
@@ -88,13 +88,13 @@
     <div class="pila">
       <div class="bloque-cabecera">
         <h2 class="titulo-tarjeta">Signos vitales</h2>
-        <p class="pequeno texto-2">Lo que registra la camiseta biomonitor que el astronauta lleva bajo la ropa o el traje. Datos simulados que se actualizan cada pocos segundos.</p>
+        <p class="pequeno texto-2">Registro continuo de la camiseta biomonitor que el astronauta lleva bajo la ropa o el traje. Datos simulados.</p>
       </div>
       <div class="rejilla rejilla-4" id="resumen-vitales"></div>
     </div>
 
     <article class="tarjeta" aria-labelledby="t-actual">
-      <div class="tarjeta-cabecera"><h2 class="titulo-tarjeta" id="t-actual">Última actualización</h2><span class="nota">Lo que se mide cada semana se marca si lleva más de 7 días sin registro.</span></div>
+      <div class="tarjeta-cabecera"><h2 class="titulo-tarjeta" id="t-actual">Última actualización</h2><span class="nota">Las mediciones semanales se marcan cuando llevan más de 7 días sin registro.</span></div>
       <ul class="lista" id="resumen-actualizaciones"></ul>
     </article>
   </div>
@@ -112,9 +112,9 @@
     const dia = Calc.diasDesde(a.fecha_inicio_mision);
     $('resumen-avatar').innerHTML = UI.avatar(a, 'avatar--grande');
     $('resumen-id').textContent = `${a.id_astronauta}, ${String(a.rol || 'tripulante').toLowerCase()}`;
-    $('resumen-titulo').textContent = `Resumen de ${a.nombre}.`;
+    $('resumen-titulo').textContent = a.nombre;
     // El conteo de días va en grande en la ventana al exterior; aquí solo el lugar y la fecha
-    const textoDia = dia === null ? '' : dia < 0 ? `Despega en ${-dia} días hacia ${entorno.enFrase}.` : `En ${entorno.enFrase} desde el ${Calc.fechaCorta(a.fecha_inicio_mision)}.`;
+    const textoDia = dia === null ? '' : dia < 0 ? `Despegue en ${-dia} días hacia ${entorno.enFrase}.` : `${entorno.nombre} desde el ${Calc.fechaCorta(a.fecha_inicio_mision)}.`;
     $('resumen-sub').textContent = `${textoDia} Perfil actualizado ${Calc.relativo(a.actualizado_en || a.registrado_en).toLowerCase()}.`;
   }
 
@@ -154,7 +154,7 @@
         <div class="imc-barra">${tramos}<span class="imc-marcador" style="left:${pos(v)}%"></span></div>
         <div class="imc-marcas">${marcas}</div>
       </div>
-      <p class="nota">Peso de ${Calc.decimal(peso.valor)} kg (${peso.fuente === 'seguimiento' ? 'seguimiento' : 'perfil'}, ${Calc.fechaCorta(peso.fecha)}) y talla de ${Calc.numero(a.talla_cm, 0)} cm. Clasificación del documento ASTRA-FIT.</p>`;
+      <p class="nota">Peso de ${Calc.decimal(peso.valor)} kg (${peso.fuente === 'seguimiento' ? 'seguimiento' : 'perfil'}, ${Calc.fechaCorta(peso.fecha)}) y talla de ${Calc.numero(a.talla_cm, 0)} cm. Clasificación de la OMS.</p>`;
   }
 
   /* ======================================================== SIGNOS VITALES (simulados) */
@@ -170,15 +170,15 @@
   }
   const NIVEL_TEXTO = { verde: 'En rango', amarillo: 'Vigilar', rojo: 'Fuera de rango' };
   const VITALES = [
-    { id: 'fc', nombre: 'Frecuencia cardíaca', unidad: 'lpm', rango: 'En reposo: 60 a 100 lpm', icono: 'corazon',
+    { id: 'fc', nombre: 'Frecuencia cardíaca', unidad: 'lpm', rango: 'Referencia en reposo: 60–100 lpm', icono: 'corazon',
       valor: (v) => Math.round(v.fc), nivel: (v) => (v.fc >= 50 && v.fc <= 100 ? 'verde' : v.fc >= 45 && v.fc <= 110 ? 'amarillo' : 'rojo') },
-    { id: 'fr', nombre: 'Frecuencia respiratoria', unidad: 'rpm', rango: 'En reposo: 12 a 20 por minuto', icono: 'pulmones',
+    { id: 'fr', nombre: 'Frecuencia respiratoria', unidad: 'rpm', rango: 'Referencia en reposo: 12–20 rpm', icono: 'pulmones',
       valor: (v) => Math.round(v.fr), nivel: (v) => (v.fr >= 12 && v.fr <= 20 ? 'verde' : v.fr >= 10 && v.fr <= 24 ? 'amarillo' : 'rojo') },
     // Categorías de la American Heart Association: menos de 130/80 (normal o elevada) = verde,
     // hipertensión etapa 1 (130-139 o 80-89) = amarillo, etapa 2 (140 o más, o 90 o más) = rojo
-    { id: 'pa', nombre: 'Presión arterial', unidad: 'mmHg', rango: 'Normal: menos de 120/80', icono: 'presion',
+    { id: 'pa', nombre: 'Presión arterial', unidad: 'mmHg', rango: 'Óptima: menos de 120/80 mmHg', icono: 'presion',
       valor: (v) => `${Math.round(v.sis)}/${Math.round(v.dia)}`, nivel: (v) => (v.sis < 130 && v.dia < 80 ? 'verde' : v.sis < 140 && v.dia < 90 ? 'amarillo' : 'rojo') },
-    { id: 'spo2', nombre: 'Saturación de oxígeno', unidad: '%', rango: 'Normal: 95 % o más', icono: 'oxigeno',
+    { id: 'spo2', nombre: 'Saturación de oxígeno', unidad: '%', rango: 'Referencia: 95 % o más', icono: 'oxigeno',
       valor: (v) => Math.round(v.spo2), nivel: (v) => (v.spo2 >= 95 ? 'verde' : v.spo2 >= 90 ? 'amarillo' : 'rojo') }
   ];
   const ICONOS = {

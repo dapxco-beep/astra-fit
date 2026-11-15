@@ -60,7 +60,7 @@
     document.getElementById('inicio').dataset.entorno = clave;   // cambia el color del cielo del encabezado
     $('escena-contenido').innerHTML = ESCENAS[clave];
     $('entorno-titulo').textContent = `Afuera de ${e.enFrase}.`;
-    $('entorno-lugar').textContent = clave === propio ? `${e.nombre}, donde está ${a ? a.nombre : 'el astronauta'}` : `${e.nombre}, para comparar`;
+    $('entorno-lugar').textContent = clave === propio ? `${e.nombre}, ubicación actual` : `${e.nombre}, como referencia`;
 
     $('entorno-gravedad').textContent = e.gravedad.texto;
     $('entorno-gravedad-barra').style.width = `${Math.max(e.gravedad.g * 100, 1.5)}%`;
@@ -71,7 +71,7 @@
     r.style.left = `${posT(e.temperatura.min)}%`;
     r.style.width = `${posT(e.temperatura.max) - posT(e.temperatura.min)}%`;
     $('entorno-temp-cabina').style.left = `${posT(e.cabina)}%`;
-    $('entorno-temp-nota').textContent = `${e.temperatura.detalle}. Dentro se mantiene cerca de ${e.cabina} °C.`;
+    $('entorno-temp-nota').textContent = `${e.temperatura.detalle}. Cabina a unos ${e.cabina} °C.`;
 
     $('entorno-dia').firstElementChild.textContent = e.dia.cifra;
     $('entorno-dia').lastElementChild.textContent = e.dia.unidad;

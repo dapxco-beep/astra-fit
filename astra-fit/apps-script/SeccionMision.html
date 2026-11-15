@@ -7,8 +7,7 @@
 <section class="seccion seccion--negra" id="mision">
   <div class="contenedor">
     <div class="seccion-cabecera">
-      <h2 class="titulo">El mismo astronauta, en cada destino.</h2>
-      <p class="subtitulo">La gravedad cambia cómo se mueve el cuerpo y cuánto trabaja cada músculo. Elige un lugar y míralo desde varios ángulos.</p>
+      <h2 class="titulo">Entornos de misión</h2>
       <div class="segmentado" data-segmentado id="ctl-mision-escenario" role="group" aria-label="Destino">
         <button type="button" data-valor="iss" aria-pressed="true">Estación Espacial</button>
         <button type="button" data-valor="gateway" aria-pressed="false">Gateway</button>
@@ -20,9 +19,9 @@
 
     <div class="cuerpo-rejilla">
       <div class="visor" id="visor-mision">
-        <canvas id="mision-lienzo" aria-label="Astronauta en 3D en el destino elegido. Arrastra para girar." role="img"></canvas>
+        <canvas id="mision-lienzo" aria-label="Astronauta en 3D en el destino elegido" role="img"></canvas>
         <div class="visor-carga" id="mision-carga">
-          <p class="texto" id="mision-carga-texto">Elige un astronauta para ver su destino.</p>
+          <p class="texto" id="mision-carga-texto">Seleccione un astronauta.</p>
         </div>
       </div>
 
@@ -64,7 +63,7 @@
 
   // Datos de cada destino (valores de referencia aproximados, tomados del prototipo; falta citar fuente)
   const SCEN = {
-    iss:     { short: 'Estación Espacial', name: 'Estación Espacial Internacional', sub: 'Órbita terrestre baja, a unos 400 km', float: true,  g: 0,    gtxt: '≈ 0 g', dur: '6 meses típicos', eq: 'Completo', nota: 'Tiene equipo de resistencia (ARED), cinta con arnés y bicicleta.', link: 'Retraso ≈ 0,6 s' },
+    iss:     { short: 'Estación Espacial', name: 'Estación Espacial Internacional', sub: 'Órbita terrestre baja, a unos 400 km', float: true,  g: 0,    gtxt: '≈ 0 g', dur: '6 meses típicos', eq: 'Completo', nota: 'Equipo disponible: dispositivo de resistencia ARED, cinta con arnés y cicloergómetro.', link: 'Retraso ≈ 0,6 s' },
     gateway: { short: 'Gateway', name: 'Gateway', sub: 'Estación en órbita lunar', float: true, g: 0, gtxt: '≈ 0 g', dur: 'Semanas a meses', eq: 'Compacto', link: 'Retraso ≈ 1,3 s' },
     transit: { short: 'Tránsito', name: 'Cápsula en tránsito', sub: 'Viaje entre la Tierra, la Luna o Marte', float: true, g: 0, gtxt: '≈ 0 g', dur: 'Días a meses', eq: 'Mínimo', link: 'Retraso variable' },
     moon:    { short: 'Luna', name: 'Superficie lunar', sub: 'Gravedad parcial', float: false, g: 1.62, gtxt: '0,16 g (1,62 m/s²)', dur: 'Días a semanas', eq: 'En el hábitat', link: 'Retraso ≈ 1,3 s' },
@@ -93,7 +92,7 @@
         <li><span class="pequeno texto-2">Estancia típica</span><span class="texto">${UI.esc(P.dur)}</span></li>
         <li><span class="pequeno texto-2">Equipo de ejercicio</span><span class="texto">${UI.esc(P.eq)}</span></li>
       </ul>
-      <p class="nota" style="margin-top: var(--e-3)">${P.float ? 'Sin gravedad el cuerpo flota: los músculos y los huesos no cargan peso.' : 'Con gravedad parcial el cuerpo carga menos peso que en la Tierra.'}${P.nota ? ' ' + UI.esc(P.nota) : ''}</p>`;
+      <p class="nota" style="margin-top: var(--e-3)">${P.float ? 'En microgravedad no hay carga sobre músculos ni huesos.' : 'Con gravedad parcial, la carga sobre el cuerpo es menor que en la Tierra.'}${P.nota ? ' ' + UI.esc(P.nota) : ''}</p>`;
     $('mision-saltar').disabled = P.float;
   }
   dibujarInfo();
