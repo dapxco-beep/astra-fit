@@ -1,7 +1,7 @@
 <!-- SeccionAcceso.html — Pantalla de entrada: logo, elegir astronauta o registrar uno nuevo.
      Fondo: blanco.  Lee la pestaña Astronautas por medio de API.  El registro y la edición viven en FormPerfil.html.
      Al elegir un astronauta guarda Sesion.astronauta y avisa con el evento "astronauta-elegido". -->
-<section class="acceso" aria-labelledby="acceso-titulo">
+<main class="acceso" aria-labelledby="acceso-titulo">
   <div class="contenedor">
     <?!= include('Logo'); ?>
     <h1 class="hero-titulo" id="acceso-titulo">Elige un astronauta.</h1>
@@ -11,7 +11,7 @@
       <p class="texto-2" style="grid-column: 1 / -1">Cargando tripulación…</p>
     </div>
   </div>
-</section>
+</main>
 
 <script>
 const Sesion = { datos: null, astronauta: null };

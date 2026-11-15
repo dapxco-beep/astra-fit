@@ -14,8 +14,10 @@
     <div class="rejilla rejilla-3" id="sen-bandas" aria-live="polite"></div>
     <p class="nota" style="text-align:center">Estados y baterías simulados. Conectado, Adquisición activa, Señal de calidad insuficiente, Batería baja y Desconectado son los cinco estados del documento.</p>
 
+    <details class="tarjeta pila" id="sen-explica" open>
+      <summary class="titulo-tarjeta">Cómo funcionan las señales</summary>
     <div class="rejilla rejilla-2">
-      <article class="tarjeta pila" aria-labelledby="sen-t-emg">
+      <section class="pila" aria-labelledby="sen-t-emg">
         <h3 class="titulo-tarjeta" id="sen-t-emg">Qué se calcula de la señal EMG</h3>
         <ul class="lista lista--texto pila">
           <li><strong>RMS:</strong> amplitud de la señal en ventanas móviles de 250 ms, actualizadas cada 50 ms. Así se ve cómo cambia durante la repetición y no solo el promedio de toda la sesión.</li>
@@ -23,8 +25,8 @@
           <li><strong>Frecuencia mediana:</strong> divide el espectro de potencia en dos mitades iguales. Su caída durante una contracción sostenida se relaciona con fatiga, pero no debe usarse sola para diagnosticar.</li>
         </ul>
         <p class="nota">La EMG no mide la fuerza directamente. La amplitud y la frecuencia se interpretan por separado.</p>
-      </article>
-      <article class="tarjeta pila" aria-labelledby="sen-t-imu">
+      </section>
+      <section class="pila" aria-labelledby="sen-t-imu">
         <h3 class="titulo-tarjeta" id="sen-t-imu">Qué aporta la unidad inercial (IMU)</h3>
         <ul class="lista lista--texto pila">
           <li><strong>Acelerómetro</strong> (ax, ay, az): cambios de aceleración del segmento donde está fijado, y regularidad de los ejercicios.</li>
@@ -32,19 +34,19 @@
           <li><strong>Juntos con la EMG:</strong> se sincronizan para relacionar la activación del músculo con el movimiento que produce.</li>
         </ul>
         <p class="nota">La IMU mide el movimiento del segmento, no la actividad de un músculo ni su fuerza.</p>
-      </article>
+      </section>
     </div>
 
-    <article class="tarjeta pila" aria-labelledby="sen-t-micro">
+    <section class="pila" aria-labelledby="sen-t-micro">
       <h3 class="titulo-tarjeta" id="sen-t-micro">Qué cambia en microgravedad</h3>
       <div class="rejilla rejilla-3">
         <div class="pila"><strong>Acelerómetro</strong><p class="texto-2">En una nave en caída libre, un acelerómetro quieto marca valores cercanos a 0 g, no 1 g como en la Tierra. La gravedad no desapareció: el sensor y la nave caen juntos. Por eso no se usa para calcular inclinación; solo para movimiento y regularidad.</p></div>
         <div class="pila"><strong>Giroscopio</strong><p class="texto-2">Sigue midiendo la rotación sin necesitar la gravedad. Pero al integrar la velocidad angular para estimar orientación, los errores pequeños se acumulan (deriva), así que hacen falta calibración y corrección de sesgos.</p></div>
         <div class="pila"><strong>Calibración</strong><p class="texto-2">Los ejes del sensor hay que relacionarlos con el segmento del cuerpo antes de leerlos anatómicamente. Las pruebas de la Tierra no se trasladan sin adaptación.</p></div>
       </div>
-    </article>
+    </section>
 
-    <article class="tarjeta pila" aria-labelledby="sen-t-flujo">
+    <section class="pila" aria-labelledby="sen-t-flujo">
       <h3 class="titulo-tarjeta" id="sen-t-flujo">Cómo es una evaluación</h3>
       <ol class="lista lista--texto pila">
         <li><strong>Colocar las bandas</strong> sobre los segmentos del protocolo, con buen contacto de la piel y sensores firmes.</li>
@@ -53,7 +55,8 @@
         <li><strong>Procesar y guardar:</strong> los registros pasan al historial del astronauta y se comparan con su basal.</li>
       </ol>
       <p class="nota">Una sesión del prototipo dura unos 25 a 35 minutos, con preparación, calibración, ejercicios y revisión. Es una propuesta de diseño, no un protocolo oficial de NASA.</p>
-    </article>
+    </section>
+    </details>
 
     <details class="tarjeta" id="sen-espec">
       <summary class="titulo-tarjeta">Especificaciones técnicas propuestas</summary>
@@ -92,6 +95,8 @@
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
+  // En móvil el bloque de explicaciones empieza cerrado: la sección pasa de unos 4.800 px a unos 2.000
+  if (matchMedia('(max-width: 640px)').matches) $('sen-explica').open = false;
   // Seis bandas del documento: músculo, segmento donde va la IMU
   const BANDAS = [
     { n: 1, musculo: 'Sóleo', segmento: 'Pantorrilla, parte baja' },
