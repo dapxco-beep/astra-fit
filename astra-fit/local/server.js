@@ -94,9 +94,20 @@ const funciones = {
     const t = ahora();
     medicion.registrado_en = t;
     (bd.Monitoreo = bd.Monitoreo || []).push(medicion);
-    const fila = guardarOActualizar(bd, 'Evaluaciones', 'id_evaluacion', { ...evaluacion, actualizado_en: t }, t);
+    const filas = [].concat(evaluacion || []).map((e) => guardarOActualizar(bd, 'Evaluaciones', 'id_evaluacion', { ...e, actualizado_en: t }, t));
     escribirBD(bd);
-    return { ok: true, medicion, evaluacion: fila };
+    return { ok: true, medicion, evaluacion: filas[0] || null, evaluaciones: filas };
+  },
+  eliminarMedicion(idMedicion, cambios = {}) {
+    const bd = leerBD();
+    const t = ahora();
+    bd.Monitoreo = (bd.Monitoreo || []).filter((m) => m.id_medicion !== idMedicion);
+    const evaluaciones = (cambios.evaluaciones || []).map((e) => guardarOActualizar(bd, 'Evaluaciones', 'id_evaluacion', { ...e, actualizado_en: t }, t));
+    const borrarE = new Set(cambios.borrarEvaluaciones || []), borrarA = new Set(cambios.borrarAlertas || []);
+    bd.Evaluaciones = bd.Evaluaciones.filter((e) => !borrarE.has(e.id_evaluacion));
+    bd.Alertas = bd.Alertas.filter((a) => !borrarA.has(a.id_alerta));
+    escribirBD(bd);
+    return { ok: true, evaluaciones };
   },
   actualizarAlerta(idAlerta, cambios) {
     const bd = leerBD();

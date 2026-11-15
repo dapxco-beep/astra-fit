@@ -19,6 +19,7 @@ const CLAVE = 'bd';
 const MAX_CUERPO = 1_000_000;   // 1 MB por petición
 const MAX_ALERTAS = 100;
 const MAX_FILAS = 50;           // filas de Evaluaciones por petición (6 músculos por evaluación)
+const MAX_SENALES = 20_000;     // señales guardadas de una medición (texto JSON, ~7 KB)
 
 // Versión de la estructura de datos. Al cambiarla, el documento guardado en KV se migra una sola vez (ver migrar()).
 //   erdm-a-1 (14-nov): la escala ERDM-A con 6 músculos reemplaza Sesiones y EMG. Pestañas nuevas: Evaluaciones
@@ -42,7 +43,7 @@ function migrar(bd) {
   // Lo que la semilla trae de nuevo (evaluaciones y mediciones de ejemplo) se agrega solo si falta, sin pisar lo guardado
   const CLAVES = { Evaluaciones: (f) => f.id_evaluacion, Monitoreo: (f) => f.id_medicion };
   for (const [hoja, clave] of Object.entries(CLAVES)) {
-    const existentes = new Set((bd[hoja] || []).map(clave));
+    const existentes = new Set([...(bd[hoja] || []).map(clave), ...((bd._eliminados || {})[hoja] || [])]);   // lo borrado a propósito no vuelve
     const faltan = (SEMILLA[hoja] || []).filter((f) => !existentes.has(clave(f)));
     if (faltan.length) { bd[hoja] = [...(bd[hoja] || []), ...structuredClone(faltan)]; cambio = true; }
   }
@@ -160,15 +161,40 @@ const funciones = {
   },
 
   async guardarMedicion(env, medicion, evaluacion) {
-    objeto(medicion, 'la medición'); objeto(evaluacion, 'la evaluación');
-    if (!evaluacion.id_evaluacion) throw new Error('Falta id_evaluacion');
+    objeto(medicion, 'la medición');
+    if (medicion.senales !== undefined && String(medicion.senales).length > MAX_SENALES) throw new Error('Las señales de la medición son demasiado grandes');
+    const lista = Array.isArray(evaluacion) ? evaluacion : [objeto(evaluacion, 'la evaluación')];   // VO2pico manda las 6 filas
+    if (!lista.length || lista.length > MAX_FILAS) throw new Error('Filas de evaluación no válidas');
+    lista.forEach((e) => { objeto(e, 'la evaluación'); if (!e.id_evaluacion) throw new Error('Falta id_evaluacion'); });
     const bd = await leerBD(env), t = ahora();
     hayEspacio(bd, 'Monitoreo');
     medicion.registrado_en = t;
     (bd.Monitoreo = bd.Monitoreo || []).push(medicion);
-    const fila = guardarOActualizar(bd, 'Evaluaciones', 'id_evaluacion', { ...evaluacion, actualizado_en: t }, t);
+    const filas = lista.map((e) => guardarOActualizar(bd, 'Evaluaciones', 'id_evaluacion', { ...e, actualizado_en: t }, t));
     await escribirBD(env, bd);
-    return { ok: true, medicion, evaluacion: fila };
+    return { ok: true, medicion, evaluacion: filas[0], evaluaciones: filas };
+  },
+
+  /* Borra una medición mal tomada. Lo que se borra queda anotado en bd._eliminados para que migrar() no lo vuelva
+     a traer de la semilla. */
+  async eliminarMedicion(env, idMedicion, cambios) {
+    if (!idMedicion || typeof idMedicion !== 'string') throw new Error('Falta la medición');
+    cambios = cambios && typeof cambios === 'object' ? cambios : {};
+    const evaluaciones = Array.isArray(cambios.evaluaciones) ? cambios.evaluaciones : [];
+    const borrarE = Array.isArray(cambios.borrarEvaluaciones) ? cambios.borrarEvaluaciones.map(String) : [];
+    const borrarA = Array.isArray(cambios.borrarAlertas) ? cambios.borrarAlertas.map(String) : [];
+    if (evaluaciones.length > MAX_FILAS || borrarE.length > MAX_FILAS || borrarA.length > MAX_ALERTAS) throw new Error('Demasiados cambios');
+    evaluaciones.forEach((e) => { objeto(e, 'la evaluación'); if (!e.id_evaluacion) throw new Error('Falta id_evaluacion'); });
+    const bd = await leerBD(env), t = ahora();
+    if (!(bd.Monitoreo || []).some((m) => m.id_medicion === idMedicion)) throw new Error('No existe la medición ' + idMedicion);
+    bd.Monitoreo = bd.Monitoreo.filter((m) => m.id_medicion !== idMedicion);
+    const guardadas = evaluaciones.map((e) => guardarOActualizar(bd, 'Evaluaciones', 'id_evaluacion', { ...e, actualizado_en: t }, t));
+    bd.Evaluaciones = bd.Evaluaciones.filter((e) => !borrarE.includes(String(e.id_evaluacion)));
+    bd.Alertas = bd.Alertas.filter((a) => !borrarA.includes(String(a.id_alerta)));
+    const el = (bd._eliminados = bd._eliminados || { Monitoreo: [], Evaluaciones: [] });
+    el.Monitoreo.push(idMedicion); el.Evaluaciones.push(...borrarE);
+    await escribirBD(env, bd);
+    return { ok: true, evaluaciones: guardadas };
   },
 
   async actualizarAlerta(env, idAlerta, cambios) {

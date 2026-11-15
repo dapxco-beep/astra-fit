@@ -6,8 +6,7 @@
 <section class="seccion seccion--gris" id="evolucion">
   <div class="contenedor contenedor--ancho">
     <div class="seccion-cabecera">
-      <h2 class="titulo">Semana a semana, frente a su basal.</h2>
-      <p class="subtitulo">Cada punto es una evaluación estandarizada. Arriba de la línea punteada empieza el riesgo moderado y, más arriba, el alto.</p>
+      <h2 class="titulo">Evolución semanal</h2>
     </div>
 
     <div class="evo-controles">
@@ -39,7 +38,7 @@
   const n0 = (v, d = 0) => Number(v).toLocaleString('es', { minimumFractionDigits: d, maximumFractionDigits: d });
 
   const MEDIDAS = {
-    puntaje: { eje: 'Puntaje ERDM-A (0–10)', valor: (f) => num(f.puntaje_erdm), texto: (v) => `${v} de 10`, explica: 'Suma de las 5 dimensiones de la escala: 0–3 riesgo bajo, 4–6 moderado, 7–10 alto.' },
+    puntaje: { eje: 'Puntaje ERDM-A (0–10)', valor: (f) => num(f.puntaje_erdm), texto: (v) => `${v} de 10`, explica: 'Suma de las cinco dimensiones de la escala: bajo 0–3, moderado 4–6, alto 7–10.' },
     fuerza: { eje: 'Pérdida de fuerza (%)', campo: 'cambio_fuerza_pct', puntos: 'p_fuerza', corte: 'fuerza', texto: (v) => `${v < 0 ? 'ganó' : 'perdió'} ${n0(Math.abs(v), 1)} %`, explica: 'Dinamometría frente a la basal. Cualquier pérdida suma 1 punto; más de 10 % suma 2. Más de 20 % es evaluación prioritaria.' },
     coordinacion: { eje: 'Aumento de la variabilidad (%)', campo: 'cambio_coordinacion_pct', puntos: 'p_coordinacion', corte: 'coordinacion', texto: (v) => `${v < 0 ? 'bajó' : 'subió'} ${n0(Math.abs(v), 1)} %`, explica: 'Coeficiente de variación entre repeticiones, medido con la IMU. Más variabilidad es menos control del movimiento.' },
     circunferencia: { eje: 'Pérdida de circunferencia (%)', campo: 'cambio_circunferencia_pct', puntos: 'p_circunferencia', corte: 'circunferencia', texto: (v) => `${v < 0 ? 'ganó' : 'perdió'} ${n0(Math.abs(v), 1)} %`, explica: 'Cinta métrica en el mismo punto anatómico. Más de 15 % es evaluación prioritaria.' },
@@ -93,6 +92,14 @@
     return `<svg viewBox="0 0 ${W} ${H}" class="evo-svg" role="img" aria-label="${esc(Erdm.etiqueta(g))}: ${esc(MEDIDAS[medida].eje)} por semana">${svg}</svg>`;
   }
 
+  /** Texto con la última medición del sensor (o del VO2pico) de ese grupo, para saber qué tan al día está la curva. */
+  function ultimaMedicion(grupo) {
+    const lista = (Sesion.datos.Monitoreo || []).filter((x) => x.id_astronauta === Sesion.astronauta.id_astronauta && x.grupo_muscular === grupo)
+      .sort((p, q) => String(p.registrado_en || p.fecha).localeCompare(String(q.registrado_en || q.fecha)));
+    const u = lista[lista.length - 1];
+    return u ? `Última medición: ${Calc.fechaCorta(u.fecha)}${u.hora ? `, ${u.hora}` : ''}` : 'Sin mediciones del sensor';
+  }
+
   let datos = {};
   function pintar() {
     if (!Sesion.astronauta) return;
@@ -119,6 +126,7 @@
         </figcaption>
         ${s.pts.length ? grafica(g, s, escala) : '<p class="nota evo-vacio">Sin evaluación basal.</p>'}
         <p class="nota evo-pie">${esc(m.eje)} · semanas desde la basal</p>
+        <p class="nota evo-ultima">${esc(ultimaMedicion(medida === 'vo2pico' ? 'vo2pico' : g))}</p>
       </figure>`;
     }).join('');
     pintarTabla();

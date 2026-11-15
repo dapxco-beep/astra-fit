@@ -26,7 +26,7 @@ function doGet(e) {
   const pagina = PAGINAS[(e && e.parameter && e.parameter.page) || ''] || 'Index';
   return HtmlService.createTemplateFromFile(pagina)
     .evaluate()
-    .setTitle('ASTRA-FIT')
+    .setTitle('MYOCARE')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -172,15 +172,35 @@ function guardarEvaluaciones(filas) {
   });
 }
 
-/** Una medición del sensor: va a Monitoreo y sus resultados (EMG y coordinación) a la fila del día en Evaluaciones. */
+/** Una medición del sensor: va a Monitoreo y sus resultados a la fila del día en Evaluaciones.
+ *  `evaluacion` puede ser una fila (músculo) o una lista (VO2pico, que va en las filas de los 6 músculos). */
 function guardarMedicion(medicion, evaluacion) {
   return conBloqueo_(function () {
     const ahora = ahora_();
     medicion.registrado_en = ahora;
     agregarFila_('Monitoreo', medicion);
-    evaluacion.actualizado_en = ahora;
-    const fila = guardarOActualizar_('Evaluaciones', 'id_evaluacion', evaluacion, ahora);
-    return { ok: true, medicion: medicion, evaluacion: fila };
+    const filas = [].concat(evaluacion || []).map(function (e) {
+      e.actualizado_en = ahora;
+      return guardarOActualizar_('Evaluaciones', 'id_evaluacion', e, ahora);
+    });
+    return { ok: true, medicion: medicion, evaluacion: filas[0] || null, evaluaciones: filas };
+  });
+}
+
+/** Borra una medición mal tomada. El navegador calcula cómo quedan las evaluaciones del día (cambios.evaluaciones),
+ *  cuáles se quedan vacías y se borran (cambios.borrarEvaluaciones) y qué alertas generó la medición (cambios.borrarAlertas). */
+function eliminarMedicion(idMedicion, cambios) {
+  return conBloqueo_(function () {
+    cambios = cambios || {};
+    const ahora = ahora_();
+    borrarFilas_('Monitoreo', 'id_medicion', [idMedicion]);
+    const evaluaciones = (cambios.evaluaciones || []).map(function (e) {
+      e.actualizado_en = ahora;
+      return guardarOActualizar_('Evaluaciones', 'id_evaluacion', e, ahora);
+    });
+    borrarFilas_('Evaluaciones', 'id_evaluacion', cambios.borrarEvaluaciones || []);
+    borrarFilas_('Alertas', 'id_alerta', cambios.borrarAlertas || []);
+    return { ok: true, evaluaciones: evaluaciones };
   });
 }
 
@@ -204,6 +224,21 @@ function actualizarAlerta(idAlerta, cambios) {
 }
 
 /* ------------------------------------------------------------------ Utilidades */
+/** Borra las filas cuya columna `clave` está en `valores` (de abajo hacia arriba para no correr los índices). */
+function borrarFilas_(nombreHoja, clave, valores) {
+  if (!valores || !valores.length) return 0;
+  const hoja = SpreadsheetApp.getActive().getSheetByName(nombreHoja);
+  if (!hoja) return 0;
+  const datos = hoja.getDataRange().getValues();
+  const col = datos[0].map(String).indexOf(clave);
+  if (col < 0) return 0;
+  const buscar = valores.map(String);
+  let n = 0;
+  for (let i = datos.length - 1; i >= 1; i--) {
+    if (buscar.indexOf(String(datos[i][col])) >= 0) { hoja.deleteRow(i + 1); n++; }
+  }
+  return n;
+}
 /** Escribe una fila ubicando cada valor por el NOMBRE de la columna. */
 function agregarFila_(nombreHoja, obj) {
   const hoja = SpreadsheetApp.getActive().getSheetByName(nombreHoja);
