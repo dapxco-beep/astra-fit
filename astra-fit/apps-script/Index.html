@@ -28,6 +28,7 @@
   <div class="vista" id="vista-panel" hidden>
     <div class="tablero">
       <!-- Escritorio: barra lateral. Los enlaces los dibuja el selector de vistas (más abajo). -->
+      <a class="saltar" href="#contenido">Saltar al contenido</a>
       <nav class="barra-lateral" aria-label="Vistas del tablero">
         <a class="nav-marca" href="#inicio">ASTRA-FIT</a>
         <span class="nav-etiqueta">Datos simulados</span>
@@ -45,7 +46,7 @@
           <button type="button" class="enlace nav-cambiar-m" onclick="Sesion.salir()">Cambiar</button>
         </header>
 
-        <main id="contenido">
+        <main id="contenido" tabindex="-1">
           <!-- Orden del panel (sigue el recorrido): Perfil, Destinos (elegir entorno), Monitoreo, Alertas (revisar) y Cuerpo (qué hacer), luego Evolución -->
           <div id="inicio-vista"><?!= include('SeccionInicio'); ?></div>
           <?!= include('SeccionMision'); ?>
@@ -54,6 +55,8 @@
           <?!= include('SeccionCuerpo'); ?>
           <?!= include('SeccionEvolucion'); ?>
         </main>
+
+        <nav class="siguiente-vista" id="siguiente-vista" aria-label="Continuar el recorrido"></nav>
 
         <footer class="pie">
           <div class="contenedor">
@@ -144,6 +147,14 @@
       document.addEventListener('click', (e) => { if (!hoja.hidden && !e.target.closest('#hoja-mas, #tab-mas')) cerrarHoja(); });
 
       let primera = true;
+      // "Siguiente" al pie de cada vista: el recorrido es Perfil, Destinos, Monitoreo, Alertas, Cuerpo, Evolución
+      function actualizarSiguiente(id) {
+        const caja = $('siguiente-vista'); if (!caja) return;
+        const i = VISTAS.findIndex((v) => v.id === id), sig = VISTAS[i + 1];
+        caja.innerHTML = '<p class="nota">Paso ' + (i + 1) + ' de ' + VISTAS.length + '</p>' + (sig
+          ? '<a class="boton" href="#' + sig.id + '">Siguiente: ' + sig.t + ' ›</a>'
+          : '<a class="boton boton--secundario" href="#' + VISTAS[0].id + '">Volver al perfil</a>');
+      }
       function ir(id) {
         if (ALIAS[id]) id = ALIAS[id];
         if (!VISTAS.some((v) => v.id === id)) id = 'inicio';
@@ -159,18 +170,25 @@
         const vista = elDe(id);
         if (vista && !vista.querySelector('h1')) { const h1 = document.createElement('h1'); h1.className = 'solo-lector'; h1.textContent = VISTAS.find((x) => x.id === id).t; vista.prepend(h1); }
         if (!primera) { const t = elDe(id).querySelector('h2, h1'); if (t) { t.setAttribute('tabindex', '-1'); t.focus({ preventScroll: true }); } }
+        actualizarSiguiente(id);
         primera = false;
       }
       // Los enlaces #vista cambian de vista sin depender del hash (en Apps Script la página va dentro de un iframe)
       document.addEventListener('click', (e) => {
         const a = e.target.closest('a[href^="#"]'); if (!a) return;
+        if (a.classList.contains('saltar')) { e.preventDefault(); $('contenido').focus({ preventScroll: true }); return; }
         const id = a.getAttribute('href').slice(1); if (!VISTAS.some((v) => v.id === id) && !ALIAS[id]) return;
         e.preventDefault(); ir(id);
         try { history.replaceState(null, '', '#' + id); } catch (err) { /* iframe sin permiso: no pasa nada */ }
       });
       const desdeHash = () => ir((location.hash || '#inicio').slice(1));
       window.addEventListener('hashchange', desdeHash);
-      document.addEventListener('astronauta-elegido', () => { primera = true; desdeHash(); contarAlertas(); });
+      document.addEventListener('astronauta-elegido', () => {
+        primera = true; desdeHash(); contarAlertas();
+        // El botón pulsado desaparece: el foco pasa al título de la vista (antes se perdía)
+        const h = document.querySelector('#contenido > :not([hidden]) h2, #contenido > :not([hidden]) h1');
+        if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
+      });
       desdeHash();
 
       // Número de alertas abiertas junto a "Alertas"

@@ -857,4 +857,32 @@ a.nav-astronauta { color: inherit; text-decoration: none; }
 .alr-tabla th[scope="row"] { font-size: var(--t-pequeno); font-weight: 600; color: var(--tinta); white-space: nowrap; }
 .alr-tabla thead th { white-space: nowrap; }
 .alr-tabla td .estado { white-space: nowrap; }
+
+/* ================================================================ 102. RECORRIDO Y ACCESIBILIDAD (auditorías del 15-nov) */
+.saltar { position: absolute; left: -9999px; top: 8px; z-index: 200; padding: 10px 14px; border-radius: 8px; background: var(--blanco); color: var(--azul-enlace); font-weight: 600; text-decoration: none; }
+.saltar:focus { left: 8px; box-shadow: 0 0 0 3px var(--azul); }
+#contenido:focus { outline: none; }
+.siguiente-vista { width: min(1180px, 100% - 48px); margin: 0 auto var(--e-8); display: flex; flex-wrap: wrap; gap: var(--e-3) var(--e-5); align-items: center; justify-content: space-between; padding: var(--e-4) var(--e-6); border-radius: 20px; background: var(--blanco); }
+.siguiente-vista .nota { margin: 0; }
+.cuerpo-hacer { display: flex; flex-wrap: wrap; gap: var(--e-3) var(--e-6); align-items: center; justify-content: space-between; margin-bottom: var(--e-5); border-left: 6px solid var(--azul-sobre-negro); }
+.cuerpo-hacer[hidden] { display: none; }
+.cuerpo-hacer .nota { margin: 0 0 2px; }
+.nav-item:hover { background: rgba(0, 0, 0, .06); }
+.mon-chip:hover, .mon-mini:hover { box-shadow: 0 2px 8px rgba(0, 0, 0, .12); border-color: var(--azul); }
+/* Pantallas táctiles: objetivos de 44 px también en tablets y en horizontal */
+@media (pointer: coarse) {
+  .boton--pequeno, .segmentado button, .enlace { min-height: 44px; }
+  .enlace { display: inline-flex; align-items: center; }
+  .visor canvas { touch-action: pan-y; }
+}
+/* Celular en horizontal: la barra superior no ocupa media pantalla */
+@media (max-height: 500px) {
+  .barra-superior { position: static; }
+  .barra-superior .nav-etiqueta { display: none; }
+}
+@media (max-width: 899px) {
+  .siguiente-vista { width: min(100% - 32px, 1180px); padding: var(--e-4); }
+  .siguiente-vista .boton { width: 100%; min-height: 48px; }
+  .cuerpo-hacer .boton { width: 100%; }
+}
 </style>
