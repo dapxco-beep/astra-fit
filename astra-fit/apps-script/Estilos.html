@@ -1064,4 +1064,18 @@ html[data-ligero] .tablero { transition: none; }
 .vo2-linea { fill: none; stroke: var(--azul); stroke-width: 2; stroke-linejoin: round; }
 .vo2-punto { stroke: #fff; stroke-width: 2; } .vo2-punto--verde { fill: var(--verde); } .vo2-punto--amarillo { fill: var(--amarillo); } .vo2-punto--rojo { fill: var(--rojo); }
 @media (max-width: 900px) { .mon-vo2-cuerpo { grid-template-columns: minmax(0, 1fr); } .mon-vo2 { padding: var(--e-5); } }
+
+/* ================================================================ 107. MONITOREO EN EL CELULAR: GRÁFICAS Y TABLAS QUE NO SE SALEN */
+.mon-grafica-titulo, .mon-series { flex-wrap: wrap; row-gap: 2px; }
+.tabla-envoltura { position: relative; }   /* lo que va oculto para lectores de pantalla dentro de la tabla no estira la página */
+@media (max-width: 760px) { .mon-erdm-rejilla { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 760px) {
+  .mon-detalle .mon-graficas { grid-template-columns: minmax(0, 1fr); }
+}
+/* Tablas anchas: una sombra en el borde avisa que hay más columnas hacia el lado */
+#monitoreo .tarjeta .tabla-envoltura {
+  background: linear-gradient(to right, #fff 30%, rgba(255, 255, 255, 0)), linear-gradient(to left, #fff 30%, rgba(255, 255, 255, 0)) 100% 0,
+    radial-gradient(farthest-side at 0 50%, rgba(15, 31, 75, .2), transparent), radial-gradient(farthest-side at 100% 50%, rgba(15, 31, 75, .2), transparent) 100% 0;
+  background-repeat: no-repeat; background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%; background-attachment: local, local, scroll, scroll;
+}
 </style>

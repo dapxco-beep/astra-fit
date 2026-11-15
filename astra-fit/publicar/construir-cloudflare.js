@@ -49,7 +49,7 @@ for (const [pagina, archivo] of [['Index', 'index.html'], ['Componentes', 'compo
 // Los .glb adelgazados se generan con astra-fit/publicar/herramientas/dividir-glb.js (solo músculos; Xbot-astronauta.glb = silueta + animaciones,
 // comprimida con gltfpack). astronaut.glb lo usa Destinos.
 const MODELOS = ['Xbot-astronauta.glb', 'astronaut.glb', 'anatomy-male-musculos.glb', 'anatomy-female-musculos.glb'];
-const ESCENARIOS = ['iss.glb', 'capsula.glb', 'lem.glb', 'rover.glb', 'hab1.glb', 'hab2.glb', 'gateway.png'];
+const ESCENARIOS = ['iss.glb', 'capsula.glb', 'lem.glb', 'rover.glb', 'hab1.glb', 'hab2.glb'];
 let copiados = 0;
 function copiar(rel) {
   const de = path.join(NASA, 'assets', rel), a = path.join(SALIDA, 'assets', rel);

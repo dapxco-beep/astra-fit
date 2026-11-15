@@ -490,7 +490,7 @@
           ${u.arrastre && u.arrastre.length ? '<p class="nota">Las dimensiones con fecha vienen de la evaluación anterior hasta que se vuelvan a medir.</p>' : ''}
           ${plan && u.fase !== 'basal' ? `<div class="mon-plan"><p class="nota">Pauta</p><p class="pequeno"><strong>${esc(plan.ejercicio)}.</strong> ${esc(plan.dosificacion)}</p></div>` : ''}
         </div>
-        <div class="tabla-envoltura">
+        <div class="tabla-envoltura" tabindex="0" role="region" aria-label="Tabla de dimensiones de la escala ERDM-A">
           <table class="mon-tabla">
             <thead><tr><th scope="col">Dimensión</th><th scope="col">Basal</th><th scope="col">Actual</th><th scope="col">Cambio</th><th scope="col">Puntos</th></tr></thead>
             <tbody>${filas}</tbody>
