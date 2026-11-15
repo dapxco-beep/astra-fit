@@ -10,8 +10,6 @@
  */
 const { chromium } = require('playwright-core');
 const URL = (process.argv[2] || process.env.BASE_URL || 'http://localhost:3000').replace(/\/?$/, '/');
-const VISTAS = ['hoy', 'monitoreo', 'cuerpo', 'alertas', 'sensores', 'evolucion', 'mision', 'inicio'];
-const PRINCIPALES = ['hoy', 'monitoreo', 'cuerpo', 'alertas'];
 const fallos = [];
 const falla = (m) => { fallos.push(m); console.log('  FALLA: ' + m); };
 const pausa = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -26,14 +24,25 @@ async function recorrer(browser, nombre, viewport, movil) {
   await p.click('.perfil[data-id]').catch(() => falla('no se puede elegir un astronauta'));
   await p.waitForSelector('#vista-panel:not([hidden])', { timeout: 15000 }).catch(() => falla('no abre el tablero'));
   await pausa(1500);
-  for (const v of VISTAS) {
+  // Las vistas se leen de la propia navegación: barra lateral (escritorio) o barra inferior (+ "Más" si existe)
+  const nav = await p.evaluate(() => {
+    const vis = (e) => !!e && getComputedStyle(e).display !== 'none';
+    const inf = document.getElementById('nav-inferior'), lat = document.querySelector('.barra-lateral'), usaInferior = vis(inf), mas = document.getElementById('tab-mas');
+    const principales = [...(usaInferior ? inf : lat).querySelectorAll('[data-vista]')].map((a) => a.dataset.vista);
+    const hayMas = usaInferior && mas && !mas.hidden && vis(mas);
+    return { usaInferior, principales, extras: hayMas ? [...document.querySelectorAll('#hoja-mas [data-vista]')].map((a) => a.dataset.vista) : [], desborde: document.documentElement.scrollWidth - innerWidth };
+  });
+  if (nav.desborde > 1) falla('la página se ensancha ' + nav.desborde + ' px más que la pantalla');
+  if ([...nav.principales, ...nav.extras].length < 5) falla('hay muy pocas vistas en la navegación');
+  for (const v of [...nav.principales, ...nav.extras]) {
     try {
-      if (movil && !PRINCIPALES.includes(v)) await p.click('#tab-mas', { timeout: 5000 });
-      const sel = (movil ? (PRINCIPALES.includes(v) ? '#nav-inferior ' : '#hoja-mas ') : '.barra-lateral ') + '[data-vista="' + v + '"]';
+      const extra = nav.extras.includes(v);
+      if (extra) await p.click('#tab-mas', { timeout: 5000 });
+      const sel = (movil ? (extra ? '#hoja-mas ' : '#nav-inferior ') : '.barra-lateral ') + '[data-vista="' + v + '"]';
       await p.click(sel, { timeout: 5000 });
       await pausa(500);
-      const visible = await p.evaluate((id) => { const el = document.getElementById(id === 'inicio' ? 'inicio-vista' : id); return !!el && !el.hidden; }, v);
-      if (!visible) falla('la vista "' + v + '" no se muestra al pulsarla');
+      const visibles = await p.evaluate(() => [...document.getElementById('contenido').children].filter((e) => e.tagName !== 'SCRIPT' && !e.hidden).length);
+      if (visibles !== 1) falla('la vista "' + v + '" deja ' + visibles + ' bloques visibles (debería ser 1)');
       else console.log('  ok ' + v);
     } catch (e) { falla('no se llega a la vista "' + v + '" con un clic (' + String(e).split('\n')[0].slice(0, 80) + ')'); }
   }

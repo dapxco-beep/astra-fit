@@ -1,19 +1,16 @@
-<!-- SeccionHoy.html — Tablero "Hoy": lo que el astronauta necesita saber y hacer, en una sola pantalla.  Fondo: gris.
-     Resume, con los datos del astronauta elegido (Sesion.datos): riesgo ERDM-A global y de cada uno de los 6 músculos,
-     alertas abiertas y qué hacer, plan de fortalecimiento del músculo más comprometido, y atajos a las demás vistas.
+<!-- SeccionHoy.html — "Estado de hoy", dentro del Perfil (SeccionInicio lo incluye debajo del encabezado).  Fondo: gris.
+     Antes era una vista propia ("Hoy"); ahora el Perfil es la primera vista del panel y resume cómo está el astronauta:
+     riesgo ERDM-A global y de cada uno de los 6 músculos, alertas abiertas y qué hacer, y el plan de fortalecimiento
+     del músculo más comprometido. Los datos personales, el IMC y los signos vitales siguen debajo, en SeccionInicio.
      Usa Erdm (JsErdm.html) y Calc (JsCalculos.html). Escucha "astronauta-elegido", "astronauta-actualizado" y "datos-actualizados".
      Las alertas son indicadores de seguimiento, no diagnósticos médicos. -->
-<section class="seccion seccion--gris" id="hoy" aria-labelledby="hoy-titulo">
+<section class="seccion seccion--gris seccion--compacta hoy" id="hoy-estado" aria-labelledby="hoy-titulo">
   <div class="contenedor pila-grande">
     <div class="hoy-cabecera">
       <div class="pila">
         <p class="nota" id="hoy-fecha"></p>
-        <h1 class="titulo" id="hoy-titulo" tabindex="-1">Hoy.</h1>
-        <p class="subtitulo" id="hoy-sub"></p>
-      </div>
-      <div class="acciones">
-        <a class="boton" href="#monitoreo">Ver el monitoreo</a>
-        <a class="boton boton--secundario" href="#cuerpo">Ver el cuerpo en 3D</a>
+        <h2 class="titulo-tarjeta hoy-titulo" id="hoy-titulo">Estado de hoy</h2>
+        <p class="texto-2" id="hoy-sub"></p>
       </div>
     </div>
 
@@ -23,26 +20,17 @@
 
     <div class="hoy-rejilla">
       <article class="tarjeta pila" aria-labelledby="hoy-t-musculos">
-        <div class="tarjeta-cabecera"><h2 class="titulo-tarjeta" id="hoy-t-musculos">Tus seis músculos</h2><a class="enlace" href="#monitoreo">Ver detalle</a></div>
+        <div class="tarjeta-cabecera"><h3 class="titulo-tarjeta" id="hoy-t-musculos">Los seis músculos</h3><a class="enlace" href="#monitoreo">Ver el monitoreo</a></div>
         <div class="hoy-musculos" id="hoy-musculos"></div>
-        <p class="nota">Puntaje ERDM-A de 0 a 10 frente a tu propia evaluación basal. 0 a 3 bajo, 4 a 6 moderado, 7 a 10 alto.</p>
+        <p class="nota">Puntaje ERDM-A de 0 a 10 frente a la evaluación basal del astronauta. 0 a 3 bajo, 4 a 6 moderado, 7 a 10 alto.</p>
         <div id="hoy-plan"></div>
       </article>
 
       <article class="tarjeta pila" aria-labelledby="hoy-t-hacer">
-        <div class="tarjeta-cabecera"><h2 class="titulo-tarjeta" id="hoy-t-hacer">Qué hacer hoy</h2><a class="enlace" href="#alertas">Ver alertas</a></div>
+        <div class="tarjeta-cabecera"><h3 class="titulo-tarjeta" id="hoy-t-hacer">Qué hacer hoy</h3><a class="enlace" href="#alertas">Ver alertas</a></div>
         <div class="pila" id="hoy-hacer"></div>
       </article>
     </div>
-
-    <div class="hoy-atajos" id="hoy-atajos">
-      <a class="hoy-atajo" href="#cuerpo"><strong>Cuerpo en 3D</strong><span class="texto-2">Músculos, anatomía y los seis ejercicios.</span></a>
-      <a class="hoy-atajo" href="#evolucion"><strong>Evolución</strong><span class="texto-2">Cómo cambió cada indicador desde tu basal.</span></a>
-      <a class="hoy-atajo" href="#sensores"><strong>Bandas y sensores</strong><span class="texto-2">Estado de las seis bandas EMG e IMU.</span></a>
-      <a class="hoy-atajo" href="#mision"><strong>Destinos</strong><span class="texto-2">Estación, Luna y Marte.</span></a>
-    </div>
-
-    <p class="nota nota--centro">Datos simulados. Los resultados son indicadores de seguimiento, no diagnósticos médicos.</p>
   </div>
 </section>
 
@@ -72,18 +60,17 @@
     const rojas = alertas.filter((x) => x.nivel === 'rojo').length;
     const hoy = new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
     $('hoy-fecha').textContent = hoy.charAt(0).toUpperCase() + hoy.slice(1);
-    $('hoy-titulo').textContent = `Hola, ${a.nombre}.`;
-    const dia = Calc.diasDesde(a.fecha_inicio_mision), ent = Calc.ENTORNOS && Calc.ENTORNOS[a.entorno];
     $('hoy-sub').textContent = p
-      ? (p.u.riesgo === 'bajo' ? 'Tus seis músculos están dentro de lo esperado.' : `Lo que más pide atención hoy: ${Erdm.etiqueta(p.g).toLowerCase()}.`)
+      ? (p.u.riesgo === 'bajo' ? 'Los seis músculos están dentro de lo esperado.' : `Lo que más pide atención hoy: ${Erdm.etiqueta(p.g).toLowerCase()}.`)
       : 'Todavía no hay evaluaciones. Empieza por la evaluación basal en el monitoreo.';
 
     const fechas = lista.filter((x) => x.u).map((x) => String(x.u.fecha)).sort();
+    const enRiesgo = lista.filter((x) => x.u && x.u.riesgo !== 'bajo').length;   // el día de misión ya está en el encabezado
     $('hoy-kpis').innerHTML =
       kpi('Riesgo muscular', p ? p.u.riesgo.charAt(0).toUpperCase() + p.u.riesgo.slice(1) : '—', p ? `${p.u.puntaje_erdm} de 10 en ${Erdm.etiqueta(p.g).toLowerCase()}` : 'Sin evaluar', p ? Erdm.nivel(p.u.riesgo) : '') +
       kpi('Alertas abiertas', String(alertas.length), rojas ? `${rojas} ${rojas === 1 ? 'requiere' : 'requieren'} valoración del médico de vuelo` : alertas.length ? 'Para vigilar o repetir la medición' : 'Todo en orden', rojas ? 'rojo' : alertas.length ? 'amarillo' : 'verde') +
       kpi('Última evaluación', fechas.length ? Calc.relativo(fechas[fechas.length - 1]).replace('Hace ', 'Hace ').toLowerCase().replace(/^./, (x) => x.toUpperCase()) : '—', fechas.length ? Calc.fechaCorta(fechas[fechas.length - 1]) : 'Sin registros', '') +
-      kpi('Día de misión', dia === null ? '—' : String(Math.max(dia, 0)), ent ? ent.nombre : 'Estación en órbita baja', '');
+      kpi('Músculos en riesgo', `${enRiesgo}<small> de 6</small>`, enRiesgo ? 'Con riesgo moderado o alto en la ERDM-A' : 'Los seis en riesgo bajo', enRiesgo ? 'amarillo' : (lista.some((x) => x.u) ? 'verde' : ''));
 
     $('hoy-musculos').innerHTML = lista.map(({ g, u }) => {
       if (!u) return `<a class="hoy-musculo" href="#monitoreo"><strong>${UI.esc(Erdm.etiqueta(g))}</strong><span class="estado estado--gris">Sin evaluar</span></a>`;
@@ -113,7 +100,7 @@
     else if (alertas.length) paso = { nivel: 'amarillo', titulo: 'Tienes ' + alertas.length + (alertas.length === 1 ? ' alerta en seguimiento' : ' alertas en seguimiento'), texto: 'Revísalas y repite la medición cuando corresponda.', boton: 'Ver las alertas', ir: '#alertas' };
     else paso = { nivel: 'verde', titulo: 'Sin alertas abiertas', texto: 'Mantén tu programa y repite las mediciones en las fechas previstas.', boton: 'Ir al monitoreo', ir: '#monitoreo' };
     if (paso.nivel) sig.dataset.nivel = paso.nivel; else delete sig.dataset.nivel;
-    sig.innerHTML = '<div><p class="nota">Siguiente paso</p><h2 class="titulo-tarjeta">' + paso.titulo + '</h2><p class="texto-2">' + paso.texto + '</p></div><a class="boton" href="' + paso.ir + '">' + paso.boton + '</a>';
+    sig.innerHTML = '<div><p class="nota">Siguiente paso</p><h3 class="titulo-tarjeta">' + paso.titulo + '</h3><p class="texto-2">' + paso.texto + '</p></div><a class="boton" href="' + paso.ir + '">' + paso.boton + '</a>';
   }
   document.addEventListener('astronauta-elegido', dibujar);
   document.addEventListener('astronauta-actualizado', dibujar);

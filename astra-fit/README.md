@@ -29,14 +29,15 @@ Todo lo que se sube a Apps Script está en `apps-script/`, con los mismos nombre
 | `Componentes.html` | Muestra de cada pieza del formato, para copiar | — |
 | `Index.html` | Esqueleto: pantalla de entrada + panel con sus secciones | Dashboard |
 | `SeccionAcceso.html` | Pantalla de entrada: logo, astronautas, registrar nuevo | Dashboard |
-| `SeccionInicio.html` | Resumen: datos de registro, IMC, signos vitales y última actualización | Dashboard |
+| `SeccionInicio.html` | Perfil, la primera vista del panel: el astronauta sobre su entorno, su estado de hoy (`SeccionHoy`), datos de registro, IMC, signos vitales y última actualización | Dashboard |
+| `SeccionHoy.html` | Estado de hoy, dentro del Perfil: riesgo ERDM-A global y de los 6 músculos, alertas abiertas y qué hacer | Dashboard |
 | `SeccionEntorno.html` | Lógica del exterior (órbita, Luna o Marte) que se ve en el encabezado oscuro de SeccionInicio: escena animada, días desde el despegue, gravedad, temperatura y duración del día | Dashboard |
 | `FormPerfil.html` | Ventana para registrar o editar un astronauta, con emoji de perfil | Dashboard |
 | `JsCalculos.html` | IMC, fechas, peso más reciente y datos de cada entorno | Dashboard |
 | `JsAvatares.html` | Avatares de astronauta con casco (en lugar de emojis) | Dashboard |
 | `JsErdm.html` | Escala ERDM-A: compara cada músculo con su basal, da de 0 a 10 puntos, nivel de riesgo, alertas y plan sugerido. Lee los cortes de la pestaña `EscalaERDM` | Dashboard |
-| `SeccionMonitoreo.html` | Monitoreo neuromuscular: figura de frente y espalda con la banda de cada músculo, una gráfica pequeña por músculo (puntaje ERDM-A por semana) y, al tocar uno, señales EMG e IMU en vivo, medición de 10 s (EMG, IMU y dinamómetro) y tarjeta de la ERDM-A | Dashboard |
-| `SeccionSensores.html` | Seis bandas: estado de cada sensor, cómo se calculan los indicadores y especificaciones | Dashboard |
+| `SeccionMonitoreo.html` | Monitoreo neuromuscular: figura de frente y espalda con la banda de cada músculo, una gráfica pequeña por músculo (puntaje ERDM-A por semana) y, al tocar uno, señales EMG e IMU en vivo, medición de 10 s (EMG, IMU y dinamómetro) y tarjeta de la ERDM-A. Al tocar un músculo en la figura abre la guía de su banda | Dashboard |
+| `SeccionSensores.html` | Dentro del Monitoreo: guía emergente de cada banda (qué mide, estado y animación de dónde ponerla, según SENIAM) y, plegado, cómo funcionan las bandas y sus especificaciones | Dashboard |
 | `SeccionCuerpo.html` | Visor del cuerpo 3D, dentro de `#visor-cuerpo` (colorea cuádriceps y pantorrilla con su riesgo ERDM-A) | **Equipo del cuerpo** |
 | `SeccionMision.html` | Destinos: el astronauta animado en la Estación, Gateway, tránsito, Luna y Marte | **Equipo 3D** |
 | `SeccionEvolucion.html` | Semana a semana: una gráfica por músculo del puntaje ERDM-A o de cada dimensión frente a la basal, con los cortes de la escala y tabla | Dashboard |
