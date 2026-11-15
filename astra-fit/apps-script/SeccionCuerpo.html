@@ -16,18 +16,17 @@
 <section class="seccion seccion--negra" id="cuerpo">
   <div class="contenedor">
     <div class="seccion-cabecera">
-      <h2 class="titulo">Cada grupo muscular, a simple vista.</h2>
-      <p class="subtitulo">El color de cada zona muestra su estado frente a la evaluación basal.</p>
+      <h2 class="titulo">Vista corporal</h2>
     </div>
 
     <article class="tarjeta cuerpo-hacer" id="cuerpo-hacer" aria-live="polite" hidden></article>
 
     <div class="cuerpo-rejilla">
       <div class="visor" id="visor-cuerpo">
-        <canvas id="cuerpo-lienzo" aria-label="Cuerpo del astronauta en 3D. Arrastra para girar." role="img"></canvas>
+        <canvas id="cuerpo-lienzo" aria-label="Cuerpo del astronauta en 3D" role="img"></canvas>
         <div class="visor-carga" id="cuerpo-carga">
           <img class="visor-poster" id="cuerpo-poster" alt="" hidden>
-          <p class="texto" id="cuerpo-carga-texto">Elige un astronauta para ver su cuerpo.</p>
+          <p class="texto" id="cuerpo-carga-texto">Seleccione un astronauta.</p>
           <div class="visor-barra" aria-hidden="true"><i id="cuerpo-barra"></i></div>
         </div>
         <div class="visor-pista" id="cuerpo-pista" role="status"></div>
@@ -62,8 +61,8 @@
         </div></div>
     </div>
     <p class="nota" style="margin-top: var(--e-5); color: var(--tinta-clara-2)">
-      Anatomía: BodyParts3D © DBCLS (CC BY 4.0), adaptada por open-anatomy-3d (CC BY 4.0). Astronauta: silueta Xbot vestida con traje, casco y mochila de ASTRA-FIT.
-      Esqueleto y animaciones: Xbot de Mixamo, de los ejemplos de three.js. Arrastra para girar, rueda para acercar y botón derecho para mover. Estados calculados con datos simulados.
+      Arrastrar para girar, rueda para acercar, clic derecho para desplazar.
+      Modelos: BodyParts3D © DBCLS y open-anatomy-3d (CC BY 4.0); astronauta y animaciones a partir de Xbot (Mixamo, ejemplos de three.js).
     </p>
   </div>
 </section>
@@ -152,9 +151,9 @@
     if (!a || !grupoActivo) { caja.hidden = true; return; }
     const u = Erdm.ultima(a.id_astronauta, grupoActivo), nombre = UI.esc(etiquetaGrupo(grupoActivo));
     caja.hidden = false;
-    if (!u) { caja.innerHTML = '<div><p class="nota">Qué hacer · ' + nombre + '</p><h3 class="titulo-tarjeta">Todavía sin evaluar</h3><p class="texto-2">Haz primero la evaluación basal en el monitoreo.</p></div><a class="boton" href="#monitoreo">Ir al monitoreo</a>'; return; }
+    if (!u) { caja.innerHTML = '<div><p class="nota">Pauta, ' + nombre + '</p><h3 class="titulo-tarjeta">Sin evaluación</h3><p class="texto-2">Falta la evaluación basal en el monitoreo.</p></div><a class="boton" href="#monitoreo">Ir al monitoreo</a>'; return; }
     const p = Erdm.plan(grupoActivo, u.fase === 'basal' ? 'bajo' : u.riesgo);
-    caja.innerHTML = '<div><p class="nota">Qué hacer · ' + nombre + '</p><h3 class="titulo-tarjeta">' + (p ? UI.esc(p.ejercicio) : 'Sin plan definido para este músculo') + '</h3>' + (p ? '<p class="texto-2">' + UI.esc(p.dosificacion) + '</p>' : '') + '</div><a class="boton boton--secundario" href="#alertas">Ver las alertas</a>';
+    caja.innerHTML = '<div><p class="nota">Pauta, ' + nombre + '</p><h3 class="titulo-tarjeta">' + (p ? UI.esc(p.ejercicio) : 'Sin plan definido para este músculo') + '</h3>' + (p ? '<p class="texto-2">' + UI.esc(p.dosificacion) + '</p>' : '') + '</div><a class="boton boton--secundario" href="#alertas">Ver las alertas</a>';
   }
   function dibujarPanel() {
     const a = Sesion.astronauta;
@@ -163,7 +162,7 @@
     if (!grupoActivo || !grupos.some((g) => g.valor === grupoActivo)) grupoActivo = peorGrupo(a, grupos) || (grupos[0] && grupos[0].valor);
     $('cuerpo-grupos').innerHTML = grupos.map((g) => {
       const n = NOMBRE_NIVEL[nivelGrupo(a.id_astronauta, g.valor)];
-      const texto = { verde: 'Estable', amarillo: 'Vigilar', rojo: 'Atender' }[n];
+      const texto = { verde: 'Riesgo bajo', amarillo: 'Moderado', rojo: 'Alto' }[n];
       return `<li aria-current="${g.valor === grupoActivo}">
         <button type="button" data-grupo="${UI.esc(g.valor)}"><span class="texto">${UI.esc(g.etiqueta)}</span>
         <span class="estado estado--${n}">${texto}</span></button></li>`;
@@ -181,7 +180,7 @@
       ${emg ? `<div class="cuerpo-datos">
         <div><p class="nota">Amplitud (RMS)</p><p class="titulo-tarjeta">${num(emg.rms)} µV</p><p class="pequeno texto-2">${pct(emg.cambioRms)} vs. basal</p></div>
         <div><p class="nota">Frecuencia mediana</p><p class="titulo-tarjeta">${num(emg.frec, 1)} Hz</p><p class="pequeno texto-2">${pct(emg.cambioFrec)} vs. basal</p></div>
-      </div><p class="nota">EMG de la evaluación del ${UI.esc(Calc.fechaCorta(emg.fecha))}, medido por la banda del sensor.</p>`
+      </div><p class="nota">EMG de la evaluación del ${UI.esc(Calc.fechaCorta(emg.fecha))}.</p>`
         : '<p class="pequeno texto-2">Todavía no hay registros de EMG para este grupo.</p>'}
       ${(() => {   // nota clínica breve (Erdm.nota), igual que en Alertas
         if (!(alerta && n !== 'verde')) return `<p class="estado estado--${n}" style="margin-top: var(--e-4)">${n === 'verde' ? 'Riesgo bajo en la escala ERDM-A.' : 'Sin alertas para este músculo.'}</p>`;

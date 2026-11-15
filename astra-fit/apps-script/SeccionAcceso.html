@@ -4,8 +4,7 @@
 <main class="acceso" aria-labelledby="acceso-titulo">
   <div class="contenedor">
     <?!= include('Logo'); ?>
-    <h1 class="hero-titulo" id="acceso-titulo">Elige un astronauta.</h1>
-    <p class="subtitulo">ASTRA-FIT sigue la fuerza, la activación muscular y el movimiento de cada miembro de la tripulación frente a su evaluación basal.</p>
+    <h1 class="hero-titulo" id="acceso-titulo">Tripulación</h1>
 
     <div class="perfiles" id="perfiles" aria-live="polite">
       <p class="texto-2" style="grid-column: 1 / -1">Cargando tripulación…</p>
@@ -38,8 +37,8 @@ const Sesion = { datos: null, astronauta: null };
       </button>`).join('') + `
       <button type="button" class="perfil perfil-nuevo" id="btn-nuevo-astronauta">
         <span class="avatar" aria-hidden="true">+</span>
-        <span class="titulo-tarjeta">Registrar nuevo astronauta</span>
-        <span class="texto-2">Agrega un tripulante y su información básica</span>
+        <span class="titulo-tarjeta">Registrar tripulante</span>
+        <span class="texto-2">Datos personales y de la misión</span>
       </button>`;
   }
 
@@ -50,6 +49,7 @@ const Sesion = { datos: null, astronauta: null };
   });
   document.addEventListener('astronauta-guardado', dibujarPerfiles);
   document.addEventListener('astronauta-actualizado', dibujarPerfiles);
+  document.addEventListener('astronauta-eliminado', dibujarPerfiles);
 
   function elegir(id) {
     Sesion.astronauta = Sesion.datos.Astronautas.find((a) => a.id_astronauta === id);
@@ -72,7 +72,7 @@ const Sesion = { datos: null, astronauta: null };
     API.obtenerDatos()
       .then((datos) => { Sesion.datos = datos; dibujarPerfiles(); })
       .catch(() => {
-        $('perfiles').innerHTML = '<div class="pila" style="grid-column:1/-1; justify-items:center"><p class="texto" role="alert" style="color: var(--rojo-texto)">No pudimos cargar la tripulación. Revisa tu conexión e inténtalo de nuevo.</p><button type="button" class="boton" id="reintentar-carga">Reintentar</button></div>';
+        $('perfiles').innerHTML = '<div class="pila" style="grid-column:1/-1; justify-items:center"><p class="texto" role="alert" style="color: var(--rojo-texto)">No se pudo cargar la tripulación. Verifique la conexión y vuelva a intentar.</p><button type="button" class="boton" id="reintentar-carga">Reintentar</button></div>';
         $('reintentar-carga').addEventListener('click', () => { $('perfiles').innerHTML = '<p class="texto-2" style="grid-column:1/-1">Cargando…</p>'; cargar(); });
         UI.aviso('Sin conexión con la base de datos. Tus datos no se perdieron.', 'error');
       });
