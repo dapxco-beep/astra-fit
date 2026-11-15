@@ -83,8 +83,8 @@
 
     const top = alertas.slice(0, 3);
     let planHtml = '';
-    let html = top.map((x) => `<div class="hoy-alerta" data-nivel="${UI.esc(x.nivel)}"><span class="estado estado--${x.nivel === 'rojo' ? 'rojo' : 'amarillo'}">${x.nivel === 'rojo' ? 'Alerta' : 'Precaución'}</span>
-      <p class="texto">${UI.esc(x.mensaje)}</p>${x.recomendacion ? `<p class="pequeno texto-2">${UI.esc(x.recomendacion)}</p>` : ''}</div>`).join('');
+    let html = top.map((x) => `<div class="hoy-alerta" data-nivel="${UI.esc(x.nivel)}"><span class="estado estado--${x.nivel === 'rojo' ? 'rojo' : 'amarillo'}">${x.nivel === 'rojo' ? 'Valoración médica' : 'Vigilancia'}</span>
+      ${Erdm.notaHtml(x)}</div>`).join('');
     if (alertas.length > top.length) html += `<a class="enlace" href="#alertas">Ver las ${alertas.length - top.length} alertas restantes</a>`;
     if (!alertas.length) html = '<p class="texto-2">No hay alertas abiertas. Mantén tu programa de ejercicio y repite las mediciones en las fechas previstas.</p>';
     const pl = p && p.u.riesgo !== 'bajo' ? Erdm.plan(p.g, p.u.riesgo) : null;
@@ -96,8 +96,8 @@
     const sig = $('hoy-siguiente');
     let paso;
     if (!p) paso = { nivel: '', titulo: 'Empieza por tu evaluación basal', texto: 'Es tu punto de comparación para todo lo demás.', boton: 'Ir al monitoreo', ir: '#monitoreo' };
-    else if (rojas) paso = { nivel: 'rojo', titulo: rojas === 1 ? 'Tienes 1 alerta que revisar ahora' : 'Tienes ' + rojas + ' alertas que revisar ahora', texto: 'Ábrelas, lee la recomendación y decide si avisas al médico de vuelo.', boton: 'Ver las alertas', ir: '#alertas' };
-    else if (alertas.length) paso = { nivel: 'amarillo', titulo: 'Tienes ' + alertas.length + (alertas.length === 1 ? ' alerta en seguimiento' : ' alertas en seguimiento'), texto: 'Revísalas y repite la medición cuando corresponda.', boton: 'Ver las alertas', ir: '#alertas' };
+    else if (rojas) paso = { nivel: 'rojo', titulo: rojas === 1 ? 'Tienes 1 alerta que revisar ahora' : 'Tienes ' + rojas + ' alertas que revisar ahora', texto: 'Requieren valoración por el médico de vuelo.', boton: 'Ver las alertas', ir: '#alertas' };
+    else if (alertas.length) paso = { nivel: 'amarillo', titulo: 'Tienes ' + alertas.length + (alertas.length === 1 ? ' alerta en seguimiento' : ' alertas en seguimiento'), texto: 'Repetir la medición en el próximo control.', boton: 'Ver las alertas', ir: '#alertas' };
     else paso = { nivel: 'verde', titulo: 'Sin alertas abiertas', texto: 'Mantén tu programa y repite las mediciones en las fechas previstas.', boton: 'Ir al monitoreo', ir: '#monitoreo' };
     if (paso.nivel) sig.dataset.nivel = paso.nivel; else delete sig.dataset.nivel;
     sig.innerHTML = '<div><p class="nota">Siguiente paso</p><h3 class="titulo-tarjeta">' + paso.titulo + '</h3><p class="texto-2">' + paso.texto + '</p></div><a class="boton" href="' + paso.ir + '">' + paso.boton + '</a>';

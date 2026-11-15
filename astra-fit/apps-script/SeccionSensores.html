@@ -1,8 +1,7 @@
-<!-- SeccionSensores.html — Guía de la banda (ventana emergente) y "Cómo funcionan las bandas".  Va dentro del Monitoreo.
+<!-- SeccionSensores.html — Guía de la banda (ventana emergente).  Va dentro del Monitoreo.
      Antes era la vista "Bandas"; ahora no es una vista propia: al tocar uno de los 6 músculos en la figura del Monitoreo se
      abre esta ventana con lo que mide su banda y una animación de dónde y cómo ponerla para que la medición se parezca lo
-     más posible a la realidad. Debajo del Monitoreo queda, plegado, lo general de las bandas (señales, microgravedad,
-     especificaciones y límites), tomado de la "Descripción técnica del sistema de monitoreo" del documento ASTRA-FIT.
+     más posible a la realidad.
 
      Puntos de colocación: recomendaciones europeas SENIAM para EMG de superficie (Hermens y cols., 2000; seniam.org).
      SENIAM no describe los flexores del antebrazo: para ellos se usa el vientre del músculo, en el tercio proximal.
@@ -49,79 +48,6 @@
   </div>
 </dialog>
 
-<details class="tarjeta pila mon-bandas-info" id="sen-explica">
-  <summary class="titulo-tarjeta">Cómo funcionan las bandas</summary>
-  <p class="texto-2">Seis bandas, una por músculo. Cada una lleva un par de electrodos EMG y una unidad inercial (IMU), y envía sus datos por Bluetooth de baja energía a la unidad receptora. Toca un músculo en la figura para ver dónde va su banda.</p>
-  <div class="rejilla rejilla-2">
-    <section class="pila" aria-labelledby="sen-t-emg">
-      <h3 class="titulo-tarjeta" id="sen-t-emg">Qué se calcula de la señal EMG</h3>
-      <ul class="lista lista--texto pila">
-        <li><strong>RMS:</strong> amplitud de la señal en ventanas móviles de 250 ms, actualizadas cada 50 ms. Así se ve cómo cambia durante la repetición y no solo el promedio de toda la sesión.</li>
-        <li><strong>RMS normalizado:</strong> RMS actual dividido entre el RMS de una contracción de referencia del mismo músculo, en %. Sirve para comparar sesiones si se mantienen las mismas condiciones.</li>
-        <li><strong>Frecuencia mediana:</strong> divide el espectro de potencia en dos mitades iguales. Su caída durante una contracción sostenida se relaciona con fatiga, pero no debe usarse sola para diagnosticar.</li>
-      </ul>
-      <p class="nota">La EMG no mide la fuerza directamente. La amplitud y la frecuencia se interpretan por separado.</p>
-    </section>
-    <section class="pila" aria-labelledby="sen-t-imu">
-      <h3 class="titulo-tarjeta" id="sen-t-imu">Qué aporta la unidad inercial (IMU)</h3>
-      <ul class="lista lista--texto pila">
-        <li><strong>Acelerómetro</strong> (ax, ay, az): cambios de aceleración del segmento donde está fijado, y regularidad de los ejercicios.</li>
-        <li><strong>Giroscopio</strong> (gx, gy, gz): velocidad angular máxima y media, duración de cada repetición y cambios entre repeticiones.</li>
-        <li><strong>Juntos con la EMG:</strong> se sincronizan para relacionar la activación del músculo con el movimiento que produce.</li>
-      </ul>
-      <p class="nota">La IMU mide el movimiento del segmento, no la actividad de un músculo ni su fuerza.</p>
-    </section>
-  </div>
-
-  <section class="pila" aria-labelledby="sen-t-micro">
-    <h3 class="titulo-tarjeta" id="sen-t-micro">Qué cambia en microgravedad</h3>
-    <div class="rejilla rejilla-3">
-      <div class="pila"><strong>Acelerómetro</strong><p class="texto-2">En una nave en caída libre, un acelerómetro quieto marca valores cercanos a 0 g, no 1 g como en la Tierra. La gravedad no desapareció: el sensor y la nave caen juntos. Por eso no se usa para calcular inclinación; solo para movimiento y regularidad.</p></div>
-      <div class="pila"><strong>Giroscopio</strong><p class="texto-2">Sigue midiendo la rotación sin necesitar la gravedad. Pero al integrar la velocidad angular para estimar orientación, los errores pequeños se acumulan (deriva), así que hacen falta calibración y corrección de sesgos.</p></div>
-      <div class="pila"><strong>Calibración</strong><p class="texto-2">Los ejes del sensor hay que relacionarlos con el segmento del cuerpo antes de leerlos anatómicamente. Las pruebas de la Tierra no se trasladan sin adaptación.</p></div>
-    </div>
-  </section>
-
-  <section class="pila" aria-labelledby="sen-t-flujo">
-    <h3 class="titulo-tarjeta" id="sen-t-flujo">Cómo es una evaluación</h3>
-    <ol class="lista lista--texto pila">
-      <li><strong>Colocar las bandas</strong> sobre los segmentos del protocolo, con buen contacto de la piel y sensores firmes.</li>
-      <li><strong>Conectar y comprobar:</strong> ASTRA-FIT identifica cada banda, revisa la calidad de la señal y calibra.</li>
-      <li><strong>Ejercicios estandarizados</strong> de los músculos elegidos, con las seis bandas adquiriendo a la vez.</li>
-      <li><strong>Procesar y guardar:</strong> los registros pasan al historial del astronauta y se comparan con su basal.</li>
-    </ol>
-    <p class="nota">Una sesión del prototipo dura unos 25 a 35 minutos, con preparación, calibración, ejercicios y revisión. Es una propuesta de diseño, no un protocolo oficial de NASA.</p>
-  </section>
-
-  <section class="pila" aria-labelledby="sen-t-espec">
-    <h3 class="titulo-tarjeta" id="sen-t-espec">Especificaciones técnicas propuestas</h3>
-    <div class="tabla-scroll" tabindex="0" role="region" aria-label="Especificaciones técnicas">
-      <table class="tabla">
-        <thead><tr><th>Componente</th><th>Configuración propuesta</th></tr></thead>
-        <tbody>
-          <tr><td>Grupos musculares</td><td>6, con 6 canales EMG y 6 módulos IMU (configuración conceptual inicial)</td></tr>
-          <tr><td>EMG</td><td>2.000 muestras/s por canal, banda de análisis 20–450 Hz, 16 bits o más, electrodos bipolares según protocolo</td></tr>
-          <tr><td>Acelerómetro</td><td>Triaxial, ±4 g, 100 Hz, 16 bits</td></tr>
-          <tr><td>Giroscopio</td><td>Triaxial, ±500 °/s, 100 Hz, 16 bits</td></tr>
-          <tr><td>Datos brutos</td><td>Unos 41,6 kbit/s por banda y unos 249,6 kbit/s en total, sin contar encabezados ni protocolo</td></tr>
-          <tr><td>Comunicación</td><td>Bluetooth de baja energía hacia una unidad receptora central, con almacenamiento local para cortes breves</td></tr>
-          <tr><td>Procesamiento</td><td>Local, con marcas de tiempo y sincronización entre bandas</td></tr>
-          <tr><td>Comparación</td><td>Valores basales de cada astronauta, en condiciones equivalentes</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <section class="pila" aria-labelledby="sen-t-limites">
-    <h3 class="titulo-tarjeta" id="sen-t-limites">Alcance y limitaciones</h3>
-    <ul class="lista lista--texto pila">
-      <li>ASTRA-FIT es un prototipo de monitoreo y apoyo al seguimiento neuromuscular. No es un dispositivo médico validado.</li>
-      <li>La EMG no determina la fuerza de un músculo, y las IMU no miden fuerza, masa muscular ni activación eléctrica.</li>
-      <li>Los indicadores se interpretan según el ejercicio, las condiciones de medición y los valores de referencia de cada persona.</li>
-      <li>En esta demostración todas las señales y los estados de las bandas son simulados.</li>
-    </ul>
-  </section>
-</details>
 
 <script>
 (() => {
