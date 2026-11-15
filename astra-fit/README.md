@@ -37,11 +37,11 @@ Todo lo que se sube a Apps Script está en `apps-script/`, con los mismos nombre
 | `JsAvatares.html` | Avatares de astronauta con casco (en lugar de emojis) | Dashboard |
 | `JsErdm.html` | Escala ERDM-A: compara cada músculo con su basal, da de 0 a 10 puntos, nivel de riesgo, alertas y plan sugerido. Lee los cortes de la pestaña `EscalaERDM` | Dashboard |
 | `SeccionMonitoreo.html` | Monitoreo neuromuscular: figura de frente y espalda con la banda de cada músculo, una gráfica pequeña por músculo (puntaje ERDM-A por semana) y, al tocar uno, señales EMG e IMU en vivo, medición de 10 s (EMG, IMU y dinamómetro) y tarjeta de la ERDM-A. Al tocar un músculo en la figura abre la guía de su banda | Dashboard |
-| `SeccionSensores.html` | Dentro del Monitoreo: guía emergente de cada banda (qué mide, estado y animación de dónde ponerla, según SENIAM) y, plegado, cómo funcionan las bandas y sus especificaciones | Dashboard |
+| `SeccionSensores.html` | Dentro del Monitoreo: guía emergente de cada banda (qué mide, estado y animación de dónde ponerla, según SENIAM) | Dashboard |
 | `SeccionCuerpo.html` | Visor del cuerpo 3D, dentro de `#visor-cuerpo` (colorea cuádriceps y pantorrilla con su riesgo ERDM-A) | **Equipo del cuerpo** |
 | `SeccionMision.html` | Destinos: el astronauta animado en la Estación, Gateway, tránsito, Luna y Marte | **Equipo 3D** |
 | `SeccionEvolucion.html` | Semana a semana: una gráfica por músculo del puntaje ERDM-A o de cada dimensión frente a la basal, con los cortes de la escala y tabla | Dashboard |
-| `SeccionAlertas.html` | Lo que requiere atención: alertas abiertas, plan de intervención y fortalecimiento por músculo (sección 6 de la ERDM-A), evaluación prioritaria, protocolo e intervenciones | Dashboard |
+| `SeccionAlertas.html` | Lo que requiere atención: alertas abiertas como nota clínica breve (hallazgos frente a la basal y conducta), pauta de ejercicio por músculo en tabla (sección 6 de la ERDM-A), criterios plegados e intervenciones | Dashboard |
 | `JsUi.html` | Avisos, controles segmentados, barra superior | — |
 | `JsApi.html` | **Única conexión con los datos** (Sheet o servidor local) | Dashboard |
 | `Logo.html` | Logo de Sinergia Cósmica incrustado | — |

@@ -17,6 +17,7 @@
     Erdm.historial(idAstronauta, grupo) → todas sus evaluaciones, de la más antigua a la más reciente
     Erdm.basal(idAstronauta, grupo)     → evaluación basal del músculo (o null)
     Erdm.alertas(filas)                 → alertas nuevas si el riesgo subió (para API.guardarAlertas)
+    Erdm.nota(alerta)                   → nota clínica breve: { musculo, resumen, hallazgos[], conducta, texto }
     Erdm.plan(grupo, riesgo)            → { ejercicio, dosificacion } de la pestaña PlanFortalecimiento
     Erdm.DIMENSIONES / Erdm.GRUPOS / Erdm.nivel(riesgo) / Erdm.idEvaluacion(id, fecha, grupo)
   Usa Sesion.datos (lo carga SeccionAcceso.html).
@@ -161,6 +162,43 @@ const Erdm = (() => {
     return t ? t[0].toUpperCase() + t.slice(1) : '';
   }
 
+  /** Nota clínica breve de una alerta, para mostrarla: músculo, puntaje, hallazgos frente a la basal y conducta.
+      Se arma desde la evaluación que la originó (alerta.origen); si no se encuentra, usa el mensaje guardado. */
+  const CONDUCTA = {
+    prioritaria: 'Evaluación prioritaria por el médico de vuelo antes de continuar la progresión de carga.',
+    alto: 'Valoración por el médico de vuelo antes de intensificar. Carga baja y progresión supervisada.',
+    moderado: 'Aumentar el trabajo específico del músculo. Reevaluar en el próximo control semanal.',
+    bajo: 'Mantener el programa preventivo.'
+  };
+  function nota(alerta) {
+    const fila = evaluaciones().find((e) => e.id_evaluacion === alerta.origen);
+    if (!fila) return { musculo: alerta.grupo_muscular ? etiqueta(alerta.grupo_muscular) : '', resumen: '', hallazgos: [], conducta: '', texto: alerta.mensaje || '' };
+    const f = calcular(fila), prior = f.alerta_prioritaria === 'SI';
+    const hallazgos = DIMENSIONES.map((d) => {
+      const v = f[d.cambio]; if (v === null || v === undefined) return null;
+      const x = d.clave === 'emg' ? Math.abs(v) : d.signo * v, r = Math.abs(Math.round(x));
+      const valor = d.clave === 'emg' ? `Δ ${r} %` : `${x < 0 ? '−' : '+'}${r} %`;
+      return { nombre: d.clave === 'coordinacion' ? 'Variabilidad (IMU)' : d.nombre, valor, puntos: Number(f[d.puntos]) || 0 };
+    }).filter(Boolean);
+    const alterados = hallazgos.filter((h) => h.puntos > 0);
+    return {
+      musculo: etiqueta(f.grupo_muscular),
+      resumen: `ERDM-A ${f.puntaje_erdm}/10, riesgo ${f.riesgo}${prior ? ', criterio de evaluación prioritaria' : ''}`,
+      hallazgos: alterados.length ? alterados : hallazgos,
+      conducta: CONDUCTA[prior ? 'prioritaria' : f.riesgo] || '',
+      texto: ''
+    };
+  }
+
+  /** La misma nota en HTML (la usan Alertas y el Estado de hoy del Perfil). */
+  function notaHtml(alerta) {
+    const n = nota(alerta), e = (t) => UI.esc(t);
+    if (n.texto) return `<p class="texto">${e(n.texto)}</p>${alerta.recomendacion ? `<p class="pequeno texto-2">${e(alerta.recomendacion)}</p>` : ''}`;
+    return `<p class="texto"><strong>${e(n.musculo)}.</strong> ${e(n.resumen)}.</p>
+      <ul class="nota-hallazgos">${n.hallazgos.map((h) => `<li><span>${e(h.nombre)}</span> <strong>${e(h.valor)}</strong></li>`).join('')}</ul>
+      ${n.conducta ? `<p class="pequeno"><span class="texto-2">Conducta:</span> ${e(n.conducta)}</p>` : ''}`;
+  }
+
   /** Alertas para filas recién guardadas: si el riesgo subió frente a la evaluación anterior, o hay alerta prioritaria nueva. */
   function alertas(filas) {
     const ahora = (() => { const d = new Date(), p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; })();
@@ -173,13 +211,12 @@ const Erdm = (() => {
       const priorPrevia = previas.some((e) => e.alerta_prioritaria === 'SI');
       const prior = f.alerta_prioritaria === 'SI';
       if (!(ORDEN[f.riesgo] > peorPrevio || (prior && !priorPrevia))) return;
-      const p = plan(f.grupo_muscular, f.riesgo);
       nuevas.push({
         creada_en: ahora, id_astronauta: f.id_astronauta, origen: f.id_evaluacion, grupo_muscular: f.grupo_muscular,
         indicador: 'puntaje_erdm', valor_actual: f.puntaje_erdm, valor_basal: 0, cambio_pct: null,
         nivel: prior ? 'rojo' : nivel(f.riesgo),
-        mensaje: `${etiqueta(f.grupo_muscular)}: riesgo ${f.riesgo} en la ERDM-A (${f.puntaje_erdm} de 10)${prior ? '. Alerta prioritaria' : ''}. ${resumenCambios(f)}.`,
-        recomendacion: p ? `${p.ejercicio}. ${p.dosificacion}` : 'Repetir la evaluación y revisar el plan de ejercicio.',
+        mensaje: `${etiqueta(f.grupo_muscular)}. ERDM-A ${f.puntaje_erdm}/10, riesgo ${f.riesgo}${prior ? ', criterio de evaluación prioritaria' : ''}. ${resumenCambios(f)} frente a la basal.`,
+        recomendacion: CONDUCTA[prior ? 'prioritaria' : f.riesgo] || '',
         estado: 'abierta', atendida_por: '', nota_cierre: ''
       });
     });
@@ -194,6 +231,6 @@ const Erdm = (() => {
     return resto;
   }
 
-  return { GRUPOS, DIMENSIONES, calcular, ultima, historial, basal, alertas, plan, nivel, etiqueta, idEvaluacion, paraGuardar, resumenCambios, corte };
+  return { GRUPOS, DIMENSIONES, calcular, ultima, historial, basal, alertas, nota, notaHtml, plan, nivel, etiqueta, idEvaluacion, paraGuardar, resumenCambios, corte };
 })();
 </script>

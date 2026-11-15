@@ -2,16 +2,17 @@
      Contenido del documento ASTRA-FIT (pestaña ESCALA):
        · Alertas abiertas de la pestaña Alertas, con los niveles del prototipo: amarillo = vigilancia, repetir medición
          o evaluación; rojo = evaluación médica inmediata. Se pueden pasar a seguimiento o marcar como atendidas.
-       · Plan de intervención y fortalecimiento (sección 6): para cada músculo, según su riesgo ERDM-A actual,
-         las acciones del nivel (6.1), el ejercicio y la dosificación (6.2, pestaña PlanFortalecimiento).
-       · Regla de alerta prioritaria (sección 5) y protocolo de aplicación (sección 7).
+       · Cada alerta se muestra como nota clínica breve (Erdm.notaHtml): músculo, puntaje, hallazgos alterados frente
+         a la basal y conducta. Sin listas de recomendaciones.
+       · Pauta de ejercicio (sección 6.2, pestaña PlanFortalecimiento) en una tabla: músculo, puntaje, ejercicio y dosis.
+       · Plegados: regla de evaluación prioritaria (sección 5) y aplicación de la escala (sección 7).
        · Intervenciones registradas (pestaña Intervenciones).
      Escucha "astronauta-elegido" y "datos-actualizados". Las alertas son indicadores de seguimiento, no diagnósticos. -->
 <section class="seccion seccion--blanca" id="alertas">
   <div class="contenedor">
     <div class="seccion-cabecera">
       <h2 class="titulo">Lo que requiere atención.</h2>
-      <p class="subtitulo">Alertas abiertas y el plan de fortalecimiento de cada músculo según su riesgo en la escala ERDM-A.</p>
+      <p class="subtitulo">Alertas activas y pauta de ejercicio por músculo, según la escala ERDM-A.</p>
     </div>
 
     <!-- ---------- Alertas abiertas ---------- -->
@@ -27,40 +28,42 @@
       </details>
     </div>
 
-    <!-- ---------- Plan de intervención ---------- -->
+    <!-- ---------- Pauta de ejercicio ---------- -->
     <div class="alr-bloque">
       <div class="alr-bloque-cabecera">
-        <h3 class="titulo-tarjeta">Plan de intervención y fortalecimiento</h3>
-        <p class="pequeno texto-2">Resistencia progresiva adaptada a microgravedad, con los equipos de la misión (resistencia mecánica y bandas elásticas). Cada músculo sigue el plan de su nivel de riesgo actual.</p>
+        <h3 class="titulo-tarjeta">Pauta de ejercicio</h3>
+        <p class="pequeno texto-2">Resistencia progresiva con los equipos de la misión, según el riesgo actual de cada músculo.</p>
       </div>
-      <details class="alr-colapso" id="alr-plan-det" open>
-        <summary class="pequeno">Ver el plan de cada músculo</summary>
-        <div class="alr-planes" id="alr-planes"></div>
+      <div class="tabla-scroll" tabindex="0" role="region" aria-label="Pauta de ejercicio por músculo">
+        <table class="tabla alr-tabla">
+          <thead><tr><th>Músculo</th><th>ERDM-A</th><th>Ejercicio</th><th>Dosificación</th></tr></thead>
+          <tbody id="alr-planes"></tbody>
+        </table>
+      </div>
+      <details class="alr-colapso">
+        <summary class="pequeno">Criterios de la escala</summary>
+        <div class="alr-pie">
+          <div class="alr-prioritaria">
+            <h4 class="alr-subtitulo">Evaluación prioritaria</h4>
+            <p class="pequeno texto-2">Se activa con cualquiera de estos hallazgos, sin importar el puntaje total:</p>
+            <ul class="alr-puntos pequeno">
+              <li>Pérdida de fuerza mayor al <span id="alr-p-fuerza">20</span> %.</li>
+              <li>Pérdida de circunferencia mayor al <span id="alr-p-circ">15</span> %.</li>
+              <li>Deterioro funcional importante o progresivo.</li>
+              <li>Hallazgos que sugieran lesión muscular o neurológica.</li>
+            </ul>
+          </div>
+          <div class="alr-protocolo">
+            <h4 class="alr-subtitulo">Aplicación</h4>
+            <ol class="alr-pasos pequeno">
+              <li>Basal antes del vuelo: dinamometría, IMU, circunferencia, EMG y VO₂pico.</li>
+              <li>Seguimiento con el mismo protocolo durante la misión.</li>
+              <li>Cambio de cada variable frente a la basal y puntaje por músculo.</li>
+              <li>Pauta según músculo y nivel; reevaluación.</li>
+            </ol>
+          </div>
+        </div>
       </details>
-    </div>
-
-    <div class="alr-pie">
-      <div class="alr-prioritaria">
-        <h4 class="alr-subtitulo">Evaluación prioritaria</h4>
-        <p class="pequeno texto-2">Sin importar el puntaje total, se activa cuando aparece cualquiera de estos hallazgos, para que un deterioro marcado en una sola dimensión no quede oculto en la suma:</p>
-        <ul class="alr-puntos pequeno">
-          <li>Pérdida de fuerza superior al <span id="alr-p-fuerza">20</span> %.</li>
-          <li>Pérdida de circunferencia superior al <span id="alr-p-circ">15</span> %.</li>
-          <li>Deterioro funcional importante o progresivo.</li>
-          <li>Hallazgos clínicos que sugieran lesión muscular o neurológica.</li>
-        </ul>
-      </div>
-      <div class="alr-protocolo">
-        <h4 class="alr-subtitulo">Cómo se aplica la escala</h4>
-        <ol class="alr-pasos pequeno">
-          <li><strong>Evaluación basal</strong> antes del vuelo: dinamometría, IMU, circunferencia, EMG y VO₂pico.</li>
-          <li><strong>Seguimiento</strong> durante la misión, con los mismos protocolos y condiciones.</li>
-          <li><strong>Cálculo del riesgo</strong>: cambio de cada variable frente a la basal.</li>
-          <li><strong>Clasificación</strong> de cada músculo: bajo, moderado o alto.</li>
-          <li><strong>Intervención</strong> según el músculo y su nivel.</li>
-          <li><strong>Reevaluación</strong> para ver si la intervención funciona.</li>
-        </ol>
-      </div>
     </div>
 
     <!-- ---------- Intervenciones registradas ---------- -->
@@ -69,7 +72,7 @@
       <ul class="alr-intervenciones" id="alr-intervenciones"></ul>
     </div>
 
-    <p class="nota alr-aviso">Las alertas son indicadores de seguimiento, no diagnósticos médicos. Planes y cortes del documento ASTRA-FIT (escala ERDM-A), propuesta del equipo no validada clínicamente.</p>
+    <p class="nota alr-aviso">Indicadores de seguimiento, no diagnósticos. Escala ERDM-A del documento ASTRA-FIT, no validada clínicamente.</p>
   </div>
 </section>
 
@@ -78,20 +81,13 @@
   const $ = (id) => document.getElementById(id);
   const esc = (t) => UI.esc(t);
 
-  // Documento ASTRA-FIT, ERDM-A sección 6.1: intervenciones según el nivel de riesgo
-  const ACCIONES = {
-    bajo: ['Mantener el programa preventivo de ejercicio.', 'Continuar con ejercicios de resistencia muscular.', 'Seguimiento periódico de fuerza y función.'],
-    moderado: ['Incrementar el entrenamiento específico del músculo.', 'Aumentar progresivamente la resistencia.', 'Incorporar ejercicios aislados y multiarticulares.', 'Reevaluar la respuesta muscular con mayor frecuencia.'],
-    alto: ['Valoración individualizada antes de intensificar el entrenamiento.', 'Iniciar con cargas bajas y movimientos controlados.', 'Priorizar la recuperación de fuerza y la correcta ejecución.', 'Incrementar la resistencia de forma progresiva según tolerancia.', 'Seguimiento estrecho con dinamometría y las demás variables de la escala.']
-  };
   // Niveles de alerta del prototipo (documento ASTRA-FIT, pestaña PROTOTIPO)
   const NIVEL = {
-    rojo: { texto: 'Evaluación médica', ayuda: 'Requiere evaluación médica inmediata y activar el protocolo correspondiente.' },
-    amarillo: { texto: 'Vigilancia', ayuda: 'Requiere vigilancia, repetir la medición o una evaluación.' }
+    rojo: { texto: 'Valoración médica' },
+    amarillo: { texto: 'Vigilancia' }
   };
   const ESTADO = { abierta: 'Abierta', en_seguimiento: 'En seguimiento', atendida: 'Atendida' };
   const ORDEN_NIVEL = { rojo: 0, amarillo: 1, verde: 2 };
-  const RIESGO = { bajo: 'Riesgo bajo', moderado: 'Riesgo moderado', alto: 'Riesgo alto' };
 
   const astronauta = () => Sesion.astronauta;
   const fechaHora = (t) => { const f = String(t || '').slice(0, 10); return f ? Calc.fechaCorta(f) : ''; };
@@ -113,9 +109,7 @@
           <span class="estado estado--${x.nivel === 'rojo' ? 'rojo' : 'amarillo'}">${n.texto}</span>
           <span class="nota">${fechaHora(x.creada_en)} · ${ESTADO[x.estado] || 'Abierta'}</span>
         </div>
-        <p class="texto alr-mensaje">${esc(x.mensaje)}</p>
-        ${x.recomendacion ? `<p class="pequeno texto-2"><strong>Recomendación.</strong> ${esc(x.recomendacion)}</p>` : ''}
-        <p class="nota">${n.ayuda}</p>
+        <div class="alr-mensaje">${Erdm.notaHtml(x)}</div>
         <div class="alr-acciones">
           ${x.estado !== 'en_seguimiento' ? '<button type="button" class="boton boton--secundario boton--pequeno" data-estado="en_seguimiento">Pasar a seguimiento</button>' : ''}
           <button type="button" class="boton boton--pequeno" data-estado="atendida">Marcar atendida</button>
@@ -132,7 +126,7 @@
     det.hidden = !lista.length;
     $('alr-atendidas-resumen').textContent = 'Alertas atendidas (' + lista.length + ')';
     $('alr-atendidas').innerHTML = lista.map((x) => `<article class="alr-atendida" data-id="${esc(x.id_alerta)}">
-      <p class="texto">${esc(x.mensaje)}</p>
+      <p class="texto">${esc((() => { const n = Erdm.nota(x); return n.texto || `${n.musculo}. ${n.resumen}.`; })())}</p>
       <div class="alr-atendida-pie"><span class="nota">${fechaHora(x.creada_en)}${x.atendida_por ? ' · Atendida por ' + esc(x.atendida_por) : ''}${x.nota_cierre ? ' · ' + esc(x.nota_cierre) : ''}</span>
       <button type="button" class="boton boton--secundario boton--pequeno" data-estado="abierta">Reabrir</button></div></article>`).join('');
   }
@@ -140,7 +134,6 @@
 
   /* En móvil se ven 3 alertas y un botón para el resto; el plan por músculo empieza cerrado */
   const movil = () => matchMedia('(max-width: 640px)').matches;
-  if (movil()) $('alr-plan-det').open = false;
   function plegarAlertas() {
     const lista = $('alr-lista'), items = [...lista.querySelectorAll(':scope > article')], previo = $('alr-mas');
     if (previo) previo.remove();
@@ -193,24 +186,11 @@
     const filas = Erdm.GRUPOS.map((g) => ({ g, u: Erdm.ultima(a.id_astronauta, g) }))
       .sort((p, q) => (q.u ? Number(q.u.puntaje_erdm) : -1) - (p.u ? Number(p.u.puntaje_erdm) : -1));
     $('alr-planes').innerHTML = filas.map(({ g, u }) => {
-      if (!u) return `<article class="alr-plan"><div class="alr-plan-cabeza"><h4 class="alr-plan-nombre">${esc(Erdm.etiqueta(g))}</h4><span class="estado estado--gris">Sin evaluar</span></div>
-        <p class="pequeno texto-2">Falta la evaluación basal. Mídelo en Monitoreo para empezar.</p></article>`;
-      const riesgo = u.fase === 'basal' ? 'bajo' : u.riesgo;
-      const p = Erdm.plan(g, riesgo) || {};
-      return `<article class="alr-plan alr-plan--${Erdm.nivel(riesgo)}">
-        <div class="alr-plan-cabeza">
-          <h4 class="alr-plan-nombre">${esc(Erdm.etiqueta(g))}</h4>
-          <span class="estado estado--${Erdm.nivel(riesgo)}">${RIESGO[riesgo]} · ${u.puntaje_erdm}/10</span>
-        </div>
-        ${u.alerta_prioritaria === 'SI' ? '<p class="estado estado--rojo pequeno">Evaluación prioritaria</p>' : ''}
-        <div class="alr-ejercicio">
-          <p class="nota">Ejercicio</p>
-          <p class="texto"><strong>${esc(p.ejercicio || '—')}</strong></p>
-          <p class="pequeno texto-2">${esc(p.dosificacion || '')}</p>
-        </div>
-        <ul class="alr-puntos pequeno">${ACCIONES[riesgo].map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
-        <p class="nota">Evaluación del ${Calc.fechaCorta(u.fecha)}${u.fase === 'basal' ? ', basal' : ''}.</p>
-      </article>`;
+      if (!u) return `<tr><th scope="row">${esc(Erdm.etiqueta(g))}</th><td><span class="estado estado--gris">Sin basal</span></td><td colspan="2" class="texto-2">Pendiente de evaluación basal.</td></tr>`;
+      const riesgo = u.fase === 'basal' ? 'bajo' : u.riesgo, p = Erdm.plan(g, riesgo) || {};
+      return `<tr><th scope="row">${esc(Erdm.etiqueta(g))}</th>
+        <td><span class="estado estado--${Erdm.nivel(riesgo)}">${u.puntaje_erdm}/10</span>${u.alerta_prioritaria === 'SI' ? ' <span class="estado estado--rojo">Prioritaria</span>' : ''}</td>
+        <td>${esc(p.ejercicio || '—')}</td><td class="texto-2">${esc(p.dosificacion || '')}</td></tr>`;
     }).join('');
     const cf = Erdm.corte('fuerza'), cc = Erdm.corte('circunferencia');
     if (cf.prioritaria) $('alr-p-fuerza').textContent = cf.prioritaria;
