@@ -38,6 +38,7 @@ const API = (() => {
     guardarSeguimiento: (registro) => llamar('guardarSeguimiento', registro),
     guardarEvaluaciones: (filas) => llamar('guardarEvaluaciones', filas),
     guardarMedicion: (medicion, evaluacion) => llamar('guardarMedicion', medicion, evaluacion),
+    eliminarMedicion: (idMedicion, cambios) => llamar('eliminarMedicion', idMedicion, cambios),
     actualizarAlerta: (idAlerta, cambios) => llamar('actualizarAlerta', idAlerta, cambios)
   };
 })();

@@ -237,6 +237,7 @@
     const muslo = Calc.ultimo('Seguimiento', id, 'muslo_cm');
     const evaluacion = Calc.ultimo('Evaluaciones', id, 'fuerza_kg');
     const medicion = Calc.ultimo('Monitoreo', id, 'emg_rms_uv');
+    const vo2 = Calc.ultimo('Evaluaciones', id, 'vo2pico_ml_kg_min');
     // Riesgo ERDM-A de la última evaluación de cada músculo
     const riesgos = Erdm.GRUPOS.map((g) => Erdm.ultima(id, g)).filter(Boolean);
     const enRiesgo = riesgos.filter((r) => r.riesgo !== 'bajo').length;
@@ -246,6 +247,7 @@
       { nombre: 'Fuerza de agarre', detalle: agarre ? `${Calc.numero(agarre.valor)} kg` : 'Sin registros', fecha: agarre && agarre.fecha, semanal: true },
       { nombre: 'Diámetro muscular', detalle: pantorrilla ? `Pantorrilla ${Calc.numero(pantorrilla.valor)} cm${muslo ? `, muslo ${Calc.numero(muslo.valor)} cm` : ''}` : 'Sin registros', fecha: pantorrilla && pantorrilla.fecha, semanal: true },
       { nombre: 'Evaluación ERDM-A', detalle: evaluacion ? (enRiesgo ? `${enRiesgo} de 6 músculos en riesgo moderado o alto` : 'Los 6 músculos en riesgo bajo') : 'Sin evaluación basal', fecha: evaluacion && evaluacion.fecha, semanal: true, limite: 14 },
+      { nombre: 'VO₂pico', detalle: vo2 ? `${Calc.numero(vo2.valor, 1)} mL/kg/min` : 'Sin registros', fecha: vo2 && vo2.fecha, semanal: true },
       { nombre: 'Monitoreo con sensor', detalle: medicion ? `${Erdm.etiqueta(medicion.fila.grupo_muscular)}, EMG e IMU` : 'Sin mediciones', fecha: medicion && (medicion.fila.registrado_en || medicion.fecha), semanal: true, limite: 14 },
       { nombre: 'Perfil', detalle: 'Datos de registro', fecha: a.actualizado_en || a.registrado_en }
     ];
