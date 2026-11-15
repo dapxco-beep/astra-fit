@@ -19,8 +19,9 @@ const PAGINA = 'https://astra-fit-modelos.dapxco.workers.dev';
 
 const ORDEN = ['Monitoreo', 'Evaluaciones', 'Alertas', 'Astronautas', 'Seguimiento', 'Intervenciones',
                'EscalaERDM', 'PlanFortalecimiento', 'Umbrales', 'Catalogos'];
-const CLAVES = { Astronautas: 'id_astronauta', Evaluaciones: 'id_evaluacion', Monitoreo: 'id_medicion',
-                 Alertas: 'id_alerta', Intervenciones: 'id_intervencion' };   // Seguimiento no tiene id: solo se agrega
+// Seguimiento no tiene id y en Monitoreo dos mediciones del mismo minuto comparten id: esas dos solo se agregan
+const CLAVES = { Astronautas: 'id_astronauta', Evaluaciones: 'id_evaluacion',
+                 Alertas: 'id_alerta', Intervenciones: 'id_intervencion' };
 const EN_VIVO = 'En vivo';
 const FILAS_EN_VIVO = 30;
 
@@ -99,7 +100,7 @@ function guardarFila_(hoja, clave, obj) {
       }
     }
   }
-  hoja.getRange(hoja.getLastRow() + 1, 1, 1, cab.length).setValues([fila]);
+  hoja.getRange(hoja.getLastRow() + 1, 1, 1, cab.length).setNumberFormat('@').setValues([fila]);
 }
 
 /** Agrega al final de la fila 1 las columnas que falten y devuelve la cabecera completa. */
@@ -119,7 +120,7 @@ function reescribir_(hoja, filas) {
   hoja.clearContents();
   if (!cab.length) return;
   const valores = [cab].concat(filas.map(function (f) { return cab.map(function (c) { return valor_(f[c]); }); }));
-  hoja.getRange(1, 1, valores.length, cab.length).setValues(valores);
+  hoja.getRange(1, 1, valores.length, cab.length).setNumberFormat('@').setValues(valores);
   formatoCabecera_(hoja);
 }
 
@@ -148,6 +149,8 @@ function marcarActualizado_() {
 }
 
 /* ------------------------------------------------------------------ Utilidades */
+// Las celdas van con formato de texto ('@') para que fechas y horas ("2026-11-15", "10:50") se vean tal cual y no
+// como números de serie. Así también "En vivo" ordena bien por registrado_en.
 function valor_(v) {
   if (v === undefined || v === null) return '';
   if (typeof v === 'object') return JSON.stringify(v);
