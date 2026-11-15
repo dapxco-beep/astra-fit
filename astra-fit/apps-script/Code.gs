@@ -26,7 +26,7 @@ function doGet(e) {
   const pagina = PAGINAS[(e && e.parameter && e.parameter.page) || ''] || 'Index';
   return HtmlService.createTemplateFromFile(pagina)
     .evaluate()
-    .setTitle('ASTRA-FIT')
+    .setTitle('MYOCARE')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
