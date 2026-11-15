@@ -150,7 +150,10 @@
         window.scrollTo(0, 0);
         // Los lienzos y visores miden su tamaño al mostrarse
         requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
-        if (!primera) { const t = elDe(id).querySelector('h1, h2'); if (t) { t.setAttribute('tabindex', '-1'); t.focus({ preventScroll: true }); } }
+        // Cada vista tiene un título de nivel 1: las que solo traen h2 reciben uno visible solo para lectores de pantalla
+        const vista = elDe(id);
+        if (vista && !vista.querySelector('h1')) { const h1 = document.createElement('h1'); h1.className = 'solo-lector'; h1.textContent = VISTAS.find((x) => x.id === id).t; vista.prepend(h1); }
+        if (!primera) { const t = elDe(id).querySelector('h2, h1'); if (t) { t.setAttribute('tabindex', '-1'); t.focus({ preventScroll: true }); } }
         primera = false;
       }
       // Los enlaces #vista cambian de vista sin depender del hash (en Apps Script la página va dentro de un iframe)

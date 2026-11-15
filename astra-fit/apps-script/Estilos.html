@@ -726,12 +726,13 @@ details.tarjeta > summary { min-height: 44px; display: flex; align-items: center
   .barra-superior .nav-etiqueta { font-size: var(--t-nota); }
   .nav-cambiar-m { min-height: 44px; min-width: 44px; font-size: var(--t-pequeno); }
   #nav-nombre-m { display: none; }
-  .barra-inferior { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: flex; height: calc(64px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: var(--material-claro); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-top: 1px solid var(--linea); }
+  .barra-inferior { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: flex; height: calc(64px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: var(--blanco); border-top: 1px solid var(--linea); }
   .tab { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; background: transparent; color: var(--tinta-2); text-decoration: none; font-size: var(--t-nota); font-weight: 500; cursor: pointer; }
   .tab span:not(.nav-badge) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tab[data-activa] { color: var(--azul-enlace); }
   .tab .nav-badge { position: absolute; top: 4px; left: 54%; margin: 0; min-width: 18px; padding: 0 5px; font-size: 11px; }
   .hoja-mas { position: fixed; left: var(--e-3); right: var(--e-3); bottom: calc(72px + env(safe-area-inset-bottom)); z-index: 60; padding: var(--e-2); background: var(--blanco); border-radius: 18px; box-shadow: 0 8px 32px rgba(0, 0, 0, .22); }
+  .hoja-mas:not([hidden]) { display: block; }
   .hoja-mas[hidden] { display: none; }
   .hoja-mas .nav-item { min-height: 52px; font-size: var(--t-cuerpo); }
   .tablero .seccion { padding: var(--e-6) 0 var(--e-8); }
@@ -742,4 +743,9 @@ details.tarjeta > summary { min-height: 44px; display: flex; align-items: center
   .hoy-atajos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hoy-cabecera .acciones .boton { min-height: 44px; }
 }
+
+/* ---- Correcciones tras la auditoría del tablero ---- */
+.tarjeta-cabecera .enlace, .hoy-musculos ~ .enlace { display: inline-flex; align-items: center; min-height: 44px; }
+.hoy-alerta ~ .enlace { display: inline-flex; align-items: center; min-height: 44px; }
+.mon-chip .estado, .mon-chip-estado { font-size: var(--t-nota); }
 </style>
