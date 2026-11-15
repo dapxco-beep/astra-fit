@@ -595,8 +595,8 @@
     aplicarVista(); fijarActividad('walk', true);
 
     /* ---------- Tamaño y bucle (solo dibuja cuando se ve) ---------- */
-    function ajustar() { const r = visor.getBoundingClientRect(); if (!r.width) return; renderer.setSize(r.width, r.height, false); camara.aspect = r.width / r.height; camara.updateProjectionMatrix(); renderer.render(escena, camara); }   // setSize borra el lienzo: se vuelve a dibujar al instante
-    new ResizeObserver(ajustar).observe(visor); ajustar();
+    function ajustar() { if (window.__panelMoviendo) { const t = performance.now(); if (t - (ajustar._t || 0) < 90) return; ajustar._t = t; } const r = visor.getBoundingClientRect(); if (!r.width) return; renderer.setSize(r.width, r.height, false); camara.aspect = r.width / r.height; camara.updateProjectionMatrix(); renderer.render(escena, camara); }   // setSize borra el lienzo: se vuelve a dibujar al instante
+    new ResizeObserver(ajustar).observe(visor); window.addEventListener('resize', ajustar); ajustar();
     new IntersectionObserver((en) => { estado.visible = en[0].isIntersecting; }).observe(visor);
 
     const reducir = matchMedia('(prefers-reduced-motion: reduce)').matches;

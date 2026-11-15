@@ -163,9 +163,9 @@
       let plegadoAntes = false; try { plegadoAntes = localStorage.getItem('astrafit-panel-plegado') === '1'; } catch (e) { /* idem */ }
       tablero.classList.add('sin-transicion'); plegar(plegadoAntes, false);
       requestAnimationFrame(() => requestAnimationFrame(() => tablero.classList.remove('sin-transicion')));
-      botonPlegar.addEventListener('click', () => plegar(!tablero.classList.contains('tablero--plegado'), true));
+      botonPlegar.addEventListener('click', () => { window.__panelMoviendo = true; clearTimeout(window.__panelFin); window.__panelFin = setTimeout(() => { window.__panelMoviendo = false; window.dispatchEvent(new Event('resize')); }, 700); plegar(!tablero.classList.contains('tablero--plegado'), true); });
       // Al terminar la animación, los lienzos y gráficas se vuelven a medir (una sola vez)
-      tablero.addEventListener('transitionend', (e) => { if (e.target === tablero && e.propertyName === 'grid-template-columns') window.dispatchEvent(new Event('resize')); });
+      tablero.addEventListener('transitionend', (e) => { if (e.target === tablero && e.propertyName === 'grid-template-columns') { window.__panelMoviendo = false; clearTimeout(window.__panelFin); window.dispatchEvent(new Event('resize')); } });
       // Celular: las barras se esconden al bajar y vuelven al subir, al enfocar algo o al llegar al final; el teclado esconde la barra inferior
       if (window.visualViewport) window.visualViewport.addEventListener('resize', () => document.body.classList.toggle('teclado', window.visualViewport.height < window.innerHeight * 0.75));
       let ultimoY = window.scrollY, esperando = false;

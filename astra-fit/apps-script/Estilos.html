@@ -983,4 +983,17 @@ html[data-ligero] .tablero { transition: none; }
   input, select, textarea { font-size: 16px; }
   * { -webkit-tap-highlight-color: transparent; }
 }
+
+/* ================================================================ 105. CRUCE SUAVE AL PLEGAR (la versión larga se desvanece, la corta entra después) */
+.nav-marca-corto, .nav-etiqueta-corto, .nav-icono { display: inline-block; max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap; vertical-align: middle; }
+@media (min-width: 900px) {
+  .tablero--plegado .nav-marca-corto, .tablero--plegado .nav-etiqueta-corto, .tablero--plegado .nav-icono { display: inline-block; max-width: 3em; opacity: 1; }
+}
+@media (max-width: 899px) { .nav-marca-corto, .nav-etiqueta-corto, .nav-icono { display: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .nav-marca-corto, .nav-etiqueta-corto, .nav-icono { transition: max-width var(--dur-media) var(--curva-suave), opacity var(--dur-corta) ease; }
+  .tablero--plegado .nav-marca-corto, .tablero--plegado .nav-etiqueta-corto, .tablero--plegado .nav-icono { transition-delay: .14s; }
+  .nav-marca-largo, .nav-etiqueta-largo, .nav-texto, .barra-lateral #nav-nombre, .nav-item > span:not(.nav-badge) { transition: max-width var(--dur-media) var(--curva-suave), opacity .12s ease; }
+  .tablero:not(.tablero--plegado) .nav-marca-largo, .tablero:not(.tablero--plegado) .nav-etiqueta-largo, .tablero:not(.tablero--plegado) .nav-texto, .tablero:not(.tablero--plegado) #nav-nombre, .tablero:not(.tablero--plegado) .nav-item > span:not(.nav-badge) { transition-delay: .1s, .14s; }
+}
 </style>
