@@ -19,8 +19,7 @@
 <section class="seccion seccion--gris" id="monitoreo">
   <div class="contenedor contenedor--ancho">
     <div class="seccion-cabecera">
-      <h2 class="titulo">Monitoreo neuromuscular.</h2>
-      <p class="subtitulo">Cada músculo lleva una banda con EMG, IMU y dinamómetro. Toca un músculo para ver cómo se pone su banda, o una gráfica para ver sus señales.</p>
+      <h2 class="titulo">Monitoreo neuromuscular</h2>
     </div>
 
     <div class="mon-rejilla">
@@ -42,8 +41,8 @@
       <!-- ---------- Los 6 músculos ---------- -->
       <div class="tarjeta mon-resumen">
         <div class="mon-resumen-cabecera">
-          <h3 class="titulo-tarjeta">Los 6 músculos</h3>
-          <p class="pequeno texto-2">Puntaje ERDM-A de 0 a 10 en cada evaluación, desde la basal. Las líneas punteadas marcan riesgo moderado (4) y alto (7).</p>
+          <h3 class="titulo-tarjeta">Tendencia por músculo</h3>
+          <p class="pequeno texto-2">Puntaje ERDM-A en cada evaluación desde la basal. Líneas punteadas: umbral moderado (4) y alto (7).</p>
         </div>
         <div class="mon-minis" id="mon-minis"></div>
       </div>
@@ -71,9 +70,13 @@
               <button type="button" class="boton" id="mon-medir">Iniciar medición</button>
             </div>
           </div>
-          <div class="mon-estado-sensor pequeno" id="mon-sensor" role="status" aria-live="polite"></div>
+          <div class="mon-estado-sensor pequeno" id="mon-sensor"></div>
         </div>
 
+        <div class="mon-graficas-barra">
+          <p class="pequeno" id="mon-graficas-nota" aria-live="polite"></p>
+          <button type="button" class="enlace enlace--simple pequeno" id="mon-envivo" hidden>Ver señal en vivo</button>
+        </div>
         <div class="mon-graficas">
           <figure class="tarjeta mon-grafica"><figcaption class="mon-grafica-titulo">Señal EMG <span class="nota">mV</span></figcaption><canvas id="mon-c-emg" aria-label="Señal EMG en vivo" role="img"></canvas></figure>
           <figure class="tarjeta mon-grafica"><figcaption class="mon-grafica-titulo">RMS, activación <span class="nota">mV</span></figcaption><canvas id="mon-c-rms" aria-label="RMS de la señal EMG" role="img"></canvas></figure>
@@ -83,11 +86,56 @@
 
         <div class="mon-kpis" id="mon-kpis"></div>
         <p class="nota" id="mon-kpis-nota"></p>
+
+        <div class="tarjeta mon-historial">
+          <div class="tarjeta-cabecera"><h3 class="titulo-tarjeta">Mediciones registradas</h3><span class="nota" id="mon-mediciones-n"></span></div>
+          <div class="tabla-scroll" tabindex="0" role="region" aria-label="Mediciones registradas del músculo">
+            <div class="tabla-envoltura"><table class="tabla mon-tabla-med" id="mon-mediciones"></table></div>
+          </div>
+        </div>
       </div>
 
       <!-- ---------- Escala ERDM-A del músculo ---------- -->
       <div class="tarjeta mon-erdm" id="mon-erdm"></div>
     </div>
+    <!-- ---------- VO2pico: capacidad funcional, común a los 6 músculos ---------- -->
+    <section class="tarjeta mon-vo2" id="mon-vo2" aria-labelledby="vo2-titulo">
+      <div class="mon-vo2-cabecera">
+        <div class="pila-chica">
+          <h3 class="titulo-tarjeta" id="vo2-titulo">Medición de VO₂pico</h3>
+          <p class="pequeno texto-2">Capacidad funcional. El resultado entra a la escala ERDM-A en la dimensión VO₂pico de los seis músculos.</p>
+        </div>
+        <div class="mon-control">
+          <div class="campo mon-fase"><label for="vo2-fase">Fase</label><select id="vo2-fase"></select></div>
+          <button type="button" class="boton" id="vo2-medir">Registrar VO₂pico</button>
+        </div>
+      </div>
+      <div class="mon-vo2-cuerpo">
+        <div class="pila">
+          <ol class="mon-vo2-pasos pequeno">
+            <li><strong>Máscara.</strong> Colocar la máscara del analizador de gases cubriendo nariz y boca. Ajustar las correas hasta que no haya fugas al exhalar.</li>
+            <li><strong>Conexión.</strong> Conectar la máscara al analizador y verificar la lectura en reposo.</li>
+            <li><strong>Esfuerzo.</strong> Actividad física continua durante 5 minutos, en cicloergómetro o cinta con arnés.</li>
+            <li><strong>Registro.</strong> Se toma el valor más alto de consumo de oxígeno, en mL/kg/min.</li>
+          </ol>
+          <div class="mon-vo2-escala" id="vo2-escala"></div>
+          <div class="mon-vo2-progreso" id="vo2-progreso" hidden>
+            <div class="mon-vo2-barra"><span id="vo2-barra"></span></div>
+            <p class="pequeno" id="vo2-progreso-texto" aria-live="polite"></p>
+          </div>
+        </div>
+        <div class="pila">
+          <figure class="mon-vo2-figura">
+            <figcaption class="mon-vo2-dato" id="vo2-dato"></figcaption>
+            <div id="vo2-grafica"></div>
+          </figure>
+          <div class="tabla-scroll" tabindex="0" role="region" aria-label="Mediciones de VO2pico">
+            <div class="tabla-envoltura"><table class="tabla mon-tabla-med" id="vo2-mediciones"></table></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <?!= include('SeccionSensores'); ?>
     <p class="nota mon-aviso">Anatomía: BodyParts3D © DBCLS (CC BY 4.0).</p>
   </div>
@@ -108,7 +156,7 @@
   // Las imágenes de anatomía (≈750 KB) se piden cuando la figura está cerca de verse, no al elegir astronauta
   let figuraVisible = false; const diferidas = [];
   const ponerHref = (nodo, url) => { if (figuraVisible) nodo.setAttribute('href', url); else { nodo.dataset.src = url; diferidas.push(nodo); } };
-  const BASE_IMG = (typeof API !== 'undefined' && API.modo === 'local') ? '/assets/anatomia2d/' : 'https://astra-fit-modelos.dapxco.workers.dev/assets/anatomia2d/';
+  const BASE_IMG = (typeof API !== 'undefined' && API.modo === 'local') ? '/assets/anatomia2d/' : 'https://myocare.dapxco.workers.dev/assets/anatomia2d/';
   const CX = { anterior: 262, posterior: 498 };
   const IMG_H = 560, IMG_W = IMG_H * 0.64, IMG_Y = 4;                 // las imágenes son de 640 × 1000
   const ARCHIVO_VISTA = { anterior: 'front', posterior: 'back' };
@@ -136,11 +184,15 @@
   let chipsY = {};          // centro de cada etiqueta, en unidades del SVG (lo fija acomodarChips)
   const guias = {};         // línea punteada de cada músculo hacia su etiqueta
   const extremos = {};      // dónde está la luz del sensor de cada músculo (unidades del SVG)
-  window.FiguraMon = { BASE_IMG, BANDAS, MUSCULOS, ARCHIVO_VISTA, COLOR_RIESGO, nivel: (g) => nivelDe(g).nivel };
+  /* Figura de anatomía: la misma para todos. El modelo femenino del atlas (open-anatomy-3d) trae los muslos y los hombros
+     deformados, así que se usa la figura masculina, que es la de referencia de los atlas. sexoFigura solo recuerda para
+     qué astronauta se dibujó. */
+  const FIGURA = 'M';
+  window.FiguraMon = { BASE_IMG, BANDAS, MUSCULOS, ARCHIVO_VISTA, COLOR_RIESGO, FIGURA, nivel: (g) => nivelDe(g).nivel };
 
   function dibujarCuerpo(sexo) {
-    const sx = String(sexo).toUpperCase() === 'F' ? 'F' : 'M', p = sx.toLowerCase();
-    sexoFigura = sx;
+    const sx = FIGURA, p = sx.toLowerCase();
+    sexoFigura = String(sexo).toUpperCase() === 'F' ? 'F' : 'M';
     const svg = $('mon-svg');
     svg.innerHTML = '';
     const defs = el('defs', {}); svg.appendChild(defs);
@@ -197,7 +249,7 @@
     const k = H / 580;   // píxeles por unidad del SVG
     ['anterior', 'posterior'].forEach((vista) => {
       const chips = Object.entries(MUSCULOS).filter(([, m]) => m.vista === vista)
-        .map(([g, m]) => ({ g, n: document.querySelector(`.mon-chip[data-grupo="${g}"]`), y: aY(BANDAS[sexoFigura][m.mascara].y) * k }))
+        .map(([g, m]) => ({ g, n: document.querySelector(`.mon-chip[data-grupo="${g}"]`), y: aY(BANDAS[FIGURA][m.mascara].y) * k }))
         .sort((p, q) => p.y - q.y);
       chips.forEach((c) => { c.h = c.n.offsetHeight; });
       let abajo = -Infinity;
@@ -226,6 +278,7 @@
   let grupo = 'cuadriceps';
   let abierto = false;          // ¿se ve el detalle de un músculo?
   let midiendo = null;          // { grupo, inicio, ... } mientras se graba
+  let congelado = null;         // { id, texto } cuando las gráficas muestran una medición guardada en vez de la señal en vivo
   const bateria = {};           // simulada por músculo
 
   const astronauta = () => Sesion.astronauta;
@@ -271,9 +324,10 @@
     abierto = true;
     $('mon-detalle').hidden = false;
     pintarTodo();
-    reiniciarReposo();
+    mostrarSenalInicial();
     const quietoYa = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     $('mon-detalle').scrollIntoView({ behavior: quietoYa ? 'auto' : 'smooth', block: 'start' });
+    const t = $('mon-titulo'); t.setAttribute('tabindex', '-1'); t.focus({ preventScroll: true });
   }
   window.Monitoreo = { elegir };
   function cerrar() {
@@ -283,7 +337,9 @@
     pintarCuerpo(); pintarMinis();
   }
   $('mon-volver').addEventListener('click', () => {
+    const deDonde = grupo;
     cerrar();
+    const b = document.querySelector('#mon-minis [data-grupo="' + deDonde + '"]'); if (b) b.focus({ preventScroll: true });
     const quietoYa = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     $('monitoreo').scrollIntoView({ behavior: quietoYa ? 'auto' : 'smooth', block: 'start' });
   });
@@ -303,7 +359,7 @@
     const d = pts.map((p, i) => `${i ? 'L' : 'M'}${X(p.x).toFixed(1)} ${Y(p.y).toFixed(1)}`).join(' ');
     const ult = pts[pts.length - 1];
     const puntos = pts.map((p) => `<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="7" class="mon-mini-blanco"><title>Semana ${Math.round(p.x)}: ${p.y} de 10</title></circle>`).join('');
-    return `<svg class="mon-mini-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Puntaje ERDM-A por semana, último ${ult.y} de 10">
+    return `<svg class="mon-mini-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true" focusable="false">
       ${guia(c.moderado)}${guia(c.alto)}
       <line x1="${iz}" x2="${W - de}" y1="${Y(0)}" y2="${Y(0)}" class="mon-mini-base"/>
       <path d="${d}" class="mon-mini-linea"/>
@@ -316,7 +372,7 @@
       .sort((p, q) => Number(u[q.puntos]) - Number(u[p.puntos]))
       .map((d) => {
         const v = Number(u[d.cambio]);
-        if (d.clave === 'emg') return `EMG cambió ${n0(v, 0)} %`;
+        if (d.clave === 'emg') return `EMG ${n0(v, 0)} % de cambio`;
         const x = d.signo * v;
         return `${d.nombre.replace(' muscular', '')} ${x < 0 ? '−' : '+'}${n0(Math.abs(x), 0)} %`;
       });
@@ -335,6 +391,7 @@
         <span class="mon-mini-valor">${u ? u.puntaje_erdm : '—'}<small>/10</small>${u && u.alerta_prioritaria === 'SI' ? '<span class="estado estado--rojo mon-mini-prioritaria">Prioritaria</span>' : ''}</span>
         ${hist.length && b ? sparkline(hist, b.fecha) : '<span class="mon-mini-vacio nota">Mide la basal para empezar el seguimiento.</span>'}
         <span class="nota mon-mini-nota">${esc(resumenCambios(u))}</span>
+        <span class="nota mon-mini-ultima">${(() => { const um = ultimaMedicion(g); return um ? `Última medición: ${esc(Calc.fechaCorta(um.fecha))}${um.hora ? `, ${esc(um.hora)}` : ''}` : 'Sin mediciones del sensor'; })()}</span>
       </button>`;
     }).join('');
   }
@@ -346,7 +403,7 @@
     const a = astronauta();
     $('mon-titulo').textContent = Erdm.etiqueta(grupo);
     const t = tareaDe(grupo);
-    $('mon-tarea').textContent = `Tarea estandarizada: ${t.etiqueta || 'contracción'}. 6 repeticiones en 10 segundos.`;
+    $('mon-tarea').textContent = `Tarea estandarizada: ${(t.etiqueta || 'contracción').toLowerCase()}, 6 repeticiones en 10 s.`;
     const tieneBasal = !!Erdm.basal(a.id_astronauta, grupo);
     $('mon-fase').innerHTML = FASES().map((f) => `<option value="${esc(f.valor)}"${f.valor === (tieneBasal ? 'mision' : 'basal') ? ' selected' : ''}>${esc(f.etiqueta)}</option>`).join('');
     pintarSensor();
@@ -359,7 +416,7 @@
       : '<span class="estado estado--verde">Conectado</span>';
     $('mon-sensor').innerHTML = `${estado}
       <span class="mon-dato">Batería ${bateria[grupo]} %</span>
-      <span class="mon-dato">Señal ${esc(u && u.calidad_senal ? u.calidad_senal : 'Excelente')}</span>
+      <span class="mon-dato">Señal ${esc(u && u.calidad_senal ? u.calidad_senal.toLowerCase() : 'excelente')}</span>
       <span class="mon-etiqueta">EMG</span><span class="mon-etiqueta">IMU</span>`;
   }
 
@@ -391,7 +448,7 @@
     const b = Erdm.basal(a.id_astronauta, grupo);
     const nombre = Erdm.etiqueta(grupo).toLowerCase();
     if (!u) {
-      $('mon-erdm').innerHTML = `<div class="tarjeta-cabecera"><h3 class="titulo-tarjeta">Escala ERDM-A del ${esc(nombre)}.</h3></div>
+      $('mon-erdm').innerHTML = `<div class="tarjeta-cabecera"><h3 class="titulo-tarjeta">ERDM-A, ${esc(nombre)}</h3></div>
         <p class="texto-2">Sin evaluación basal. Mide el músculo con la fase basal: el sensor deja el EMG, la coordinación y la fuerza.</p>`;
       return;
     }
@@ -406,7 +463,7 @@
       const v = u[dim.cambio];
       if (u.fase === 'basal') return 'Basal';
       if (v === null || v === undefined) return (u.valores || u)[dim.campos[0]] === null || (u.valores || u)[dim.campos[0]] === undefined ? 'Falta registrar' : 'Sin basal';
-      if (dim.clave === 'emg') return `cambió ${n0(v, 0)} %`;
+      if (dim.clave === 'emg') return `${n0(v, 0)} % de cambio`;
       const x = dim.signo * v;
       return `${x < 0 ? '−' : '+'}${n0(Math.abs(x), 0)} %`;
     };
@@ -421,7 +478,7 @@
     const faltan = Erdm.DIMENSIONES.filter((d) => u[d.puntos] === null || u[d.puntos] === undefined).map((d) => d.nombre.toLowerCase().replace('vo₂pico', 'VO₂pico'));
     $('mon-erdm').innerHTML = `
       <div class="tarjeta-cabecera">
-        <h3 class="titulo-tarjeta">Escala ERDM-A del ${esc(nombre)}.</h3>
+        <h3 class="titulo-tarjeta">ERDM-A, ${esc(nombre)}</h3>
         <p class="pequeno texto-2">Evaluación del ${Calc.fechaCorta(u.fecha)}, fase ${esc((FASES().find((f) => f.valor === u.fase) || {}).etiqueta || u.fase).toLowerCase()}</p>
       </div>
       <div class="mon-erdm-rejilla">
@@ -431,16 +488,16 @@
           ${u.alerta_prioritaria === 'SI' ? '<p class="estado estado--rojo">Alerta prioritaria</p>' : ''}
           ${parcial ? `<p class="nota">Faltan ${faltan.join(', ')}: se toman con cinta métrica y prueba de esfuerzo, fuera de la banda.</p>` : ''}
           ${u.arrastre && u.arrastre.length ? '<p class="nota">Las dimensiones con fecha vienen de la evaluación anterior hasta que se vuelvan a medir.</p>' : ''}
-          ${plan && u.fase !== 'basal' ? `<div class="mon-plan"><p class="nota">Plan sugerido</p><p class="pequeno"><strong>${esc(plan.ejercicio)}.</strong> ${esc(plan.dosificacion)}</p></div>` : ''}
+          ${plan && u.fase !== 'basal' ? `<div class="mon-plan"><p class="nota">Pauta</p><p class="pequeno"><strong>${esc(plan.ejercicio)}.</strong> ${esc(plan.dosificacion)}</p></div>` : ''}
         </div>
-        <div class="tabla-envoltura">
+        <div class="tabla-envoltura" tabindex="0" role="region" aria-label="Tabla de dimensiones de la escala ERDM-A">
           <table class="mon-tabla">
             <thead><tr><th scope="col">Dimensión</th><th scope="col">Basal</th><th scope="col">Actual</th><th scope="col">Cambio</th><th scope="col">Puntos</th></tr></thead>
             <tbody>${filas}</tbody>
           </table>
         </div>
       </div>
-      <p class="nota">Cortes de la pestaña EscalaERDM (documento ASTRA-FIT). Propuesta del equipo, no validada clínicamente.</p>`;
+      <p class="nota">Puntos de corte de la escala ERDM-A: propuesta del equipo, sin validación clínica.</p>`;
   }
 
   function pintarTodo() {
@@ -450,6 +507,8 @@
     pintarCabecera();
     if (!midiendo) kpisDeUltima();
     pintarErdm();
+    pintarMediciones();
+    pintarVo2();
   }
 
   /* ======================================================== SIMULADOR DEL SENSOR
@@ -630,8 +689,8 @@
     marcas.forEach((m) => { ctx.beginPath(); ctx.moveTo(izq, y(m)); ctx.lineTo(w - 6, y(m)); ctx.stroke(); ctx.textAlign = 'right'; ctx.fillText(String(m).replace('.', ','), izq - 6, y(m) + 4); });
     ctx.textAlign = 'center';
     for (let s = 0; s <= 10; s += 2) ctx.fillText(String(s), izq + s / 10 * ancho, h - 4);
-    const total = fsSerie * VENTANA, escritas = nombre === 'emg' || nombre === 'rms' ? nEmg : nImu;
-    const cabeza = escritas % total;
+    const total = fsSerie * VENTANA, escritas = congelado ? total : (nombre === 'emg' || nombre === 'rms' ? nEmg : nImu);
+    const cabeza = congelado ? total : escritas % total;
     series.forEach((serie, i) => {
       ctx.strokeStyle = COLORES[i]; ctx.lineWidth = nombre === 'emg' ? 1 : 1.6; ctx.lineJoin = 'round';
       // por cada columna de píxeles, mínimo y máximo de las muestras que caen ahí
@@ -654,7 +713,8 @@
         ctx.fillStyle = 'rgba(0,113,227,.10)'; ctx.fill();
       }
     });
-    // cabeza del barrido
+    // cabeza del barrido (no en una medición guardada)
+    if (congelado) return;
     ctx.fillStyle = 'rgba(0,113,227,.5)';
     ctx.fillRect(izq + (cabeza / total) * ancho - 1, 6, 2, alto);
   }
@@ -670,6 +730,7 @@
   const quieto = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function cuadro(ahora) {
     if (!animando) return;
+    if (congelado && !midiendo) { animando = false; dibujarGraficas(); return; }
     const dt = Math.min(0.05, (ahora - ultimoCuadro) / 1000 || 0.016);
     ultimoCuadro = ahora;
     generar(dt);
@@ -683,6 +744,7 @@
   }
   function arrancar() {
     if (animando || !astronauta()) return;
+    if (congelado && !midiendo) { dibujarGraficas(); return; }
     if (!midiendo && (!visible || quieto() || document.hidden)) { dibujarGraficas(); return; }
     animando = true; ultimoCuadro = performance.now(); requestAnimationFrame(cuadro);
   }
@@ -701,9 +763,12 @@
   /* ======================================================== MEDIR Y GUARDAR */
   $('mon-medir').addEventListener('click', () => {
     if (midiendo || !astronauta()) return;
+    congelado = null; pintarNotaGraficas();
     limpiar();
     fuente = prepararFuente(true);
-    midiendo = { grupo, t: 0, fase: $('mon-fase').value };
+    midiendo = { grupo, t: 0, fase: $('mon-fase').value, id: astronauta().id_astronauta };   // la medición queda atada a este astronauta
+    const tt = $('mon-titulo'); tt.setAttribute('tabindex', '-1'); if (document.activeElement === $('mon-medir')) tt.focus({ preventScroll: true });   // el botón se desactiva: el foco no se pierde
+    pintarNotaGraficas();
     $('mon-medir').disabled = true; $('mon-medir').textContent = 'Midiendo…'; $('mon-fase').disabled = true;
     pintarCuerpo(); pintarMinis(); pintarSensor();
     pintarKpis(null, 'Midiendo 6 repeticiones…');
@@ -713,7 +778,9 @@
 
   async function terminarMedicion() {
     const s = fuente, m = midiendo, a = astronauta();
+    if (!a || a.id_astronauta !== m.id) { cancelarEnCurso(); return; }   // se cambió de astronauta a mitad de la medición
     const r = procesar(s);
+    const senales = capturarSenales();   // las 6 repeticiones quedan guardadas con la medición
     midiendo = null;
     fuente = prepararFuente(false);
     bateria[m.grupo] = Math.max(5, (bateria[m.grupo] || 92) - 1);
@@ -728,8 +795,10 @@
       emg_rms_uv: +r.rms.toFixed(1), emg_frec_mediana_hz: +r.fmed.toFixed(1), emg_amplitud_pico_uv: Math.round(r.pico),
       activacion_pct: Math.round(r.rms / rmsBasal * 100), velocidad_ms: +r.velocidad.toFixed(2), rom_grados: Math.round(r.rom),
       coordinacion_cv_pct: +r.cv.toFixed(1), fatiga_pct: +r.fatiga.toFixed(1), fuerza_kg: +r.fuerza.toFixed(1),
-      bateria_pct: bateria[m.grupo], calidad_senal: 'Excelente', origen: 'simulador'
+      bateria_pct: bateria[m.grupo], calidad_senal: 'Excelente', origen: 'simulador', senales
     };
+    congelado = { id: medicion.id_medicion, texto: textoMedicion(medicion) };
+    pintarNotaGraficas(); dibujarGraficas();
     // Fila del día en Evaluaciones: se conserva lo que ya tenga (circunferencia, VO2pico) y se agregan EMG, coordinación y fuerza
     const idEval = Erdm.idEvaluacion(a.id_astronauta, fecha, m.grupo);
     const previa = (Sesion.datos.Evaluaciones || []).find((e) => e.id_evaluacion === idEval);
@@ -756,15 +825,267 @@
       UI.aviso('No se pudo guardar la medición: ' + err.message, 'error');
     } finally {
       $('mon-medir').disabled = false; $('mon-medir').textContent = 'Iniciar medición'; $('mon-fase').disabled = false;
-      pintarCuerpo(); pintarMinis(); pintarSensor(); pintarErdm();
-      if (!visible || quieto()) animando = false;
+      pintarCuerpo(); pintarMinis(); pintarSensor(); pintarErdm(); pintarMediciones(); pintarVo2();
+      animando = false; dibujarGraficas();
     }
   }
 
+  /* ======================================================== SEÑALES GUARDADAS
+     Al terminar, la medición guarda una versión reducida de sus señales (texto JSON, ~7 KB): EMG como mínimo y máximo
+     de 250 tramos, RMS en 200 puntos e IMU en 100 puntos por eje. Así las gráficas pueden volver a mostrarla después. */
+  const textoMedicion = (m) => `${Calc.fechaCorta(m.fecha)}${m.hora ? `, ${m.hora}` : ''}`;
+  function capturarSenales() {
+    const red = (v, d) => Math.round(v * 10 ** d) / 10 ** d;
+    const extremos = (arr, tramos) => { const out = [], paso = arr.length / tramos;
+      for (let i = 0; i < tramos; i++) { let lo = Infinity, hi = -Infinity; for (let k = Math.floor(i * paso); k < Math.floor((i + 1) * paso); k++) { const v = arr[k]; if (v < lo) lo = v; if (v > hi) hi = v; } out.push(red(lo, 3), red(hi, 3)); }
+      return out; };
+    const medias = (arr, tramos, d) => { const out = [], paso = arr.length / tramos;
+      for (let i = 0; i < tramos; i++) { let s = 0, n = 0; for (let k = Math.floor(i * paso); k < Math.floor((i + 1) * paso); k++) { s += arr[k]; n++; } out.push(red(n ? s / n : 0, d)); }
+      return out; };
+    return JSON.stringify({ v: 1, emg: extremos(buf.emg, 250), rms: medias(buf.rms, 200, 3),
+      ax: medias(buf.ax, 100, 3), ay: medias(buf.ay, 100, 3), az: medias(buf.az, 100, 3),
+      gx: medias(buf.gx, 100, 1), gy: medias(buf.gy, 100, 1), gz: medias(buf.gz, 100, 1) });
+  }
+  function cargarSenales(texto) {
+    let s; try { s = typeof texto === 'string' ? JSON.parse(texto) : texto; } catch (e) { return false; }
+    if (!s || !Array.isArray(s.emg)) return false;
+    const interpolar = (destino, puntos) => { const n = destino.length, m = puntos.length;
+      for (let k = 0; k < n; k++) { const x = (k + 0.5) / n * m - 0.5, i = Math.max(0, Math.min(m - 1, Math.floor(x))), j = Math.min(m - 1, i + 1), t = Math.max(0, Math.min(1, x - i)); destino[k] = puntos[i] * (1 - t) + puntos[j] * t; } };
+    const tramos = s.emg.length / 2, paso = buf.emg.length / tramos;
+    for (let i = 0; i < tramos; i++) { const a = Math.floor(i * paso), b = Math.floor((i + 1) * paso), mitad = a + Math.max(1, Math.floor((b - a) / 2));
+      for (let k = a; k < b; k++) buf.emg[k] = k < mitad ? s.emg[2 * i] : s.emg[2 * i + 1]; }
+    interpolar(buf.rms, s.rms); ['ax', 'ay', 'az', 'gx', 'gy', 'gz'].forEach((e) => interpolar(buf[e], s[e] || [0]));
+    nEmg = buf.emg.length; nImu = buf.ax.length;
+    return true;
+  }
+  function pintarNotaGraficas() {
+    const u = astronauta() ? ultimaMedicion(grupo) : null;
+    $('mon-graficas-nota').textContent = midiendo ? 'Midiendo: señal en vivo de la banda.'
+      : congelado ? `Señales de la medición del ${congelado.texto}.`
+      : u && !u.senales ? `Señal en vivo del sensor, en reposo. La medición del ${textoMedicion(u)} no tiene señales guardadas.` : 'Señal en vivo del sensor, en reposo.';
+    $('mon-envivo').hidden = !congelado || !!midiendo;
+  }
+  function mostrarMedicion(m) {
+    if (!m || !m.senales || !cargarSenales(m.senales)) return false;
+    congelado = { id: m.id_medicion, texto: textoMedicion(m) };
+    animando = false; dibujarGraficas(); pintarNotaGraficas();
+    return true;
+  }
+  /** Al abrir un músculo: si su última medición tiene señales, se muestran; si no, la señal en vivo. */
+  function mostrarSenalInicial() {
+    if (!mostrarMedicion(ultimaMedicion(grupo))) { congelado = null; reiniciarReposo(); arrancar(); pintarNotaGraficas(); }
+  }
+  $('mon-envivo').addEventListener('click', () => { congelado = null; kpisDeUltima(); reiniciarReposo(); arrancar(); pintarNotaGraficas(); pintarMediciones(); });
+
+  /* ======================================================== MEDICIONES REGISTRADAS (ver y eliminar) */
+  const nombreFase = (v) => ((Sesion.datos.Catalogos || []).find((c) => c.lista === 'fase' && c.valor === v) || {}).etiqueta || v || '—';
+  let confirmando = null;   // id de la medición que pide confirmación para eliminarse
+  function filaKpis(m) {
+    return { ...m, activacion_pct: Number(m.activacion_pct), fuerza_kg: m.fuerza_kg === '' || m.fuerza_kg == null ? null : Number(m.fuerza_kg), velocidad_ms: Number(m.velocidad_ms), coordinacion_cv_pct: Number(m.coordinacion_cv_pct), fatiga_pct: Number(m.fatiga_pct) };
+  }
+  function pintarMediciones() {
+    if (!astronauta()) return;
+    const lista = medicionesDe(grupo).slice().reverse();
+    $('mon-mediciones-n').textContent = lista.length ? `${lista.length} ${lista.length === 1 ? 'medición' : 'mediciones'}` : '';
+    if (!lista.length) { $('mon-mediciones').innerHTML = '<tbody><tr><td class="texto-2">Sin mediciones de este músculo.</td></tr></tbody>'; return; }
+    $('mon-mediciones').innerHTML = `<thead><tr><th scope="col">Fecha</th><th scope="col">Fase</th><th scope="col">RMS (µV)</th><th scope="col">F. mediana (Hz)</th><th scope="col">Coordinación (% CV)</th><th scope="col">Fuerza (kg)</th><th scope="col"><span class="solo-lector">Acciones</span></th></tr></thead>
+      <tbody>${lista.map((m) => {
+        const id = esc(m.id_medicion), viendo = congelado && congelado.id === m.id_medicion;
+        const acciones = confirmando === m.id_medicion
+          ? `<span class="mon-confirmar"><span class="pequeno">¿Eliminar esta medición?</span><button type="button" class="boton boton--peligro boton--pequeno" data-si="${id}">Eliminar</button><button type="button" class="enlace enlace--simple pequeno" data-no>Cancelar</button></span>`
+          : `${m.senales ? `<button type="button" class="enlace enlace--simple pequeno" data-ver="${id}" aria-pressed="${viendo}">${viendo ? 'En las gráficas' : 'Ver señales'}</button>` : ''}<button type="button" class="enlace enlace--simple pequeno mon-eliminar" data-eliminar="${id}">Eliminar</button>`;
+        return `<tr${viendo ? ' class="es-actual"' : ''}><th scope="row">${esc(textoMedicion(m))}</th><td>${esc(nombreFase(m.fase))}</td><td>${n0(m.emg_rms_uv)}</td><td>${n0(m.emg_frec_mediana_hz, 1)}</td><td>${n0(m.coordinacion_cv_pct, 1)}</td><td>${m.fuerza_kg === '' || m.fuerza_kg == null ? '—' : n0(m.fuerza_kg, 1)}</td><td class="mon-acciones">${acciones}</td></tr>`;
+      }).join('')}</tbody>`;
+  }
+  $('mon-mediciones').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b || midiendo) return;
+    const buscar = (id) => medicionesDe(grupo).find((m) => m.id_medicion === id);
+    if (b.dataset.ver) { const m = buscar(b.dataset.ver); if (mostrarMedicion(m)) { pintarKpis(filaKpis(m), `Medición del ${textoMedicion(m)}. RMS ${n0(m.emg_rms_uv)} µV, frecuencia mediana ${n0(m.emg_frec_mediana_hz, 1)} Hz.`); pintarMediciones(); } return; }
+    if (b.dataset.eliminar) { confirmando = b.dataset.eliminar; pintarMediciones(); return; }
+    if ('no' in b.dataset) { confirmando = null; pintarMediciones(); return; }
+    if (b.dataset.si) { const m = buscar(b.dataset.si); confirmando = null; if (m) eliminarMedicion(m, b); }
+  });
+
+  /* Eliminar una medición mal tomada. La fila del día en Evaluaciones se corrige solo si sus valores vinieron de esta
+     medición: se reemplazan por los de otra medición del mismo día (si hay) o se vacían; si la fila queda sin ningún
+     dato medido y la había creado el sensor, se borra junto con las alertas abiertas que generó esta medición. */
+  const MEDIDOS = ['emg_rms_uv', 'emg_frec_mediana_hz', 'coordinacion_cv_pct', 'fuerza_kg', 'circunferencia_cm', 'vo2pico_ml_kg_min'];
+  const vacio = (v) => v === '' || v === null || v === undefined;
+  const igual = (a, b) => !vacio(a) && !vacio(b) && Math.abs(Number(a) - Number(b)) < 1e-6;
+  async function eliminarMedicion(m, boton) {
+    const a = astronauta(), esVo2 = m.grupo_muscular === 'vo2pico';
+    const campos = esVo2 ? ['vo2pico_ml_kg_min'] : ['emg_rms_uv', 'emg_frec_mediana_hz', 'coordinacion_cv_pct', 'fuerza_kg'];
+    const hermanas = (Sesion.datos.Monitoreo || []).filter((x) => x.id_astronauta === m.id_astronauta && x.grupo_muscular === m.grupo_muscular && x.fecha === m.fecha && x.id_medicion !== m.id_medicion)
+      .sort((p, q) => String(p.registrado_en || p.hora).localeCompare(String(q.registrado_en || q.hora)));
+    const reemplazo = hermanas[hermanas.length - 1] || null;
+    const desde = `${m.fecha} ${m.hora || '00:00'}`;
+    const guardar = [], borrarE = [], borrarA = [];
+    (esVo2 ? Erdm.GRUPOS : [m.grupo_muscular]).forEach((g) => {
+      const ev = (Sesion.datos.Evaluaciones || []).find((e) => e.id_evaluacion === Erdm.idEvaluacion(a.id_astronauta, m.fecha, g));
+      if (!ev || !campos.some((c) => !vacio(m[c])) || !campos.every((c) => vacio(m[c]) || igual(ev[c], m[c]))) return;   // la fila no vino de esta medición
+      const nuevo = { ...ev };
+      campos.forEach((c) => { nuevo[c] = reemplazo && !vacio(reemplazo[c]) ? reemplazo[c] : ''; });
+      const alertas = (Sesion.datos.Alertas || []).filter((x) => x.origen === ev.id_evaluacion && x.estado === 'abierta' && String(x.creada_en || '') >= desde).map((x) => x.id_alerta);
+      if (MEDIDOS.every((c) => vacio(nuevo[c])) && String(ev.registrado_por || '') === 'sensor') { borrarE.push(ev.id_evaluacion); borrarA.push(...alertas); }
+      else { guardar.push(Erdm.paraGuardar(Erdm.calcular(nuevo))); if (!reemplazo) borrarA.push(...alertas); }
+    });
+    if (boton) { boton.disabled = true; boton.textContent = 'Eliminando…'; }
+    try {
+      const res = await API.eliminarMedicion(m.id_medicion, { evaluaciones: guardar, borrarEvaluaciones: borrarE, borrarAlertas: borrarA });
+      Sesion.datos.Monitoreo = (Sesion.datos.Monitoreo || []).filter((x) => x.id_medicion !== m.id_medicion);
+      const lista = Sesion.datos.Evaluaciones || [];
+      (res.evaluaciones || guardar).forEach((f) => { const i = lista.findIndex((e) => e.id_evaluacion === f.id_evaluacion); if (i >= 0) lista[i] = { ...lista[i], ...f }; });
+      Sesion.datos.Evaluaciones = lista.filter((e) => !borrarE.includes(e.id_evaluacion));
+      Sesion.datos.Alertas = (Sesion.datos.Alertas || []).filter((x) => !borrarA.includes(x.id_alerta));
+      if (congelado && congelado.id === m.id_medicion) congelado = null;
+      document.dispatchEvent(new CustomEvent('datos-actualizados'));
+      if (!esVo2) { kpisDeUltima(); if (!congelado) mostrarSenalInicial(); }
+      UI.aviso(`Medición del ${textoMedicion(m)} eliminada.`, 'completado');
+    } catch (err) {
+      UI.aviso('No se pudo eliminar la medición: ' + err.message, 'error');
+      if (boton) { boton.disabled = false; boton.textContent = 'Eliminar'; }
+    }
+  }
+
+  /* ======================================================== VO2PICO
+     Prueba con máscara y analizador de gases durante 5 minutos de actividad física (simulada en 5 s). El valor va a la
+     dimensión VO₂pico de la ERDM-A, que es común a los 6 músculos: se escribe en las 6 filas del día en Evaluaciones.
+     La medición queda en Monitoreo con grupo_muscular = "vo2pico". La gráfica es su evolución frente a la basal. */
+  const VO2_DURACION = 5;   // segundos de la simulación (cada uno representa un minuto de prueba)
+  let midiendoVo2 = false;
+  const vo2Mediciones = () => medicionesDe('vo2pico');
+  function vo2Serie() {
+    const a = astronauta(), porFecha = {};
+    (Sesion.datos.Evaluaciones || []).filter((e) => e.id_astronauta === a.id_astronauta && !vacio(e.vo2pico_ml_kg_min))
+      .forEach((e) => { const f = String(e.fecha); if (!porFecha[f] || e.fase === 'basal') porFecha[f] = { fecha: f, valor: Number(e.vo2pico_ml_kg_min), fase: e.fase }; });
+    const pts = Object.values(porFecha).sort((p, q) => p.fecha.localeCompare(q.fecha));
+    const basales = pts.filter((p) => p.fase === 'basal');
+    const basal = basales.length ? basales[basales.length - 1] : null;
+    return { basal, pts: basal ? pts.filter((p) => p.fecha >= basal.fecha) : pts };
+  }
+  function vo2Puntos(v, b) {
+    const c = Erdm.corte('vo2pico'), perdida = (b - v) / b * 100;
+    return { perdida, puntos: perdida > c.alto ? 2 : perdida >= c.moderado ? 1 : 0 };
+  }
+  function vo2Grafica({ basal, pts }) {
+    if (!basal || !pts.length) return '<p class="nota">Sin VO₂pico basal. Registre la medición con la fase basal para empezar la curva.</p>';
+    const c = Erdm.corte('vo2pico'), b = basal.valor;
+    const W = 560, H = 200, iz = 40, de = 64, ar = 12, ab = 26;
+    const sem = (f) => (Date.parse(f) - Date.parse(basal.fecha)) / (7 * 864e5);
+    const xmax = Math.max(4, Math.ceil(Math.max(...pts.map((p) => sem(p.fecha))) / 2) * 2);
+    const vals = pts.map((p) => p.valor).concat([b, b * (1 - (c.alto + 4) / 100), b * 1.03]);
+    const ymin = Math.floor(Math.min(...vals) / 2) * 2, ymax = Math.ceil(Math.max(...vals) / 2) * 2;
+    const X = (x) => iz + x / xmax * (W - iz - de), Y = (y) => ar + (1 - (y - ymin) / (ymax - ymin)) * (H - ar - ab);
+    const linea = (v, clase, txt) => `<line x1="${iz}" x2="${W - de}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" class="${clase}"/><text x="${W - de + 6}" y="${(Y(v) + 4).toFixed(1)}" class="vo2-eje">${txt}</text>`;
+    const marcas = []; for (let v = ymin; v <= ymax; v += Math.max(2, Math.round((ymax - ymin) / 4 / 2) * 2)) marcas.push(v);
+    const NIV = ['verde', 'amarillo', 'rojo'];
+    const d = pts.map((p, i) => `${i ? 'L' : 'M'}${X(sem(p.fecha)).toFixed(1)} ${Y(p.valor).toFixed(1)}`).join(' ');
+    return `<svg class="vo2-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolución del VO₂pico frente a la basal">
+      ${marcas.map((v) => `<text x="${iz - 6}" y="${(Y(v) + 4).toFixed(1)}" class="vo2-eje" text-anchor="end">${v}</text>`).join('')}
+      ${linea(b, 'vo2-basal', `Basal ${n0(b, 1)}`)}
+      ${linea(b * (1 - c.moderado / 100), 'vo2-corte vo2-corte--moderado', `−${c.moderado} %`)}
+      ${linea(b * (1 - c.alto / 100), 'vo2-corte vo2-corte--alto', `−${c.alto} %`)}
+      <path d="${d}" class="vo2-linea"/>
+      ${pts.map((p) => { const k = p.fase === 'basal' ? 0 : vo2Puntos(p.valor, b).puntos; return `<circle cx="${X(sem(p.fecha)).toFixed(1)}" cy="${Y(p.valor).toFixed(1)}" r="4.5" class="vo2-punto vo2-punto--${NIV[k]}"><title>${esc(Calc.fechaCorta(p.fecha))}: ${n0(p.valor, 1)} mL/kg/min</title></circle>`; }).join('')}
+      ${[0, xmax / 2, xmax].map((s) => `<text x="${X(s).toFixed(1)}" y="${H - 6}" class="vo2-eje" text-anchor="middle">${Math.round(s)}</text>`).join('')}
+      <text x="${W - 4}" y="${H - 6}" class="vo2-eje" text-anchor="end">semanas</text>
+    </svg>`;
+  }
+  function pintarVo2() {
+    if (!astronauta()) return;
+    const c = Erdm.corte('vo2pico'), serie = vo2Serie(), u = serie.pts[serie.pts.length - 1], b = serie.basal;
+    $('vo2-escala').innerHTML = `<p class="pequeno"><strong>Escala ERDM-A, dimensión VO₂pico</strong> (disminución frente a la basal)</p>
+      <ul class="mon-vo2-cortes pequeno"><li><span class="estado estado--verde">0 puntos</span> menos del ${c.moderado} %</li><li><span class="estado estado--amarillo">1 punto</span> del ${c.moderado} al ${c.alto} %</li><li><span class="estado estado--rojo">2 puntos</span> más del ${c.alto} %</li></ul>`;
+    const um = vo2Mediciones().slice(-1)[0];
+    if (u && b) {
+      const r = vo2Puntos(u.valor, b.valor), NIV = ['verde', 'amarillo', 'rojo'];
+      $('vo2-dato').innerHTML = `<span class="mon-vo2-valor">${n0(u.valor, 1)}<small> mL/kg/min</small></span>
+        <span class="estado estado--${u.fase === 'basal' ? 'verde' : NIV[r.puntos]}">${u.fase === 'basal' ? 'Basal' : `${r.perdida >= 0 ? '−' : '+'}${n0(Math.abs(r.perdida), 1)} % frente a la basal, ${r.puntos} ${r.puntos === 1 ? 'punto' : 'puntos'}`}</span>
+        <span class="nota">Última medición: ${esc(um ? textoMedicion(um) : Calc.fechaCorta(u.fecha))}</span>`;
+    } else $('vo2-dato').innerHTML = '<span class="nota">Sin registros de VO₂pico.</span>';
+    $('vo2-grafica').innerHTML = vo2Grafica(serie);
+    const lista = vo2Mediciones().slice().reverse();
+    $('vo2-mediciones').innerHTML = lista.length
+      ? `<thead><tr><th scope="col">Fecha</th><th scope="col">Fase</th><th scope="col">VO₂pico (mL/kg/min)</th><th scope="col">FC máx. (lpm)</th><th scope="col"><span class="solo-lector">Acciones</span></th></tr></thead>
+        <tbody>${lista.map((m) => `<tr><th scope="row">${esc(textoMedicion(m))}</th><td>${esc(nombreFase(m.fase))}</td><td>${n0(m.vo2pico_ml_kg_min, 1)}</td><td>${n0(m.fc_max_lpm)}</td><td class="mon-acciones">${confirmando === m.id_medicion
+          ? `<span class="mon-confirmar"><span class="pequeno">¿Eliminar esta medición?</span><button type="button" class="boton boton--peligro boton--pequeno" data-si="${esc(m.id_medicion)}">Eliminar</button><button type="button" class="enlace enlace--simple pequeno" data-no>Cancelar</button></span>`
+          : `<button type="button" class="enlace enlace--simple pequeno mon-eliminar" data-eliminar="${esc(m.id_medicion)}">Eliminar</button>`}</td></tr>`).join('')}</tbody>`
+      : '<tbody><tr><td class="nota">Los valores anteriores vienen de las evaluaciones. Las mediciones nuevas con la máscara aparecen aquí y se pueden eliminar.</td></tr></tbody>';
+    const tieneBasal = !!b;
+    $('vo2-fase').innerHTML = FASES().map((f) => `<option value="${esc(f.valor)}"${f.valor === (tieneBasal ? 'mision' : 'basal') ? ' selected' : ''}>${esc(f.etiqueta)}</option>`).join('');
+    $('vo2-medir').disabled = midiendoVo2;
+  }
+  $('vo2-mediciones').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b || midiendoVo2) return;
+    if (b.dataset.eliminar) { confirmando = b.dataset.eliminar; pintarVo2(); return; }
+    if ('no' in b.dataset) { confirmando = null; pintarVo2(); return; }
+    if (b.dataset.si) { const m = vo2Mediciones().find((x) => x.id_medicion === b.dataset.si); confirmando = null; if (m) eliminarMedicion(m, b); }
+  });
+  let vo2Turno = 0, guardandoVo2 = false;
+  $('vo2-medir').addEventListener('click', () => {
+    const a = astronauta(); if (!a || midiendoVo2) return;
+    const turno = ++vo2Turno;   // si se cambia de astronauta, el turno cambia y esta prueba se detiene
+    midiendoVo2 = true; $('vo2-medir').disabled = true; $('vo2-fase').disabled = true; $('vo2-progreso').hidden = false;
+    const serie = vo2Serie(), ref = serie.pts.length ? serie.pts[serie.pts.length - 1].valor : (serie.basal ? serie.basal.valor : 42);
+    const final = Math.round(ref * (1 + azar() * 0.012) * 10) / 10, fcMax = Math.round(158 + Math.random() * 18);
+    const inicio = performance.now(), fase = $('vo2-fase').value;
+    const paso = () => {
+      if (turno !== vo2Turno) return;
+      const t = Math.min(VO2_DURACION, (performance.now() - inicio) / 1000), avance = t / VO2_DURACION;
+      $('vo2-barra').style.width = `${(avance * 100).toFixed(1)}%`;
+      const min = Math.floor(t), seg = Math.floor((t - min) * 60);
+      $('vo2-progreso-texto').textContent = `Prueba en curso, minuto ${min}:${String(seg).padStart(2, '0')} de 5:00 (simulada). VO₂ ${n0(final * (0.35 + 0.65 * Math.sqrt(avance)), 1)} mL/kg/min`;
+      if (t < VO2_DURACION) requestAnimationFrame(paso); else guardarVo2(a, final, fcMax, fase);
+    };
+    requestAnimationFrame(paso);
+  });
+  async function guardarVo2(a, valor, fcMax, fase) {   // a: el astronauta con que empezó la prueba
+    guardandoVo2 = true;
+    const pad = (n) => String(n).padStart(2, '0'), d = new Date();
+    const fecha = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, hora = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const medicion = { id_medicion: `MON-${a.id_astronauta.replace('-', '')}-${fecha.replace(/-/g, '')}-${hora.replace(':', '')}-vo2pico`, id_astronauta: a.id_astronauta, fecha, hora, fase,
+      grupo_muscular: 'vo2pico', tarea: 'vo2pico', duracion_s: 300, vo2pico_ml_kg_min: valor, fc_max_lpm: fcMax, origen: 'simulador' };
+    const filas = Erdm.GRUPOS.map((g) => {
+      const id = Erdm.idEvaluacion(a.id_astronauta, fecha, g), previa = (Sesion.datos.Evaluaciones || []).find((e) => e.id_evaluacion === id);
+      const base = previa || { id_evaluacion: id, id_astronauta: a.id_astronauta, fecha, grupo_muscular: g, registrado_por: 'sensor', fase: fase === 'basal' || !Erdm.basal(a.id_astronauta, g) ? 'basal' : fase };
+      return Erdm.calcular({ ...base, vo2pico_ml_kg_min: valor });
+    });
+    $('vo2-progreso-texto').textContent = `VO₂pico ${n0(valor, 1)} mL/kg/min. Guardando…`;
+    try {
+      const nuevas = Erdm.alertas(filas);
+      const res = await API.guardarMedicion(medicion, filas.map(Erdm.paraGuardar));
+      (Sesion.datos.Monitoreo = Sesion.datos.Monitoreo || []).push(res.medicion || medicion);
+      const lista = (Sesion.datos.Evaluaciones = Sesion.datos.Evaluaciones || []);
+      (res.evaluaciones || filas).forEach((f) => { const i = lista.findIndex((e) => e.id_evaluacion === f.id_evaluacion); if (i >= 0) lista[i] = { ...lista[i], ...f }; else lista.push(f); });
+      let guardadas = [];
+      if (nuevas.length) { try { guardadas = (await API.guardarAlertas(nuevas)).alertas; guardadas.forEach((x) => Sesion.datos.Alertas.push(x)); } catch (err) { UI.aviso('El VO₂pico se guardó, pero no las alertas: ' + err.message, 'error'); } }
+      document.dispatchEvent(new CustomEvent('datos-actualizados'));
+      UI.aviso(`VO₂pico de ${n0(valor, 1)} mL/kg/min guardado en la escala de los seis músculos.${guardadas.length ? ` ${guardadas.length === 1 ? 'Se generó 1 alerta.' : `Se generaron ${guardadas.length} alertas.`}` : ''}`, guardadas.length ? 'advertencia' : 'completado');
+    } catch (err) {
+      UI.aviso('No se pudo guardar el VO₂pico: ' + err.message, 'error');
+    } finally {
+      midiendoVo2 = false; guardandoVo2 = false; $('vo2-fase').disabled = false; $('vo2-progreso').hidden = true;
+      pintarVo2(); pintarCuerpo(); pintarMinis(); if (abierto) { pintarErdm(); }
+    }
+  }
+
+  /* ======================================================== CANCELAR AL CAMBIAR DE ASTRONAUTA */
+  // Una medición o una prueba de VO2pico en curso no se puede guardar en otro astronauta: se cancela y se avisa.
+  // Si ya se estaba guardando, termina en el astronauta con que empezó.
+  function cancelarEnCurso(avisar) {
+    const habia = !!midiendo || (midiendoVo2 && !guardandoVo2);
+    if (midiendo) { midiendo = null; if (astronauta()) fuente = prepararFuente(false); else animando = false; }   // sin astronauta (pantalla de entrada) se detiene el ciclo
+    $('mon-medir').disabled = false; $('mon-medir').textContent = 'Iniciar medición'; $('mon-fase').disabled = false;
+    if (midiendoVo2 && !guardandoVo2) { vo2Turno++; midiendoVo2 = false; $('vo2-medir').disabled = false; $('vo2-fase').disabled = false; $('vo2-progreso').hidden = true; }
+    if (habia && avisar) UI.aviso('Se canceló la medición en curso al cambiar de astronauta; no se guardó nada.', 'advertencia');
+  }
+  document.addEventListener('sesion-cerrada', () => cancelarEnCurso(true));
+
   /* ======================================================== EVENTOS */
   document.addEventListener('astronauta-elegido', () => {
+    cancelarEnCurso(true);
     if (sexoFigura !== (String(astronauta().sexo).toUpperCase() === 'F' ? 'F' : 'M')) dibujarCuerpo(astronauta().sexo);
-    midiendo = null; Object.keys(bateria).forEach((k) => delete bateria[k]);
+    midiendo = null; congelado = null; Object.keys(bateria).forEach((k) => delete bateria[k]);
     // empieza por el músculo con más riesgo (o cuádriceps)
     const a = astronauta();
     const peor = Erdm.GRUPOS.map((g) => Erdm.ultima(a.id_astronauta, g)).filter(Boolean).sort((p, q) => q.puntaje_erdm - p.puntaje_erdm)[0];
@@ -772,7 +1093,7 @@
     abierto = false; $('mon-detalle').hidden = true;
     pintarTodo(); reiniciarReposo();
   });
-  document.addEventListener('datos-actualizados', () => { if (astronauta() && !midiendo) { pintarCuerpo(); pintarMinis(); pintarCabecera(); pintarErdm(); } });
+  document.addEventListener('datos-actualizados', () => { if (astronauta() && !midiendo) { pintarCuerpo(); pintarMinis(); pintarCabecera(); pintarErdm(); pintarMediciones(); pintarVo2(); } });
   document.addEventListener('astronauta-actualizado', () => {
     if (!astronauta() || midiendo) return;
     if (sexoFigura !== (String(astronauta().sexo).toUpperCase() === 'F' ? 'F' : 'M')) { dibujarCuerpo(astronauta().sexo); pintarCuerpo(); }

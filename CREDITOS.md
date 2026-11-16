@@ -8,7 +8,9 @@ ASTRA-FIT es un prototipo para el NASA Space Apps Challenge 2026. Esta lista re�
 | three.js (v0.160.0) | Visores 3D | MIT. Se carga desde jsDelivr. |
 | BodyParts3D © DBCLS, adaptada por open-anatomy-3d | Anatomía muscular del visor del cuerpo y de Monitoreo | CC BY 4.0. Los modelos se adelgazaron y se separaron con `astra-fit/publicar/herramientas/dividir-glb.js` (modificado). |
 | Xbot y animaciones (Mixamo, de los ejemplos de three.js) | Esqueleto y animaciones del visor | Por confirmar: términos de redistribución de Mixamo. |
-| `Michelle.glb`, `Soldier.glb`, `astronaut.glb`, naves y escenarios en `assets/` | Destinos y pruebas | Origen y licencia por confirmar. |
+| `astronaut.glb`, `assets/escenarios/` (ISS, módulo lunar Apollo, cápsula ESAS, hábitat HDU, rover SEV) y `assets/naves/` | Destinos | NASA 3D Resources (https://github.com/nasa/NASA-3D-Resources). Los archivos de escenarios son idénticos a los del catálogo. Uso según las pautas de medios de la NASA (sin respaldo de la NASA). |
+| Texturas de la Tierra y la Luna | Destinos | Ejemplos de three.js (MIT), cargadas desde jsDelivr. |
+| `Michelle.glb`, `Soldier.glb`, `avatar-male.glb` | Solo pruebas (no se muestran en la página) | Origen por confirmar; `avatar-male.glb` es de Ready Player Me. |
 | Inter | Tipografía | SIL Open Font License, vía Google Fonts. |
 | NASA Human Research Program | Referencia de los riesgos de salud del vuelo espacial | https://www.nasa.gov/hrp/risks/ |
 

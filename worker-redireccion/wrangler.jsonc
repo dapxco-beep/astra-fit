@@ -1,0 +1,7 @@
+// Worker con el nombre viejo: solo redirige a la dirección nueva (myocare.dapxco.workers.dev).
+{
+  "name": "astra-fit-modelos",
+  "main": "index.js",
+  "compatibility_date": "2026-11-13",
+  "workers_dev": true
+}

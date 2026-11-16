@@ -8,7 +8,7 @@
  * Solo una persona despliega, siempre con este script (anótalo en docs/equipo/NOTAS.md).
  */
 const { execSync, spawn } = require('child_process');
-const PROD = 'https://astra-fit-modelos.dapxco.workers.dev/';
+const PROD = 'https://myocare.dapxco.workers.dev/';
 const sh = (c) => execSync(c, { stdio: ['ignore', 'pipe', 'inherit'] }).toString().trim();
 const run = (c) => execSync(c, { stdio: 'inherit' });
 const pausa = (ms) => new Promise((r) => setTimeout(r, ms));

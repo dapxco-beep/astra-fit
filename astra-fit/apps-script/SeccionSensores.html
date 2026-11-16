@@ -37,12 +37,12 @@
     </div>
 
     <div class="guia-funciona">
-      <h3 class="titulo-tarjeta guia-subtitulo">Qué mide esta banda</h3>
+      <h3 class="titulo-tarjeta guia-subtitulo">Variables registradas</h3>
       <div class="guia-mide" id="guia-mide"></div>
     </div>
 
     <div class="guia-pie">
-      <p class="nota">Simulado. Colocación según SENIAM; es una propuesta del prototipo, no un protocolo oficial de NASA.</p>
+      <p class="nota">Colocación según las recomendaciones SENIAM para EMG de superficie. Datos simulados.</p>
       <button type="button" class="boton" id="guia-medir">Ver señales y medir</button>
     </div>
   </div>
@@ -61,46 +61,46 @@
      la vertical de la imagen). La IMU mide el movimiento de ese segmento durante la tarea. */
   const GUIA = {
     soleo: {
-      n: 1, segmento: 'Pierna, por dentro y abajo', fibras: 0,
-      postura: 'Sentado, con la rodilla doblada a unos 90° y el pie apoyado.',
-      punto: 'A dos tercios de la línea que va del cóndilo medial del fémur (rodilla, por dentro) al maléolo medial (tobillo, por dentro), debajo de la masa del gemelo.',
-      ref: 'Sobre el maléolo o la cara interna de la tibia.',
-      imu: 'la pierna: la flexión plantar mueve el pie, y la banda registra el ritmo y la regularidad de cada elevación'
+      n: 1, segmento: 'Pierna, cara medial distal', fibras: 0,
+      postura: 'Sedente, rodilla en flexión de 90° y pie apoyado.',
+      punto: 'A dos tercios de la línea entre el cóndilo medial del fémur y el maléolo medial, distal al vientre del gastrocnemio.',
+      ref: 'maléolo medial o cara medial de la tibia',
+      imu: 'la pierna durante la flexión plantar: ritmo y regularidad de cada elevación'
     },
     gastrocnemio: {
-      n: 2, segmento: 'Pantorrilla', fibras: 0,
-      postura: 'Boca abajo o de pie, con la rodilla extendida y el pie suelto.',
-      punto: 'Sobre la parte más abultada del gemelo interno (gastrocnemio medial), en la dirección de la pierna.',
-      ref: 'Sobre el tobillo o la tibia.',
-      imu: 'la pantorrilla: cuánto y qué tan parejo se eleva el talón en cada repetición'
+      n: 2, segmento: 'Pierna, cara posterior', fibras: 0,
+      postura: 'Decúbito prono o bipedestación, rodilla en extensión.',
+      punto: 'Sobre la zona más prominente del vientre del gastrocnemio medial, en el eje longitudinal de la pierna.',
+      ref: 'maléolo o tibia',
+      imu: 'la pierna: amplitud y regularidad de la elevación del talón en cada repetición'
     },
     cuadriceps: {
-      n: 3, segmento: 'Muslo, por delante', fibras: 4,
-      postura: 'Sentado, con el tronco derecho y la rodilla un poco doblada.',
-      punto: 'En la mitad de la línea que va de la espina ilíaca anterosuperior (el hueso saliente de la cadera) al borde superior de la rótula, sobre el recto femoral.',
-      ref: 'Sobre la rótula o el tobillo.',
-      imu: 'el muslo: velocidad y rango de la extensión de rodilla, y si las repeticiones salen iguales'
+      n: 3, segmento: 'Muslo, cara anterior', fibras: 4,
+      postura: 'Sedente, tronco erguido y rodilla en ligera flexión.',
+      punto: 'En el punto medio de la línea entre la espina ilíaca anterosuperior y el borde superior de la rótula, sobre el recto femoral.',
+      ref: 'rótula o maléolo',
+      imu: 'el muslo: velocidad y rango de la extensión de rodilla, y regularidad entre repeticiones'
     },
     biceps_braquial: {
-      n: 4, segmento: 'Brazo, por delante', fibras: 6,
-      postura: 'Sentado, con el codo doblado a 90° y la palma hacia arriba.',
-      punto: 'En la línea que va del acromion (la punta del hombro) a la fosa del codo, a un tercio de la distancia contando desde el codo.',
-      ref: 'Sobre la muñeca.',
-      imu: 'el brazo: cómo gira el segmento en cada flexión de codo y cuánto dura cada repetición'
+      n: 4, segmento: 'Brazo, cara anterior', fibras: 6,
+      postura: 'Sedente, codo en flexión de 90° y antebrazo en supinación.',
+      punto: 'Sobre la línea entre el acromion y la fosa cubital, a un tercio de la distancia desde la fosa cubital.',
+      ref: 'muñeca (apófisis estiloides del cúbito)',
+      imu: 'el brazo: rotación del segmento en cada flexión de codo y duración de cada repetición'
     },
     triceps_braquial: {
-      n: 5, segmento: 'Brazo, por detrás', fibras: -4,
-      postura: 'Sentado, con el brazo junto al cuerpo y el codo doblado a 90°.',
-      punto: 'En la mitad de la línea que va de la parte de atrás del acromion al olécranon (la punta del codo), dos dedos hacia adentro, sobre la cabeza larga.',
-      ref: 'Sobre la muñeca.',
+      n: 5, segmento: 'Brazo, cara posterior', fibras: -4,
+      postura: 'Sedente, brazo junto al tronco y codo en flexión de 90°.',
+      punto: 'En el punto medio de la línea entre la cresta posterior del acromion y el olécranon, dos traveses de dedo hacia medial, sobre la cabeza larga.',
+      ref: 'muñeca (apófisis estiloides del cúbito)',
       imu: 'el brazo: velocidad de la extensión de codo y regularidad entre repeticiones'
     },
     flexores_antebrazo: {
-      n: 6, segmento: 'Antebrazo, cara interna', fibras: 12,
-      postura: 'Sentado, con el antebrazo apoyado y la palma hacia arriba.',
-      punto: 'En el tercio superior de la cara interna del antebrazo, unos cuatro dedos debajo del pliegue del codo, sobre la masa que se endurece al cerrar el puño.',
-      ref: 'Sobre el hueso de la muñeca, del lado del meñique.',
-      imu: 'el antebrazo: el movimiento de la muñeca durante la prensión y si cada repetición se parece a la anterior'
+      n: 6, segmento: 'Antebrazo, cara anterior proximal', fibras: 12,
+      postura: 'Sedente, antebrazo apoyado en supinación.',
+      punto: 'Tercio proximal de la cara anterior del antebrazo, unos cuatro traveses de dedo distal al pliegue del codo, sobre el vientre muscular que se contrae con la prensión.',
+      ref: 'apófisis estiloides del cúbito',
+      imu: 'el antebrazo: movimiento de la muñeca durante la prensión y regularidad entre repeticiones'
     }
   };
 
@@ -130,13 +130,13 @@
   /* ======================================================== LOS PASOS
      El paso 2 cambia con el músculo. La animación muestra cada paso sobre la anatomía, acercada al músculo. */
   const PASOS = (gu) => [
-    { t: 'Prepara la piel', d: 'Si hay vello, rasura la zona. Frota suave y limpia con alcohol; deja secar. Menos resistencia de la piel, menos ruido en la señal.' },
-    { t: 'Ubica el punto', d: gu.punto },
-    { t: 'Pega los electrodos', d: 'Dos electrodos de 10 mm como máximo, con 20 mm entre centros, alineados con las fibras del músculo. El de referencia va ' + gu.ref.charAt(0).toLowerCase() + gu.ref.slice(1) },
-    { t: 'Ajusta la banda', d: 'Pasa la banda sobre los electrodos, firme pero sin apretar: no debe moverse ni girar al hacer el ejercicio. El módulo con la IMU queda hacia afuera.' },
-    { t: 'Conecta y calibra', d: 'Quédate quieto unos 5 segundos mientras ASTRA-FIT calibra la IMU y revisa la calidad de la señal. Cuando la luz pase a verde, la banda está lista.' }
+    { t: 'Preparar la piel', d: 'Rasurar si hay vello, abrasión suave y limpieza con alcohol; dejar secar. Así baja la impedancia piel-electrodo y el ruido de la señal.' },
+    { t: 'Ubicar el punto', d: gu.punto },
+    { t: 'Colocar los electrodos', d: 'Electrodos de 10 mm de diámetro como máximo, a 20 mm entre centros y alineados con las fibras. Referencia: ' + gu.ref + '.' },
+    { t: 'Ajustar la banda', d: 'Banda sobre los electrodos, firme sin comprimir; no debe desplazarse ni rotar durante la tarea. Módulo de la IMU en la cara externa.' },
+    { t: 'Conectar y calibrar', d: 'Reposo de unos 5 s mientras se calibra la IMU y se verifica la calidad de la señal. Indicador en verde: banda lista.' }
   ];
-  const LEYENDA = ['Limpia la zona', 'Marca el punto sobre el músculo', 'Par de electrodos, 20 mm', 'La banda cubre los electrodos', 'Calibrando… lista'];
+  const LEYENDA = ['Preparación de la piel', 'Punto de colocación', 'Electrodos a 20 mm', 'Banda colocada', 'Calibración'];
   const DURACION = 3200;   // ms por paso
 
   let grupoActual = null, paso = 0, temporizador = null, pausado = false;
@@ -148,7 +148,7 @@
     const svg = $('guia-svg'), F = window.FiguraMon;
     svg.querySelectorAll(':scope > :not(desc)').forEach((n) => n.remove());
     if (!F) return;
-    const m = F.MUSCULOS[grupo], sx = String((Sesion.astronauta || {}).sexo).toUpperCase() === 'F' ? 'F' : 'M', p = sx.toLowerCase();
+    const m = F.MUSCULOS[grupo], sx = F.FIGURA || 'M', p = sx.toLowerCase();
     const b = F.BANDAS[sx][m.mascara];
     // Coordenadas de la imagen (640 × 1000). Ventana de 290 × 348 centrada en la banda: se ve el músculo y su segmento.
     const cx = (b.x0 + b.x1) / 2 * 640, cy = b.y * 1000, ancho = (b.x1 - b.x0) * 640;
@@ -211,9 +211,9 @@
     $('guia-postura').innerHTML = `<strong>Postura:</strong> ${esc(gu.postura)}`;
     $('guia-pasos').innerHTML = PASOS(gu).map((x, i) => `<li><button type="button" data-paso="${i}"><span class="guia-num" aria-hidden="true">${i + 1}</span><span><strong>${esc(x.t)}</strong><span class="pequeno texto-2">${esc(x.d)}</span></span></button></li>`).join('');
     $('guia-mide').innerHTML = [
-      ['EMG', '2.000 Hz', `El par de electrodos capta la actividad eléctrica del ${esc(Erdm.etiqueta(grupo).toLowerCase())} durante la tarea (${esc(tarea.toLowerCase())}). De ahí salen el RMS y la frecuencia mediana, que alimentan la dimensión EMG de la escala.`],
-      ['IMU', '100 Hz', `El acelerómetro y el giroscopio miden ${esc(gu.imu)}. Eso da la coordinación: cuánto varían las repeticiones entre sí.`],
-      ['Fuerza', 'Dinamómetro', 'Durante el mismo ejercicio se registra la fuerza, que se compara con la basal para la dimensión de fuerza.']
+      ['EMG', '2.000 Hz', `Actividad eléctrica del ${esc(Erdm.etiqueta(grupo).toLowerCase())} durante la tarea estandarizada (${esc(tarea.toLowerCase())}). Se calculan RMS y frecuencia mediana para la dimensión EMG.`],
+      ['IMU', '100 Hz', `Acelerómetro y giroscopio sobre ${esc(gu.imu)}. La variación entre repeticiones (CV) define la dimensión de coordinación.`],
+      ['Fuerza', 'Dinamómetro', 'Fuerza en la misma tarea, comparada con la basal para la dimensión de fuerza.']
     ].map(([t, f, d]) => `<div class="guia-mide-item"><p><strong>${t}</strong> <span class="nota">${f}</span></p><p class="pequeno texto-2">${d}</p></div>`).join('');
     dibujar(grupo);
     pausado = false; $('guia-pausa').textContent = 'Pausar'; $('guia-pausa').hidden = quieto();

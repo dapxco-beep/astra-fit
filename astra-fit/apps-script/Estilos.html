@@ -255,7 +255,14 @@ a { color: var(--azul-enlace); }
 .vista[hidden] { display: none !important; }
 .acceso { min-height: 100vh; background: var(--blanco); padding: clamp(40px, 6vw, 72px) 0 var(--e-16); }
 .acceso .contenedor { display: grid; gap: var(--e-6); justify-items: center; text-align: center; }
-.logo { width: clamp(150px, 18vw, 210px); height: auto; }
+.logo { width: clamp(120px, 14vw, 168px); height: auto; }
+/* Marca MYOCARE en la entrada: el nombre grande y, debajo, su significado con las iniciales resaltadas.
+   En el resto de la app va solo el nombre. */
+.marca { display: grid; gap: var(--e-3); justify-items: center; margin-bottom: var(--e-4); }
+.marca-nombre { font-size: clamp(3.25rem, 9vw, 6rem); line-height: 1; font-weight: 700; letter-spacing: .06em; color: var(--tinta); }
+.marca-significado { max-width: 34ch; font-size: clamp(1rem, 1.6vw, 1.1875rem); line-height: 1.4; color: var(--tinta-2); letter-spacing: .005em; text-wrap: balance; }
+.marca-significado b { font-weight: 700; color: var(--azul); }
+.acceso-tripulacion { margin-top: var(--e-4); }
 .acceso .subtitulo { max-width: 640px; }
 
 .perfiles { width: 100%; display: grid; gap: var(--e-5); grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: var(--e-6); }
@@ -278,6 +285,7 @@ a { color: var(--azul-enlace); }
   .perfiles { gap: var(--e-3); }
   .perfil { grid-template-columns: 56px minmax(0, 1fr); justify-items: start; text-align: left; column-gap: var(--e-4); row-gap: 2px; padding: var(--e-4) var(--e-5); border-radius: 20px; }
   .perfil .avatar { grid-row: span 4; width: 56px; height: 56px; font-size: 1.25rem; margin: 0; align-self: center; }
+  .perfil .avatar--emoji { font-size: 2rem; }
   .perfil .titulo-tarjeta { font-size: 1.1875rem; }
   .perfil .enlace { margin-top: 0; }
 }
@@ -286,6 +294,13 @@ a { color: var(--azul-enlace); }
 .perfil-nuevo .avatar { background: var(--fondo); color: var(--azul); font-weight: 400; font-size: 2.5rem; }
 
 .hoja { width: 100%; max-width: 760px; text-align: left; background: var(--fondo); }
+.perfil-pie { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--e-4); }
+.perfil-eliminar { color: var(--rojo-texto); font-size: var(--t-pequeno); }
+.perfil-confirmar { display: grid; gap: var(--e-2); padding: var(--e-4); border-radius: 16px; background: var(--rojo-fondo); }
+.perfil-confirmar[hidden] { display: none; }
+.perfil-confirmar-botones { display: flex; flex-wrap: wrap; gap: var(--e-3); margin-top: var(--e-2); }
+.boton--peligro { background: var(--rojo-texto); color: #fff; }
+.boton--peligro:hover { background: #b80012; }
 .hoja-cabecera { display: flex; justify-content: space-between; align-items: baseline; gap: var(--e-4); }
 
 /* Barra superior del panel: astronauta activo y botón para cambiarlo */
@@ -298,10 +313,6 @@ a { color: var(--azul-enlace); }
 .avatar--grande.avatar--0, .avatar--grande.avatar--1, .avatar--grande.avatar--2 { font-size: 2.5rem; }
 .seccion--gris .avatar--emoji, .hero .avatar--emoji { background: var(--fondo); }
 .nav-astronauta .avatar--emoji { font-size: 15px; background: transparent; }
-/* Avatar serio: busto de astronauta con casco (JsAvatares.html). La ilustración trae su propio fondo. */
-.avatar--serio { display: block; padding: 0; overflow: hidden; background: transparent; }
-.avatar--serio svg { display: block; width: 100%; height: 100%; }
-.emoji-opcion .avatar--serio { width: 40px; height: 40px; margin: 0; border-radius: 50%; }
 
 .dialogo {
   width: min(760px, 100% - 32px); max-height: min(92vh, 900px); padding: 0; border: 0; border-radius: var(--radio-tarjeta);
@@ -379,7 +390,7 @@ a { color: var(--azul-enlace); }
 .hero-centro { display: grid; justify-items: center; gap: var(--e-4); padding: clamp(8px, 3vw, 40px) 0 clamp(24px, 6vw, 96px); }
 .hero-id { color: var(--tinta-clara-2); }
 .escena .subtitulo { color: var(--tinta-clara-2); max-width: 720px; }
-.escena .avatar--emoji, .escena .avatar--serio { background: rgba(255, 255, 255, .12); box-shadow: 0 0 0 1px rgba(255, 255, 255, .14), 0 20px 60px rgba(90, 200, 250, .18); }
+.escena .avatar--emoji { background: rgba(255, 255, 255, .12); box-shadow: 0 0 0 1px rgba(255, 255, 255, .14), 0 20px 60px rgba(90, 200, 250, .18); }
 .escena .enlace { color: #2997ff; }
 .escena-tarjetas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--e-3); text-align: left; }
 .vidrio { display: grid; align-content: start; gap: var(--e-2); padding: var(--e-5); border-radius: 18px; background: rgba(20, 22, 30, .42); border: 1px solid rgba(255, 255, 255, .14); -webkit-backdrop-filter: blur(22px) saturate(160%); backdrop-filter: blur(22px) saturate(160%); }
@@ -854,7 +865,217 @@ a.nav-astronauta { color: inherit; text-decoration: none; }
 .nota-hallazgos { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px var(--e-4); font-size: var(--t-pequeno); font-variant-numeric: tabular-nums; }
 .nota-hallazgos span { color: var(--tinta-2); }
 .alr-mensaje { display: grid; gap: 6px; }
+.nota-plan { margin: 4px 0 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px var(--e-3); }
+.nota-plan dt { color: var(--tinta-2); }
+.nota-plan dd { margin: 0; max-width: 72ch; }
+@media (max-width: 640px) { .nota-plan { grid-template-columns: minmax(0, 1fr); gap: 2px; } .nota-plan dd { margin-bottom: 6px; } .nota-plan dt:empty { display: none; } }
 .alr-tabla th[scope="row"] { font-size: var(--t-pequeno); font-weight: 600; color: var(--tinta); white-space: nowrap; }
 .alr-tabla thead th { white-space: nowrap; }
 .alr-tabla td .estado { white-space: nowrap; }
+
+/* ================================================================ 102. RECORRIDO Y ACCESIBILIDAD (auditorías del 15-nov) */
+.saltar { position: absolute; left: -9999px; top: 8px; z-index: 200; padding: 10px 14px; border-radius: 8px; background: var(--blanco); color: var(--azul-enlace); font-weight: 600; text-decoration: none; }
+.saltar:focus { left: 8px; box-shadow: 0 0 0 3px var(--azul); }
+#contenido:focus { outline: none; }
+.siguiente-vista { width: min(1180px, 100% - 48px); margin: 0 auto var(--e-8); display: flex; flex-wrap: wrap; gap: var(--e-3) var(--e-5); align-items: center; justify-content: space-between; padding: var(--e-4) var(--e-6); border-radius: 20px; background: var(--blanco); }
+.siguiente-vista .nota { margin: 0; }
+.cuerpo-hacer { display: flex; flex-wrap: wrap; gap: var(--e-3) var(--e-6); align-items: center; justify-content: space-between; margin-bottom: var(--e-5); border-left: 6px solid var(--azul-sobre-negro); }
+.cuerpo-hacer[hidden] { display: none; }
+.cuerpo-hacer .nota { margin: 0 0 2px; }
+.nav-item:hover { background: rgba(0, 0, 0, .06); }
+.mon-chip:hover, .mon-mini:hover { box-shadow: 0 2px 8px rgba(0, 0, 0, .12); border-color: var(--azul); }
+/* Pantallas táctiles: objetivos de 44 px también en tablets y en horizontal */
+@media (pointer: coarse) {
+  .boton--pequeno, .segmentado button, .enlace { min-height: 44px; }
+  .enlace { display: inline-flex; align-items: center; }
+  .visor canvas { touch-action: pan-y; }
+}
+/* Celular en horizontal: la barra superior no ocupa media pantalla */
+@media (max-height: 500px) {
+  .barra-superior { position: static; }
+  .barra-superior .nav-etiqueta { display: none; }
+}
+@media (max-width: 899px) {
+  .siguiente-vista { width: min(100% - 32px, 1180px); padding: var(--e-4); }
+  .siguiente-vista .boton { width: 100%; min-height: 48px; }
+  .cuerpo-hacer .boton { width: 100%; }
+}
+
+/* ================================================================ 103. PANEL PLEGABLE Y MOVIMIENTO */
+:root { --curva-suave: cubic-bezier(.22, .8, .2, 1); --dur-corta: .18s; --dur-media: .32s; --dur-larga: .42s; }
+.nav-cabeza { display: flex; align-items: center; justify-content: space-between; gap: var(--e-2); }
+.nav-plegar { flex: none; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 12px; background: transparent; color: var(--tinta-2); cursor: pointer; }
+.nav-plegar:hover { background: var(--fondo); color: var(--tinta); }
+.nav-marca-largo, .nav-etiqueta-largo, .nav-texto, .barra-lateral #nav-nombre, .nav-item > span:not(.nav-badge) { display: inline-block; max-width: 180px; overflow: hidden; white-space: nowrap; vertical-align: middle; }
+.nav-marca-corto, .nav-etiqueta-corto, .nav-icono { display: none; }
+@media (min-width: 900px) {
+  .tablero { grid-template-columns: var(--lateral, 240px) minmax(0, 1fr); }
+  .tablero--plegado { --lateral: 76px; }
+  .barra-lateral { overflow-x: hidden; }
+  .tablero--plegado .nav-marca-largo, .tablero--plegado .nav-etiqueta-largo, .tablero--plegado .nav-texto, .tablero--plegado .barra-lateral #nav-nombre, .tablero--plegado .nav-item > span:not(.nav-badge) { max-width: 0; opacity: 0; }
+  .tablero--plegado .nav-marca-corto, .tablero--plegado .nav-etiqueta-corto, .tablero--plegado .nav-icono { display: inline; }
+  .tablero--plegado .nav-cabeza { flex-direction: column; gap: var(--e-2); }
+  .tablero--plegado .nav-marca { margin: 0; }
+  .tablero--plegado .nav-plegar svg { transform: rotate(180deg); }
+  .tablero--plegado .nav-etiqueta { padding: 3px 6px; align-self: center; }
+  .tablero--plegado .nav-astronauta { justify-content: center; }
+  .tablero--plegado .nav-item { justify-content: center; gap: 0; padding: 0; }
+  .tablero--plegado .nav-badge { position: absolute; top: 2px; right: 2px; margin: 0; min-width: 18px; padding: 0 5px; font-size: 11px; }
+  .tablero--plegado .nav-cambiar { padding: 0; min-width: 44px; }
+}
+/* Movimiento (se apaga si la persona pide menos movimiento) */
+@media (prefers-reduced-motion: no-preference) {
+  .tablero { transition: grid-template-columns var(--dur-media) var(--curva-suave); }
+  .nav-marca-largo, .nav-etiqueta-largo, .nav-texto, .barra-lateral #nav-nombre, .nav-item > span:not(.nav-badge) { transition: max-width var(--dur-media) var(--curva-suave), opacity var(--dur-corta) ease; }
+  .nav-plegar svg { transition: transform var(--dur-media) var(--curva-suave); }
+  .nav-item, .nav-plegar { transition: background-color var(--dur-corta) ease, color var(--dur-corta) ease; }
+  @keyframes vistaEntra { from { opacity: 0; } to { opacity: 1; } }
+  .vista-entra { animation: vistaEntra .38s var(--curva-suave); }
+  @keyframes tarjetaEntra { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
+  .vista-entra .hoy-kpis > *, .vista-entra .hoy-musculos > *, .vista-entra .alr-lista > *, .vista-entra .alr-planes > * { animation: tarjetaEntra var(--dur-larga) var(--curva-suave) both; }
+  .vista-entra .hoy-kpis > :nth-child(2), .vista-entra .hoy-musculos > :nth-child(2), .vista-entra .alr-lista > :nth-child(2), .vista-entra .alr-planes > :nth-child(2) { animation-delay: 50ms; }
+  .vista-entra .hoy-kpis > :nth-child(3), .vista-entra .hoy-musculos > :nth-child(3), .vista-entra .alr-lista > :nth-child(3), .vista-entra .alr-planes > :nth-child(3) { animation-delay: 100ms; }
+  .vista-entra .hoy-kpis > :nth-child(4), .vista-entra .hoy-musculos > :nth-child(4), .vista-entra .alr-lista > :nth-child(4), .vista-entra .alr-planes > :nth-child(4) { animation-delay: 150ms; }
+  .vista-entra .hoy-musculos > :nth-child(5), .vista-entra .alr-lista > :nth-child(5), .vista-entra .alr-planes > :nth-child(5) { animation-delay: 200ms; }
+  .vista-entra .hoy-musculos > :nth-child(6), .vista-entra .alr-lista > :nth-child(6), .vista-entra .alr-planes > :nth-child(6) { animation-delay: 250ms; }
+  @keyframes desplegar { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  .alr-cierre, .cuerpo-hacer:not([hidden]) { animation: desplegar .28s var(--curva-suave); }
+  .siguiente-vista .boton { transition: transform var(--dur-corta) var(--curva-suave), box-shadow var(--dur-corta) ease, background-color var(--dur-corta) ease; }
+  .siguiente-vista .boton:hover { transform: translateX(4px); }
+  .hoy-musculo, .hoy-atajo { transition: transform var(--dur-corta) var(--curva-suave), box-shadow var(--dur-corta) ease, background-color var(--dur-corta) ease; }
+  .hoy-musculo:hover, .hoy-atajo:hover { transform: translateY(-2px); }
+  .nav-badge { animation: pulsoInsignia 2.4s ease-in-out infinite; }
+  @keyframes pulsoInsignia { 0%, 100% { box-shadow: 0 0 0 0 rgba(215, 0, 21, .35); } 50% { box-shadow: 0 0 0 5px rgba(215, 0, 21, 0); } }
+}
+html[data-ligero] .vista-entra, html[data-ligero] .vista-entra * { animation: none !important; }
+html[data-ligero] .tablero { transition: none; }
+.tablero.sin-transicion, .tablero.sin-transicion * { transition: none !important; }
+/* Celular: las barras se esconden al bajar y vuelven al subir */
+@media (max-width: 899px) {
+  .barra-superior, .barra-inferior { transition: transform var(--dur-media) var(--curva-suave); }
+  .barras-ocultas .barra-superior { transform: translateY(-100%); }
+  .barras-ocultas .barra-inferior { transform: translateY(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .barra-superior, .barra-inferior { transition: none; }
+}
+
+/* ================================================================ 104. DIRECCIÓN VISUAL "TELEMETRÍA DE MISIÓN" (auditoría de diseño del 15-nov) */
+:root {
+  --noche-1: #070b1a; --noche-2: #0d1530; --noche-3: #16224a; --cian: #38d0e8;
+  --fondo: #f3f5fa;
+  --sombra-1: 0 1px 2px rgba(15, 31, 75, .06), 0 4px 14px rgba(15, 31, 75, .06);
+  --sombra-2: 0 2px 4px rgba(15, 31, 75, .08), 0 12px 32px rgba(15, 31, 75, .10);
+  --fuente-cifras: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+/* Panel lateral nocturno */
+.barra-lateral { background: linear-gradient(180deg, var(--noche-2), var(--noche-1)); border-right: 0; }
+.barra-lateral .nav-marca, .barra-lateral .nav-astronauta { color: #f1f4ff; }
+.barra-lateral .nav-item { color: #aab6d8; }
+.barra-lateral .nav-item:hover { background: rgba(255, 255, 255, .08); color: #fff; }
+.barra-lateral .nav-item[aria-current="page"] { background: rgba(56, 208, 232, .14); color: #fff; box-shadow: inset 3px 0 0 var(--cian); }
+.barra-lateral .nav-plegar { color: #aab6d8; }
+.barra-lateral .nav-plegar:hover { background: rgba(255, 255, 255, .08); color: #fff; }
+.barra-lateral .nav-etiqueta { background: rgba(255, 176, 32, .16); color: #ffd27a; }
+.barra-lateral .nav-cambiar { color: #d6e4ff; background: transparent; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .3); }
+.barra-lateral .nav-cambiar:hover { background: rgba(255, 255, 255, .1); }
+.barra-lateral .nav-astronauta .avatar { box-shadow: 0 0 0 2px rgba(56, 208, 232, .45); }
+/* Tarjetas con elevación suave y cifras tipo telemetría */
+.tarjeta { box-shadow: var(--sombra-1); }
+.seccion--negra .tarjeta { box-shadow: none; }
+.cifra, .hoy-cifra, .hoy-puntaje { font-family: var(--fuente-cifras); font-weight: 500; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.hoy-kpi { border-left: 0; border-top: 3px solid var(--linea); }
+.hoy-kpi[data-nivel="amarillo"] { border-top-color: var(--amarillo); } .hoy-kpi[data-nivel="verde"] { border-top-color: var(--verde); } .hoy-kpi[data-nivel="rojo"] { border-top-color: var(--rojo); }
+/* Estados como píldora con fondo suave (fuera de las secciones oscuras) */
+.estado--verde, .estado--amarillo, .estado--rojo { padding: 3px 10px; border-radius: 999px; }
+.estado--verde { background: var(--verde-fondo); } .estado--amarillo { background: var(--amarillo-fondo); } .estado--rojo { background: var(--rojo-fondo); }
+.seccion--negra .estado--verde, .seccion--negra .estado--amarillo, .seccion--negra .estado--rojo, .hoy-musculo .estado, .mon-chip .estado, .mon-leyenda .estado { background: transparent; padding: 0; }
+/* Secciones oscuras: azul noche en vez de negro puro */
+.seccion--negra { background: var(--noche-1); }
+.visor { background: radial-gradient(circle at 50% 40%, var(--noche-3), var(--noche-1)); }
+@media (min-width: 1280px) { :root { --ancho: 1200px; } }
+/* Celular: notch, barras del sistema y teclado */
+@media (max-width: 899px) {
+  .barra-superior { padding-top: calc(4px + env(safe-area-inset-top)); padding-left: calc(var(--e-4) + env(safe-area-inset-left)); padding-right: calc(var(--e-4) + env(safe-area-inset-right)); }
+  body.teclado .barra-inferior { display: none; }
+  input, select, textarea { font-size: 16px; }
+  * { -webkit-tap-highlight-color: transparent; }
+}
+
+/* ================================================================ 105. CRUCE SUAVE AL PLEGAR (la versión larga se desvanece, la corta entra después) */
+.nav-marca-corto, .nav-etiqueta-corto, .nav-icono { display: inline-block; max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap; vertical-align: middle; }
+@media (min-width: 900px) {
+  .tablero--plegado .nav-marca-corto, .tablero--plegado .nav-etiqueta-corto, .tablero--plegado .nav-icono { display: inline-block; max-width: 3em; opacity: 1; }
+}
+@media (max-width: 899px) { .nav-marca-corto, .nav-etiqueta-corto, .nav-icono { display: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .nav-marca-corto, .nav-etiqueta-corto, .nav-icono { transition: max-width var(--dur-media) var(--curva-suave), opacity var(--dur-corta) ease; }
+  .tablero--plegado .nav-marca-corto, .tablero--plegado .nav-etiqueta-corto, .tablero--plegado .nav-icono { transition-delay: .14s; }
+  .nav-marca-largo, .nav-etiqueta-largo, .nav-texto, .barra-lateral #nav-nombre, .nav-item > span:not(.nav-badge) { transition: max-width var(--dur-media) var(--curva-suave), opacity .12s ease; }
+  .tablero:not(.tablero--plegado) .nav-marca-largo, .tablero:not(.tablero--plegado) .nav-etiqueta-largo, .tablero:not(.tablero--plegado) .nav-texto, .tablero:not(.tablero--plegado) #nav-nombre, .tablero:not(.tablero--plegado) .nav-item > span:not(.nav-badge) { transition-delay: .1s, .14s; }
+}
+
+/* ================================================================ 106. NAVEGACIÓN, FOCO Y AVISOS (auditoría del 15-nov) */
+@media (max-width: 899px) {
+  .aviso { bottom: calc(84px + env(safe-area-inset-bottom)); width: max-content; max-width: calc(100% - 32px); }
+  .aviso > span { flex: 1 1 auto; min-width: 0; }
+  body.barras-ocultas .aviso, body.teclado .aviso { bottom: calc(16px + env(safe-area-inset-bottom)); }
+  .aviso button { min-height: 44px; }
+  .barra-superior .nav-astronauta { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+  #nav-nombre-m { display: inline-block; max-width: 11ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: var(--t-pequeno); }
+}
+@media (max-width: 359px) { #nav-nombre-m { max-width: 7ch; } }
+.alr-lista > article:focus, #mon-titulo:focus, #acceso-titulo:focus { outline: none; }
+.alr-lista > article:focus-visible { outline: 2px solid var(--azul); outline-offset: 3px; }
+.tabla-envoltura:focus-visible { outline: 2px solid var(--azul); outline-offset: 2px; }
+/* Mediciones guardadas: nota de las gráficas, tabla de mediciones (ver y eliminar) y VO2pico */
+.mon-graficas-barra { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--e-2) var(--e-4); margin: var(--e-2) 0; }
+.mon-graficas-barra p { color: var(--tinta-2); }
+.mon-mini-ultima { color: var(--tinta-2); }
+.mon-historial { padding: var(--e-5); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--e-3); margin-top: var(--e-4); }
+.mon-vo2, .mon-vo2-figura { grid-template-columns: minmax(0, 1fr); }
+.mon-tabla-med { font-size: var(--t-pequeno); font-variant-numeric: tabular-nums; }
+.mon-tabla-med th[scope="row"] { font-weight: 600; white-space: nowrap; color: var(--tinta); }
+.mon-tabla-med tr.es-actual { background: rgba(0, 113, 227, .06); }
+.mon-acciones { white-space: nowrap; text-align: right; }
+.mon-acciones > button + button { margin-left: var(--e-3); }
+.mon-eliminar { color: var(--rojo-texto); }
+.mon-confirmar { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--e-2); }
+.mon-vo2 { padding: var(--e-6); display: grid; gap: var(--e-5); margin-top: var(--e-6); }
+.mon-vo2-cabecera { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: var(--e-4); }
+.mon-vo2-cabecera .pila-chica { display: grid; gap: 4px; max-width: 60ch; }
+.mon-vo2-cuerpo { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: var(--e-6); align-items: start; }
+.mon-vo2-pasos { margin: 0; padding-left: 1.25em; display: grid; gap: var(--e-2); }
+.mon-vo2-escala { display: grid; gap: var(--e-2); padding: var(--e-4); border-radius: 14px; background: var(--fondo); }
+.mon-vo2-cortes { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.mon-vo2-cortes .estado { min-width: 86px; display: inline-block; }
+.mon-vo2-progreso { display: grid; gap: var(--e-2); }
+.mon-vo2-barra { height: 6px; border-radius: 999px; background: var(--fondo); overflow: hidden; }
+.mon-vo2-barra span { display: block; height: 100%; width: 0; background: var(--azul); border-radius: inherit; }
+.mon-vo2-figura { margin: 0; display: grid; gap: var(--e-2); }
+.mon-vo2-dato { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--e-2) var(--e-3); }
+.mon-vo2-valor { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.mon-vo2-valor small { font-size: var(--t-pequeno); font-weight: 400; color: var(--tinta-2); }
+.vo2-svg { width: 100%; height: auto; display: block; }
+.vo2-eje { font-size: 11px; fill: var(--tinta-2); }
+.vo2-basal { stroke: var(--tinta-2); stroke-width: 1; }
+.vo2-corte { stroke-width: 1; stroke-dasharray: 4 4; }
+.vo2-corte--moderado { stroke: var(--amarillo); } .vo2-corte--alto { stroke: var(--rojo); }
+.vo2-linea { fill: none; stroke: var(--azul); stroke-width: 2; stroke-linejoin: round; }
+.vo2-punto { stroke: #fff; stroke-width: 2; } .vo2-punto--verde { fill: var(--verde); } .vo2-punto--amarillo { fill: var(--amarillo); } .vo2-punto--rojo { fill: var(--rojo); }
+@media (max-width: 900px) { .mon-vo2-cuerpo { grid-template-columns: minmax(0, 1fr); } .mon-vo2 { padding: var(--e-5); } }
+
+/* ================================================================ 107. MONITOREO EN EL CELULAR: GRÁFICAS Y TABLAS QUE NO SE SALEN */
+.mon-grafica-titulo, .mon-series { flex-wrap: wrap; row-gap: 2px; }
+.tabla-envoltura { position: relative; }   /* lo que va oculto para lectores de pantalla dentro de la tabla no estira la página */
+@media (max-width: 760px) { .mon-erdm-rejilla { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 760px) {
+  .mon-detalle .mon-graficas { grid-template-columns: minmax(0, 1fr); }
+}
+/* Tablas anchas: una sombra en el borde avisa que hay más columnas hacia el lado */
+#monitoreo .tarjeta .tabla-envoltura {
+  background: linear-gradient(to right, #fff 30%, rgba(255, 255, 255, 0)), linear-gradient(to left, #fff 30%, rgba(255, 255, 255, 0)) 100% 0,
+    radial-gradient(farthest-side at 0 50%, rgba(15, 31, 75, .2), transparent), radial-gradient(farthest-side at 100% 50%, rgba(15, 31, 75, .2), transparent) 100% 0;
+  background-repeat: no-repeat; background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%; background-attachment: local, local, scroll, scroll;
+}
 </style>
