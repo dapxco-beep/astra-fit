@@ -531,21 +531,25 @@
   const gravedad = () => (Calc.ENTORNOS[(astronauta() && astronauta().entorno) || 'orbita'] || Calc.ENTORNOS.orbita).gravedad.g;
 
   /** "Estado real" del músculo hoy: parte de su última evaluación y medición, con una pequeña variación. */
+  // Solo sirven de referencia los números positivos: un campo vacío ("") o en 0 (por ejemplo, la fila que deja un VO2pico
+  // o una medición eliminada) daría una señal inválida.
+  const positivo = (x) => { if (x === '' || x === null || x === undefined) return null; const n = Number(x); return Number.isFinite(n) && n > 0 ? n : null; };
   function objetivo(g) {
     const a = astronauta();
-    const u = Erdm.historial(a.id_astronauta, g).filter((e) => e.emg_rms_uv !== null && e.emg_rms_uv !== undefined).pop();
+    const u = Erdm.historial(a.id_astronauta, g).filter((e) => positivo(e.emg_rms_uv) && positivo(e.emg_frec_mediana_hz)).pop();
     const m = ultimaMedicion(g);
-    const fz = Erdm.historial(a.id_astronauta, g).filter((e) => e.fuerza_kg !== null && e.fuerza_kg !== undefined && e.fuerza_kg !== '').pop();
+    const fz = Erdm.historial(a.id_astronauta, g).filter((e) => positivo(e.fuerza_kg)).pop();
     const [rms0, f0, cv0, rom0] = BASE[g];
     const v = (x, s) => x * (1 + azar() * s);
+    const de = (x, porDefecto) => positivo(x) || porDefecto;
     return {
-      rms: v(u ? Number(u.emg_rms_uv) : rms0, u ? 0.02 : 0.08),
-      fmed: v(u ? Number(u.emg_frec_mediana_hz) : f0, u ? 0.012 : 0.05),
-      cv: Math.max(2, v(u ? Number(u.coordinacion_cv_pct) : cv0, u ? 0.04 : 0.1)),
-      fatiga: Math.max(1, v(m ? Number(m.fatiga_pct) : 5, 0.15)),
-      velocidad: v(m ? Number(m.velocidad_ms) : 0.8, 0.03),
-      rom: v(m ? Number(m.rom_grados) : rom0, 0.02),
-      fuerza: v(fz ? Number(fz.fuerza_kg) : FUERZA_BASE[g], fz ? 0.015 : 0.1)   // dinamómetro: mejor de las repeticiones
+      rms: v(u ? positivo(u.emg_rms_uv) : rms0, u ? 0.02 : 0.08),
+      fmed: v(u ? positivo(u.emg_frec_mediana_hz) : f0, u ? 0.012 : 0.05),
+      cv: Math.max(2, v(u ? de(u.coordinacion_cv_pct, cv0) : cv0, u ? 0.04 : 0.1)),
+      fatiga: Math.max(1, v(m ? de(m.fatiga_pct, 5) : 5, 0.15)),
+      velocidad: v(m ? de(m.velocidad_ms, 0.8) : 0.8, 0.03),
+      rom: v(m ? de(m.rom_grados, rom0) : rom0, 0.02),
+      fuerza: v(fz ? positivo(fz.fuerza_kg) : FUERZA_BASE[g], fz ? 0.015 : 0.1)   // dinamómetro: mejor de las repeticiones
     };
   }
 
@@ -702,7 +706,8 @@
         if (escritas < total && a >= cabeza) break;                       // aún no hay datos aquí
         if (Math.abs(a - cabeza) < fsSerie * 0.15 && escritas >= total && a > cabeza) { empezado = false; continue; }   // hueco del barrido
         let lo = Infinity, hi = -Infinity;
-        for (let k = a; k < b; k++) { const v = serie[k]; if (v < lo) lo = v; if (v > hi) hi = v; }
+        for (let k = a; k < b; k++) { const v = serie[k]; if (!Number.isFinite(v)) continue; if (v < lo) lo = v; if (v > hi) hi = v; }
+        if (hi === -Infinity) { empezado = false; continue; }   // sin valores válidos en esta columna: hueco
         const xpx = izq + px;
         if (!empezado) { ctx.moveTo(xpx, y(hi)); empezado = true; } else ctx.lineTo(xpx, y(hi));
         if (porPx > 1.5 && nombre === 'emg') ctx.lineTo(xpx, y(lo));
@@ -780,6 +785,11 @@
     const s = fuente, m = midiendo, a = astronauta();
     if (!a || a.id_astronauta !== m.id) { cancelarEnCurso(); return; }   // se cambió de astronauta a mitad de la medición
     const r = procesar(s);
+    if (![r.rms, r.fmed, r.pico].every((x) => Number.isFinite(x) && x > 0)) {   // nunca se guarda una medición sin señal válida
+      cancelarEnCurso(false);
+      UI.aviso('La medición no tuvo una señal válida y no se guardó. Iniciarla de nuevo.', 'error');
+      return;
+    }
     const senales = capturarSenales();   // las 6 repeticiones quedan guardadas con la medición
     midiendo = null;
     fuente = prepararFuente(false);
@@ -848,7 +858,7 @@
   }
   function cargarSenales(texto) {
     let s; try { s = typeof texto === 'string' ? JSON.parse(texto) : texto; } catch (e) { return false; }
-    if (!s || !Array.isArray(s.emg)) return false;
+    if (!s || !Array.isArray(s.emg) || !s.emg.some(Number.isFinite)) return false;   // señales sin EMG válido: no se muestran
     const interpolar = (destino, puntos) => { const n = destino.length, m = puntos.length;
       for (let k = 0; k < n; k++) { const x = (k + 0.5) / n * m - 0.5, i = Math.max(0, Math.min(m - 1, Math.floor(x))), j = Math.min(m - 1, i + 1), t = Math.max(0, Math.min(1, x - i)); destino[k] = puntos[i] * (1 - t) + puntos[j] * t; } };
     const tramos = s.emg.length / 2, paso = buf.emg.length / tramos;
