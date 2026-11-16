@@ -1,6 +1,6 @@
 # Créditos y licencias
 
-ASTRA-FIT es un prototipo para el NASA Space Apps Challenge 2026. Esta lista reúne lo que se sabe del origen de cada recurso.
+MYOCARE es un prototipo para el NASA Space Apps Challenge 2026. Esta lista reúne lo que se sabe del origen de cada recurso.
 **Lo marcado "por confirmar" debe verificarse antes de la entrega.**
 
 | Recurso | Uso | Licencia / fuente |
@@ -16,5 +16,5 @@ ASTRA-FIT es un prototipo para el NASA Space Apps Challenge 2026. Esta lista re�
 
 ## Limitaciones que deben decirse siempre
 - Los datos son **simulados**. No hay sensores reales ni personas reales.
-- ASTRA-FIT **no es un dispositivo médico**. Las alertas son indicadores de seguimiento, no diagnósticos.
+- MYOCARE **no es un dispositivo médico**. Las alertas son indicadores de seguimiento, no diagnósticos.
 - La demostración publicada no tiene autenticación: cualquiera con el enlace puede leer y escribir. No uses datos reales.

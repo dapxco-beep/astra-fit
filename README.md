@@ -1,4 +1,8 @@
-# NASA Space Apps 2026 — Health Monitoring Software
+# MYOCARE — NASA Space Apps 2026 (Health Monitoring Software)
+
+**App publicada: https://myocare.dapxco.workers.dev**
+
+Muscle Yield Observation, Conditioning and Risk Evaluation: tablero para seguir la condición muscular de la tripulación en órbita, en la Luna y en Marte. Datos simulados; no es un dispositivo médico.
 
 ## Cómo correr y desplegar
 - Local: `node astra-fit/local/server.js` y abrir http://localhost:3000 (sin instalar nada).
