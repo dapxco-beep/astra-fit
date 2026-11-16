@@ -156,7 +156,7 @@
   // Las imágenes de anatomía (≈750 KB) se piden cuando la figura está cerca de verse, no al elegir astronauta
   let figuraVisible = false; const diferidas = [];
   const ponerHref = (nodo, url) => { if (figuraVisible) nodo.setAttribute('href', url); else { nodo.dataset.src = url; diferidas.push(nodo); } };
-  const BASE_IMG = (typeof API !== 'undefined' && API.modo === 'local') ? '/assets/anatomia2d/' : 'https://astra-fit-modelos.dapxco.workers.dev/assets/anatomia2d/';
+  const BASE_IMG = (typeof API !== 'undefined' && API.modo === 'local') ? '/assets/anatomia2d/' : 'https://myocare.dapxco.workers.dev/assets/anatomia2d/';
   const CX = { anterior: 262, posterior: 498 };
   const IMG_H = 560, IMG_W = IMG_H * 0.64, IMG_Y = 4;                 // las imágenes son de 640 × 1000
   const ARCHIVO_VISTA = { anterior: 'front', posterior: 'back' };

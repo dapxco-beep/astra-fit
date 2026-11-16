@@ -2,7 +2,7 @@
  * humo.js — Prueba de humo de ASTRA-FIT con Playwright y el Chrome instalado. Solo lectura: no guarda nada.
  *
  *   node scripts/humo.js                 (contra http://localhost:3000)
- *   node scripts/humo.js https://astra-fit-modelos.dapxco.workers.dev/
+ *   node scripts/humo.js https://myocare.dapxco.workers.dev/
  *
  * Revisa, en escritorio y en celular: que carga la tripulación, que no hay errores de JavaScript, que la API responde,
  * y que se llega a CADA vista con clics reales (en el celular, incluido el menú "Más").

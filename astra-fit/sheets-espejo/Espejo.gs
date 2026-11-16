@@ -15,7 +15,7 @@
 
 // La misma clave que se guarda en Cloudflare con: npx wrangler secret put SHEETS_CLAVE
 const CLAVE = 'PEGAR-AQUI-LA-CLAVE';
-const PAGINA = 'https://astra-fit-modelos.dapxco.workers.dev';
+const PAGINA = 'https://myocare.dapxco.workers.dev';
 
 const ORDEN = ['Monitoreo', 'Evaluaciones', 'Alertas', 'Astronautas', 'Seguimiento', 'Intervenciones',
                'EscalaERDM', 'PlanFortalecimiento', 'Umbrales', 'Catalogos'];

@@ -32,7 +32,7 @@ llena solo la primera vez (`prepararBase_` en Code.gs con `DatosEjemplo.gs`); lo
 
 ## 3. Modelos 3D en Cloudflare
 
-**Ya está en https://astra-fit-modelos.dapxco.workers.dev** y `SeccionCuerpo` y `SeccionMision` apuntan ahí.
+**Ya está en https://myocare.dapxco.workers.dev** y `SeccionCuerpo` y `SeccionMision` apuntan ahí.
 Falta redesplegar: `publicar-cloudflare/assets/` ya trae también `astronaut.glb` y `escenarios/` (incluye
 `rover.glb`, de 21 MB), pero el sitio publicado los devuelve 404 hasta correr `npx wrangler deploy` desde la raíz de NASA.
 Los pasos de abajo son los originales, por si hay que repetirlos.

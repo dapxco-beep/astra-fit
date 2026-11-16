@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "astra-fit-modelos",
+  "name": "myocare",
   "main": "worker/index.js",
   "compatibility_date": "2026-11-13",
   "observability": {

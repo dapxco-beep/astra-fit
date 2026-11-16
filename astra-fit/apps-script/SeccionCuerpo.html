@@ -76,7 +76,7 @@
   // así que hay que publicarlos fuera (p. ej. GitHub + jsDelivr) y poner aquí esa dirección.
   const BASE_MODELOS = (typeof API !== 'undefined' && API.modo === 'local')
     ? '/assets/'
-    : 'https://astra-fit-modelos.dapxco.workers.dev/assets/';   // Cloudflare: carpeta publicar-cloudflare/ (para actualizar: npx wrangler deploy)
+    : 'https://myocare.dapxco.workers.dev/assets/';   // Cloudflare: carpeta publicar-cloudflare/ (para actualizar: npx wrangler deploy)
 
   // Músculo de la escala ERDM-A -> malla del modelo 3D. El modelo junta gastrocnemio y sóleo en una sola malla
   // ("calf"), por eso se toma el peor de los dos. Glúteo y espalda ya no se miden (la escala usa 6 músculos).
